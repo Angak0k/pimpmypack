@@ -1,0 +1,1333 @@
+basePath: /api/v1
+definitions:
+  dataset.Account:
+    properties:
+      created_at:
+        type: string
+      email:
+        type: string
+      firstname:
+        type: string
+      id:
+        type: integer
+      lastname:
+        type: string
+      role:
+        type: string
+      status:
+        type: string
+      updated_at:
+        type: string
+      username:
+        type: string
+    type: object
+  dataset.Inventory:
+    properties:
+      category:
+        type: string
+      created_at:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      item_name:
+        type: string
+      price:
+        type: integer
+      updated_at:
+        type: string
+      url:
+        type: string
+      user_id:
+        type: integer
+      weight:
+        type: integer
+      weight_unit:
+        type: string
+    type: object
+  dataset.Pack:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      pack_description:
+        type: string
+      pack_name:
+        type: string
+      updated_at:
+        type: string
+      user_id:
+        type: integer
+    type: object
+  dataset.PackContent:
+    properties:
+      consumable:
+        type: boolean
+      created_at:
+        type: string
+      id:
+        type: integer
+      item_id:
+        type: integer
+      pack_id:
+        type: integer
+      quantity:
+        type: integer
+      updated_at:
+        type: string
+      worn:
+        type: boolean
+    type: object
+  dataset.RegisterInput:
+    properties:
+      email:
+        type: string
+      firstname:
+        type: string
+      lastname:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - firstname
+    - lastname
+    - password
+    - username
+    type: object
+host: pimpmypack.alki.earth
+info:
+  contact: {}
+  description: This is an API server to manage Backpack Inventory
+  title: PimpMyPack API
+  version: "1.0"
+paths:
+  /accounts:
+    get:
+      description: Get all accounts - for admin use only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.Account'
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get all accounts'
+      tags:
+      - Accounts
+    post:
+      consumes:
+      - application/json
+      description: Create a new account - for admin use only
+      parameters:
+      - description: Account Information
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.Account'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dataset.Account'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Create a new account'
+      tags:
+      - Accounts
+  /accounts/{id}:
+    delete:
+      description: Delete account by ID - for admin use only
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Account deleted
+          schema:
+            type: string
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Delete account by ID'
+      tags:
+      - Accounts
+    get:
+      description: Get account by ID - for admin use only
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.Account'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 'error: Account not found'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get account by ID'
+      tags:
+      - Accounts
+    put:
+      consumes:
+      - application/json
+      description: Update account by ID - for admin use only
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Account Information
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.Account'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.Account'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Update account by ID'
+      tags:
+      - Accounts
+  /inventories:
+    get:
+      description: Retrieves a list of all inventories -  for admin use only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of Inventories
+          schema:
+            items:
+              $ref: '#/definitions/dataset.Inventory'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get all inventories'
+      tags:
+      - Inventories
+    post:
+      consumes:
+      - application/json
+      description: Creates an inventory -  for admin use only
+      parameters:
+      - description: Inventory
+        in: body
+        name: inventory
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.Inventory'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dataset.Inventory'
+        "400":
+          description: Invalid payload
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Create an inventory'
+      tags:
+      - Inventories
+  /inventories/{id}:
+    delete:
+      description: Deletes an inventory by ID -  for admin use only
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory deleted
+          schema:
+            type: string
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Delete an inventory by ID'
+      tags:
+      - Inventories
+    get:
+      description: Retrieves an inventory by ID -  for admin use only
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.Inventory'
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Inventory not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get an inventory by ID'
+      tags:
+      - Inventories
+    put:
+      consumes:
+      - application/json
+      description: Updates an inventory by ID -  for admin use only
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Inventory
+        in: body
+        name: inventory
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.Inventory'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.Inventory'
+        "400":
+          description: Invalid payload
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Update an inventory by ID'
+      tags:
+      - Inventories
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Logs in a user by providing username and password
+      parameters:
+      - description: Username
+        in: body
+        name: username
+        required: true
+        schema:
+          type: string
+      - description: Password
+        in: body
+        name: password
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: 'error: credentials are incorrect or token generation failed'
+          schema:
+            additionalProperties: true
+            type: object
+      summary: User login
+      tags:
+      - Accounts
+  /myaccount:
+    get:
+      description: Get information of the currently logged-in user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Account Information
+          schema:
+            $ref: '#/definitions/dataset.Account'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: 'error: Account not found'
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get account info
+      tags:
+      - Accounts
+    put:
+      consumes:
+      - application/json
+      description: Update information of the currently logged-in user
+      parameters:
+      - description: Account Information
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.Account'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.Account'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Update account info
+      tags:
+      - Accounts
+  /myinventory:
+    get:
+      description: Retrieves a list of all inventories of the user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dataset.Inventory'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get all inventories of the user
+      tags:
+      - Inventories
+    post:
+      consumes:
+      - application/json
+      description: Creates an inventory
+      parameters:
+      - description: Inventory
+        in: body
+        name: inventory
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.Inventory'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dataset.Inventory'
+        "400":
+          description: Invalid payload
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Create an inventory
+      tags:
+      - Inventories
+  /myinventory/{id}:
+    get:
+      description: Retrieves an inventory by ID
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.Inventory'
+        "400":
+          description: Invalid ID format
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: This item does not belong to you
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Inventory not found
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get an inventory by ID
+      tags:
+      - Inventories
+    put:
+      consumes:
+      - application/json
+      description: Updates an inventory by ID
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Inventory
+        in: body
+        name: inventory
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.Inventory'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.Inventory'
+        "400":
+          description: Invalid payload
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: This item does not belong to you
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Update an inventory by ID
+      tags:
+      - Inventories
+  /mypack:
+    post:
+      consumes:
+      - application/json
+      description: Create a new pack
+      parameters:
+      - description: Pack
+        in: body
+        name: pack
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.Pack'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dataset.Pack'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Create a new pack
+      tags:
+      - Packs
+  /mypack/{id}:
+    delete:
+      description: Delete a pack by ID
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete a pack by ID
+      tags:
+      - Packs
+    get:
+      description: Get pack by ID
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.Pack'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get pack by ID
+      tags:
+      - Packs
+    put:
+      consumes:
+      - application/json
+      description: Update a pack by ID
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Pack
+        in: body
+        name: pack
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.Pack'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.Pack'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Update a pack by ID
+      tags:
+      - Packs
+  /mypack/import:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Import from lighterpack csv pack file
+      parameters:
+      - description: CSV file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Import from lighterpack csv pack file
+      tags:
+      - Packs
+  /mypackcontent:
+    post:
+      consumes:
+      - application/json
+      description: Create a new pack content
+      parameters:
+      - description: Pack Content
+        in: body
+        name: packcontent
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.PackContent'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dataset.PackContent'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Create a new pack content
+      tags:
+      - Packs
+  /mypackcontent/{id}:
+    delete:
+      description: Delete a pack content by ID
+      parameters:
+      - description: Pack Content ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete a pack content by ID
+      tags:
+      - Packs
+    get:
+      description: Get pack content by ID
+      parameters:
+      - description: Pack Content ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.PackContent'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Get pack content by ID
+      tags:
+      - Packs
+  /mypacks:
+    get:
+      description: Get all packs - for admin use only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dataset.Pack'
+            type: array
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get all packs'
+      tags:
+      - Packs
+  /mypassword:
+    put:
+      consumes:
+      - application/json
+      description: Update the password of the current logged-in user
+      parameters:
+      - description: Updated Password
+        in: body
+        name: password
+        required: true
+        schema:
+          type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Updated password successfully
+          schema:
+            type: string
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: Update password
+      tags:
+      - Accounts
+  /packcontents:
+    get:
+      description: Get all pack contents - for admin use only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dataset.PackContent'
+            type: array
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get all pack contents'
+      tags:
+      - Packs
+    post:
+      consumes:
+      - application/json
+      description: Create a new pack content - for admin use only
+      parameters:
+      - description: Pack Content
+        in: body
+        name: packcontent
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.PackContent'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dataset.PackContent'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Create a new pack content'
+      tags:
+      - Packs
+  /packcontents/{id}:
+    delete:
+      description: Delete a pack content by ID - for admin use only
+      parameters:
+      - description: Pack Content ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Delete a pack content by ID'
+      tags:
+      - Packs
+    get:
+      description: Get pack content by ID - for admin use only
+      parameters:
+      - description: Pack Content ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.PackContent'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get pack content by ID'
+      tags:
+      - Packs
+    put:
+      consumes:
+      - application/json
+      description: Update a pack content by ID - for admin use only
+      parameters:
+      - description: Pack Content ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Pack Content
+        in: body
+        name: packcontent
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.PackContent'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.PackContent'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Update a pack content by ID'
+      tags:
+      - Packs
+  /packs:
+    get:
+      description: Get all packs - for admin use only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dataset.Pack'
+            type: array
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get all packs'
+      tags:
+      - Packs
+    post:
+      consumes:
+      - application/json
+      description: Create a new pack - for admin use only
+      parameters:
+      - description: Pack
+        in: body
+        name: pack
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.Pack'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dataset.Pack'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Create a new pack'
+      tags:
+      - Packs
+  /packs/:id/packcontents:
+    get:
+      description: Get all pack contents - for admin use only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dataset.PackContent'
+            type: array
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get all pack contents'
+      tags:
+      - Packs
+  /packs/{id}:
+    get:
+      description: Get pack by ID - for admin use only
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.Pack'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get pack by ID'
+      tags:
+      - Packs
+    put:
+      consumes:
+      - application/json
+      description: Update a pack by ID - for admin use only
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Pack
+        in: body
+        name: pack
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.Pack'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dataset.Pack'
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Update a pack by ID'
+      tags:
+      - Packs
+  /register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with username, password, email, firstname,
+        and lastname
+      parameters:
+      - description: Register Info
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.RegisterInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: registration success
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Register new user
+      tags:
+      - Accounts
+swagger: "2.0"

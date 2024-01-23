@@ -1,0 +1,46 @@
+run:
+  timeout: 5m
+
+linters:
+  enable:
+    - bodyclose
+    - musttag
+    - gocritic
+    - unparam
+    - errorlint
+    - gci
+    - rowserrcheck
+    - revive
+
+linters-settings:
+  revive:
+    rules:
+      - name: datarace
+        disabled: false
+      - name: deep-exit
+        disabled: false
+      - name: defer
+        disabled: false
+      - name: errorf
+        disabled: false
+      - name: function-length
+        disabled: false
+        arguments: [120, 0]  # we have to decrease this value
+      - name: if-return
+        disabled: false
+      - name: superfluous-else
+        disabled: false
+      - name: unhandled-error
+        disabled: false
+      - name: unnecessary-stmt
+        disabled: false
+      - name: unreachable-code
+        disabled: false
+      - name: unused-parameter
+        disabled: false
+      - name: unused-receiver
+        disabled: false
+      - name: useless-break
+        disabled: false
+      - name: var-naming
+        disabled: true
