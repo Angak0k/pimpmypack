@@ -56,7 +56,7 @@ jobs:
       - name: Generate Swagger Documentation
         run: |
           # Generate Swagger documentation
-          $(go env GOPATH)/bin/swag init
+          $(go env GOPATH)/bin/swag init --tags \!Internal
 
           # Configure Git
           git config --local user.email "action@github.com"

@@ -18,7 +18,7 @@ import (
 // Register a new user account
 // @Summary Register new user
 // @Description Register a new user with username, password, email, firstname, and lastname
-// @Tags Accounts
+// @Tags Public
 // @Accept  json
 // @Produce  json
 // @Param   input  body    dataset.RegisterInput  true  "Register Info"
@@ -147,7 +147,7 @@ func updatePassword(user_id uint, updatedPassword string) error {
 // User login
 // @Summary User login
 // @Description Logs in a user by providing username and password
-// @Tags Accounts
+// @Tags Public
 // @Accept  json
 // @Produce  json
 // @Param   username  body    string  true  "Username"
@@ -283,7 +283,7 @@ func PutMyAccount(c *gin.Context) {
 // @Summary [ADMIN] Get all accounts
 // @Description Get all accounts - for admin use only
 // @Security Bearer
-// @Tags Accounts
+// @Tags Internal
 // @Produce  json
 // @Success 200 {object} dataset.Account
 // @Failure 500 {object} map[string]interface{} "error"
@@ -328,7 +328,7 @@ func returnAccounts() (*dataset.Accounts, error) {
 // @Summary [ADMIN] Get account by ID
 // @Description Get account by ID - for admin use only
 // @Security Bearer
-// @Tags Accounts
+// @Tags Internal
 // @Produce  json
 // @Param   id  path    int  true  "Account ID"
 // @Success 200 {object} dataset.Account
@@ -381,7 +381,7 @@ func findAccountById(id uint) (*dataset.Account, error) {
 // @Summary [ADMIN] Create a new account
 // @Description Create a new account - for admin use only
 // @Security Bearer
-// @Tags Accounts
+// @Tags Internal
 // @Accept  json
 // @Produce  json
 // @Param   input  body    dataset.Account  true  "Account Information"
@@ -428,7 +428,7 @@ func insertAccount(a *dataset.Account) error {
 // @Summary [ADMIN] Update account by ID
 // @Description Update account by ID - for admin use only
 // @Security Bearer
-// @Tags Accounts
+// @Tags Internal
 // @Accept  json
 // @Produce  json
 // @Param   id  path    int  true  "Account ID"
@@ -483,7 +483,7 @@ func updateAccountById(id uint, a *dataset.Account) error {
 // @Summary [ADMIN] Delete account by ID
 // @Description Delete account by ID - for admin use only
 // @Security Bearer
-// @Tags Accounts
+// @Tags Internal
 // @Produce  json
 // @Param   id  path    int  true  "Account ID"
 // @Success 200 {string} string "Account deleted"

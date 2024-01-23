@@ -21,7 +21,7 @@ import (
 // @Summary [ADMIN] Get all packs
 // @Description Get all packs - for admin use only
 // @Security Bearer
-// @Tags Packs
+// @Tags Internal
 // @Produce  json
 // @Success 200 {object} dataset.Packs
 // @Failure 500 {object} map[string]interface{} "error"
@@ -79,7 +79,7 @@ func returnPacks() (dataset.Packs, error) {
 // @Summary [ADMIN] Get pack by ID
 // @Description Get pack by ID - for admin use only
 // @Security Bearer
-// @Tags Packs
+// @Tags Internal
 // @Produce  json
 // @Param id path int true "Pack ID"
 // @Success 200 {object} dataset.Pack
@@ -182,7 +182,7 @@ func findPackById(id uint) (*dataset.Pack, error) {
 // @Summary [ADMIN] Create a new pack
 // @Description Create a new pack - for admin use only
 // @Security Bearer
-// @Tags Packs
+// @Tags Internal
 // @Accept  json
 // @Produce  json
 // @Param pack body dataset.Pack true "Pack"
@@ -266,7 +266,7 @@ func insertPack(p *dataset.Pack) error {
 // @Summary [ADMIN] Update a pack by ID
 // @Description Update a pack by ID - for admin use only
 // @Security Bearer
-// @Tags Packs
+// @Tags Internal
 // @Accept  json
 // @Produce  json
 // @Param id path int true "Pack ID"
@@ -374,7 +374,7 @@ func updatePackById(id uint, p *dataset.Pack) error {
 // @Summary [ADMIN] Delete a pack by ID
 // @Description Delete a pack by ID - for admin use only
 // @Security Bearer
-// @Tags Packs
+// @Tags Internal
 // @Produce  json
 // @Param id path int true "Pack ID"
 // @Success 200 {object} map[string]string "message"
@@ -462,7 +462,7 @@ func deletePackById(id uint) error {
 // @Summary [ADMIN] Get all pack contents
 // @Description Get all pack contents - for admin use only
 // @Security Bearer
-// @Tags Packs
+// @Tags Internal
 // @Produce  json
 // @Success 200 {object} dataset.PackContents
 // @Failure 500 {object} map[string]interface{} "error"
@@ -508,7 +508,7 @@ func returnPackContents() (*dataset.PackContents, error) {
 // @Summary [ADMIN] Get pack content by ID
 // @Description Get pack content by ID - for admin use only
 // @Security Bearer
-// @Tags Packs
+// @Tags Internal
 // @Produce  json
 // @Param id path int true "Pack Content ID"
 // @Success 200 {object} dataset.PackContent
@@ -559,7 +559,7 @@ func findPackContentById(id uint) (*dataset.PackContent, error) {
 // @Summary [ADMIN] Create a new pack content
 // @Description Create a new pack content - for admin use only
 // @Security Bearer
-// @Tags Packs
+// @Tags Internal
 // @Accept  json
 // @Produce  json
 // @Param packcontent body dataset.PackContent true "Pack Content"
@@ -656,7 +656,7 @@ func insertPackContent(pc *dataset.PackContent) error {
 // @Summary [ADMIN] Update a pack content by ID
 // @Description Update a pack content by ID - for admin use only
 // @Security Bearer
-// @Tags Packs
+// @Tags Internal
 // @Accept  json
 // @Produce  json
 // @Param id path int true "Pack Content ID"
@@ -758,7 +758,7 @@ func updatePackContentByID(id uint, pc *dataset.PackContent) error {
 // @Summary [ADMIN] Delete a pack content by ID
 // @Description Delete a pack content by ID - for admin use only
 // @Security Bearer
-// @Tags Packs
+// @Tags Internal
 // @Produce  json
 // @Param id path int true "Pack Content ID"
 // @Success 200 {object} map[string]string "message"
@@ -849,7 +849,7 @@ func deletePackContentById(id uint) error {
 // @Summary [ADMIN] Get all pack contents
 // @Description Get all pack contents - for admin use only
 // @Security Bearer
-// @Tags Packs
+// @Tags Internal
 // @Produce  json
 // @Success 200 {object} dataset.PackContents
 // @Failure 500 {object} map[string]interface{} "error"
@@ -959,7 +959,7 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 // @Summary [ADMIN] Get all packs
 // @Description Get all packs - for admin use only
 // @Security Bearer
-// @Tags Packs
+// @Tags Internal
 // @Produce  json
 // @Success 200 {object} []dataset.Pack
 // @Failure 500 {object} map[string]interface{} "error"
