@@ -17,7 +17,7 @@ import (
 // @Summary [ADMIN] Get all inventories
 // @Description Retrieves a list of all inventories -  for admin use only
 // @Security Bearer
-// @Tags Inventories
+// @Tags Internal
 // @Produce json
 // @Success 200 {array} dataset.Inventory "List of Inventories"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
@@ -128,7 +128,7 @@ func returnInventoriesByUserID(user_id uint) (*dataset.Inventories, error) {
 // @Summary [ADMIN] Get an inventory by ID
 // @Description Retrieves an inventory by ID -  for admin use only
 // @Security Bearer
-// @Tags Inventories
+// @Tags Internal
 // @Produce json
 // @Param id path int true "Inventory ID"
 // @Success 200 {object} dataset.Inventory
@@ -225,7 +225,7 @@ func findInventoryById(id uint) (*dataset.Inventory, error) {
 // @Summary [ADMIN] Create an inventory
 // @Description Creates an inventory -  for admin use only
 // @Security Bearer
-// @Tags Inventories
+// @Tags Internal
 // @Accept json
 // @Produce json
 // @Param inventory body dataset.Inventory true "Inventory"
@@ -310,7 +310,7 @@ func InsertInventory(i *dataset.Inventory) error {
 // @Summary [ADMIN] Update an inventory by ID
 // @Description Updates an inventory by ID -  for admin use only
 // @Security Bearer
-// @Tags Inventories
+// @Tags Internal
 // @Accept json
 // @Produce json
 // @Param id path int true "Inventory ID"
@@ -423,7 +423,7 @@ func updateInventoryById(id uint, i *dataset.Inventory) error {
 // @Summary [ADMIN] Delete an inventory by ID
 // @Description Deletes an inventory by ID -  for admin use only
 // @Security Bearer
-// @Tags Inventories
+// @Tags Internal
 // @Produce json
 // @Param id path int true "Inventory ID"
 // @Success 200 {object} string "Inventory deleted"
