@@ -128,6 +128,10 @@ type Token struct {
 	Token string `json:"token"`
 }
 
+type OkResponse struct {
+	Response string `json:"message"`
+}
+
 type ErrorResponse struct {
 	Error string `json:"error"`
 }

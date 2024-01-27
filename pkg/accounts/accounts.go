@@ -21,8 +21,8 @@ import (
 // @Tags Public
 // @Accept  json
 // @Produce  json
-// @Param   input  body    dataset.RegisterInput  true  "Register Info"
-// @Success 200 {object} dataset.RegisterResponse
+// @Param   input  body    dataset.RegisterInput  true  "Register Informations"
+// @Success 200 {object} dataset.OkResponse
 // @Failure 400 {object} dataset.ErrorResponse
 // @Router /register [post]
 func Register(c *gin.Context) {
@@ -78,82 +78,15 @@ func saveUser(u dataset.User) error {
 	return nil
 }
 
-// Update user password
-// @Summary Update password
-// @Description Update the password of the current logged-in user
-// @Security Bearer
-// @Tags Accounts
-// @Accept  json
-// @Produce  json
-// @Param   password  body    string  true  "Updated Password"
-// @Success 200 {string} string "Updated password successfully"
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
-// @Router /mypassword [put]
-func PutMyPassword(c *gin.Context) {
-
-	var updatedPassword string
-
-	user_id, err := security.ExtractTokenID(c)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Call BindJSON to bind the received JSON to updatedPassword.
-	if err := c.BindJSON(&updatedPassword); err != nil {
-		return
-	}
-
-	// Update the DB
-	err = updatePassword(user_id, updatedPassword)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.IndentedJSON(http.StatusOK, updatedPassword)
-}
-
-func updatePassword(user_id uint, updatedPassword string) error {
-	var lastPassword string
-	// Get old password
-	row := database.Db().QueryRow("SELECT password FROM password WHERE user_id = $1);", user_id)
-	err := row.Scan(&lastPassword)
-	if err != nil {
-		return fmt.Errorf("failed to get old password: %w", err)
-	}
-
-	// Update DB
-	statement, err := database.Db().Prepare("UPDATE password SET password = $1, last_password = $2, updated_at = $3 WHERE user_id = $4);")
-	if err != nil {
-		return fmt.Errorf("failed to prepare update statement: %w", err)
-	}
-	defer statement.Close()
-
-	hashedPassword, err := security.HashPassword(updatedPassword)
-	if err != nil {
-		return fmt.Errorf("failed to hash password: %w", err)
-	}
-
-	_, err = statement.Exec(hashedPassword, lastPassword, time.Now().Truncate(time.Second), user_id)
-	if err != nil {
-		return fmt.Errorf("failed to execute update query: %w", err)
-	}
-
-	return nil
-}
-
 // User login
 // @Summary User login
-// @Description Logs in a user by providing username and password
+// @Description Log in a user by providing username and password
 // @Tags Public
 // @Accept  json
 // @Produce  json
-// @Param   username  body    string  true  "Username"
-// @Param   password  body    string  true  "Password"
-// @Success 200 {object} map[string]string "token"
-// @Failure 403 {object} map[string]interface{} "error: credentials are incorrect or token generation failed"
+// @Param   input  body    dataset.LoginInput  true  "Credentials Info"
+// @Success 200 {object} dataset.Token
+// @Failure 403 {object} dataset.ErrorResponse
 // @Router /login [post]
 func Login(c *gin.Context) {
 
@@ -239,6 +172,72 @@ func GetMyAccount(c *gin.Context) {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Account not found"})
 	}
 
+}
+
+// Update user password
+// @Summary Update password
+// @Description Update the password of the current logged-in user
+// @Security Bearer
+// @Tags Accounts
+// @Accept  json
+// @Produce  json
+// @Param   password  body    string  true  "Updated Password"
+// @Success 200 {object} dataset.OkResponse
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
+// @Router /mypassword [put]
+func PutMyPassword(c *gin.Context) {
+
+	var updatedPassword string
+
+	user_id, err := security.ExtractTokenID(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Call BindJSON to bind the received JSON to updatedPassword.
+	if err := c.BindJSON(&updatedPassword); err != nil {
+		return
+	}
+
+	// Update the DB
+	err = updatePassword(user_id, updatedPassword)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, updatedPassword)
+}
+
+func updatePassword(user_id uint, updatedPassword string) error {
+	var lastPassword string
+	// Get old password
+	row := database.Db().QueryRow("SELECT password FROM password WHERE user_id = $1);", user_id)
+	err := row.Scan(&lastPassword)
+	if err != nil {
+		return fmt.Errorf("failed to get old password: %w", err)
+	}
+
+	// Update DB
+	statement, err := database.Db().Prepare("UPDATE password SET password = $1, last_password = $2, updated_at = $3 WHERE user_id = $4);")
+	if err != nil {
+		return fmt.Errorf("failed to prepare update statement: %w", err)
+	}
+	defer statement.Close()
+
+	hashedPassword, err := security.HashPassword(updatedPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	_, err = statement.Exec(hashedPassword, lastPassword, time.Now().Truncate(time.Second), user_id)
+	if err != nil {
+		return fmt.Errorf("failed to execute update query: %w", err)
+	}
+
+	return nil
 }
 
 // Update my account information
