@@ -86,7 +86,7 @@ func saveUser(u dataset.User) error {
 // @Produce  json
 // @Param   input  body    dataset.LoginInput  true  "Credentials Info"
 // @Success 200 {object} dataset.Token
-// @Failure 403 {object} dataset.ErrorResponse
+// @Failure 401 {object} dataset.ErrorResponse
 // @Router /login [post]
 func Login(c *gin.Context) {
 
@@ -100,7 +100,7 @@ func Login(c *gin.Context) {
 	token, err := loginCheck(input.Username, input.Password)
 
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": "credentials are incorrect or token generation failed."})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "credentials are incorrect or token generation failed."})
 		return
 	}
 
@@ -147,7 +147,7 @@ func loginCheck(username string, password string) (string, error) {
 // @Tags Accounts
 // @Produce  json
 // @Success 200 {object} dataset.Account "Account Information"
-// @Failure 403 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 404 {object} dataset.ErrorResponse "Account not found"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /myaccount [get]
@@ -184,7 +184,7 @@ func GetMyAccount(c *gin.Context) {
 // @Param   password  body dataset.PasswordUpdateInput  true  "New Password"
 // @Success 200 {object} dataset.OkResponse "Password updated"
 // @Failure 400 {object} dataset.ErrorResponse "Bad Request"
-// @Failure 403 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /mypassword [put]
 func PutMyPassword(c *gin.Context) {
@@ -253,7 +253,7 @@ func updatePassword(user_id uint, updatedPassword string) error {
 // @Param   input  body    dataset.Account  true  "Account Information"
 // @Success 200 {object} dataset.Account
 // @Failure 400 {object} dataset.ErrorResponse
-// @Failure 403 {object} dataset.ErrorResponse
+// @Failure 401 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
 // @Router /myaccount [put]
 func PutMyAccount(c *gin.Context) {
@@ -491,9 +491,9 @@ func updateAccountById(id uint, a *dataset.Account) error {
 // @Tags Internal
 // @Produce  json
 // @Param   id  path    int  true  "Account ID"
-// @Success 200 dataset.OkResponse
-// @Failure 400 dataset.ErrorResponse
-// @Failure 500 dataset.ErrorResponse
+// @Success 200 {object} dataset.OkResponse
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /accounts/{id} [delete]
 func DeleteAccountByID(c *gin.Context) {
 	id := c.Param("id")
