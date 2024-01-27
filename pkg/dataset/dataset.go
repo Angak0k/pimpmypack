@@ -101,6 +101,10 @@ type RegisterInput struct {
 	Lastname  string `json:"lastname" binding:"required"`
 }
 
+type RegisterResponse struct {
+	Response string `json:"message"`
+}
+
 type User struct {
 	ID           uint      `json:"id"`
 	Username     string    `json:"username"`

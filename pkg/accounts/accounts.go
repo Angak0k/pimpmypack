@@ -22,8 +22,8 @@ import (
 // @Accept  json
 // @Produce  json
 // @Param   input  body    dataset.RegisterInput  true  "Register Info"
-// @Success 200 {object} map[string]interface{} "registration success"
-// @Failure 400 {object} map[string]interface{} "error"
+// @Success 200 {object} dataset.RegisterResponse
+// @Failure 400 {object} dataset.ErrorResponse
 // @Router /register [post]
 func Register(c *gin.Context) {
 

@@ -41,10 +41,11 @@ func init() {
 }
 
 // @title PimpMyPack API
-// @description This is an API server to manage Backpack Inventory
+// @description API server to manage Backpack Inventory and Packing Lists
 // @version 1.0
-// @host pimpmypack.alki.earth
-// @BasePath /api/v1
+// @host pmp-dev.alki.earth
+// @Schemes https
+// @BasePath /api
 func main() {
 
 	if config.Stage == "DEV" {
