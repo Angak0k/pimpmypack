@@ -8,7 +8,7 @@
 
 The server is based on [Gin Framework](https://github.com/gin-gonic/gin) and provides endpoints to manage Accounts, Inventories & Packs
 
-A dedicated API documentation is available [here]().
+A dedicated API documentation is available [here](pmp-dev.alki.earth/swagger/index.html).
 
 ## Setup for local development
 
