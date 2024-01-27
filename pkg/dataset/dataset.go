@@ -101,10 +101,6 @@ type RegisterInput struct {
 	Lastname  string `json:"lastname" binding:"required"`
 }
 
-type RegisterResponse struct {
-	Response string `json:"message"`
-}
-
 type User struct {
 	ID           uint      `json:"id"`
 	Username     string    `json:"username"`
@@ -122,6 +118,10 @@ type User struct {
 type LoginInput struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
+}
+
+type PasswordUpdateInput struct {
+	Password string `json:"password"`
 }
 
 type Token struct {

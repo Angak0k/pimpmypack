@@ -147,16 +147,16 @@ func loginCheck(username string, password string) (string, error) {
 // @Tags Accounts
 // @Produce  json
 // @Success 200 {object} dataset.Account "Account Information"
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 404 {object} map[string]interface{} "error: Account not found"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 403 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 404 {object} dataset.ErrorResponse "Account not found"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /myaccount [get]
 func GetMyAccount(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -181,10 +181,11 @@ func GetMyAccount(c *gin.Context) {
 // @Tags Accounts
 // @Accept  json
 // @Produce  json
-// @Param   password  body    string  true  "Updated Password"
-// @Success 200 {object} dataset.OkResponse
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Param   password  body dataset.PasswordUpdateInput  true  "New Password"
+// @Success 200 {object} dataset.OkResponse "Password updated"
+// @Failure 400 {object} dataset.ErrorResponse "Bad Request"
+// @Failure 403 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /mypassword [put]
 func PutMyPassword(c *gin.Context) {
 
@@ -192,12 +193,14 @@ func PutMyPassword(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
 	// Call BindJSON to bind the received JSON to updatedPassword.
-	if err := c.BindJSON(&updatedPassword); err != nil {
+	err = c.BindJSON(&updatedPassword)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -249,8 +252,9 @@ func updatePassword(user_id uint, updatedPassword string) error {
 // @Produce  json
 // @Param   input  body    dataset.Account  true  "Account Information"
 // @Success 200 {object} dataset.Account
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 403 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /myaccount [put]
 func PutMyAccount(c *gin.Context) {
 
@@ -258,7 +262,7 @@ func PutMyAccount(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -267,6 +271,8 @@ func PutMyAccount(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
+
+	updatedAccount.ID = user_id
 
 	// Update the DB
 	err = updateAccountById(user_id, &updatedAccount)
@@ -285,7 +291,7 @@ func PutMyAccount(c *gin.Context) {
 // @Tags Internal
 // @Produce  json
 // @Success 200 {object} dataset.Account
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /accounts [get]
 func GetAccounts(c *gin.Context) {
 	accounts, err := returnAccounts()
@@ -331,9 +337,9 @@ func returnAccounts() (*dataset.Accounts, error) {
 // @Produce  json
 // @Param   id  path    int  true  "Account ID"
 // @Success 200 {object} dataset.Account
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 404 {object} map[string]interface{} "error: Account not found"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 404 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /accounts/{id} [get]
 func GetAccountByID(c *gin.Context) {
 
@@ -385,8 +391,8 @@ func findAccountById(id uint) (*dataset.Account, error) {
 // @Produce  json
 // @Param   input  body    dataset.Account  true  "Account Information"
 // @Success 201 {object} dataset.Account
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /accounts [post]
 func PostAccount(c *gin.Context) {
 	var newAccount dataset.Account
@@ -433,8 +439,8 @@ func insertAccount(a *dataset.Account) error {
 // @Param   id  path    int  true  "Account ID"
 // @Param   input  body    dataset.Account  true  "Account Information"
 // @Success 200 {object} dataset.Account
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /accounts/{id} [put]
 func PutAccountByID(c *gin.Context) {
 	var updatedAccount dataset.Account
@@ -485,9 +491,9 @@ func updateAccountById(id uint, a *dataset.Account) error {
 // @Tags Internal
 // @Produce  json
 // @Param   id  path    int  true  "Account ID"
-// @Success 200 {string} string "Account deleted"
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Success 200 dataset.OkResponse
+// @Failure 400 dataset.ErrorResponse
+// @Failure 500 dataset.ErrorResponse
 // @Router /accounts/{id} [delete]
 func DeleteAccountByID(c *gin.Context) {
 	id := c.Param("id")
