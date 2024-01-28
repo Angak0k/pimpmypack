@@ -19,8 +19,9 @@ import (
 // @Security Bearer
 // @Tags Internal
 // @Produce json
-// @Success 200 {array} dataset.Inventory "List of Inventories"
-// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Success 200 {object} dataset.Inventory "List of Inventories"
+// @Failure 404 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /inventories [get]
 func GetInventories(c *gin.Context) {
 
@@ -72,15 +73,17 @@ func returnInventories() (*dataset.Inventories, error) {
 // @Security Bearer
 // @Tags Inventories
 // @Produce json
-// @Success 200 {array} dataset.Inventory
-// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Success 200 {object} dataset.Inventories
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 404 {object} dataset.ErrorResponse "No Inventory Found"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /myinventory [get]
 func GetMyInventory(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -132,9 +135,9 @@ func returnInventoriesByUserID(user_id uint) (*dataset.Inventories, error) {
 // @Produce json
 // @Param id path int true "Inventory ID"
 // @Success 200 {object} dataset.Inventory
-// @Failure 400 {object} map[string]interface{} "Invalid ID format"
-// @Failure 404 {object} map[string]interface{} "Inventory not found"
-// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 404 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /inventories/{id} [get]
 func GetInventoryByID(c *gin.Context) {
 
@@ -166,17 +169,17 @@ func GetInventoryByID(c *gin.Context) {
 // @Tags Inventories
 // @Produce json
 // @Param id path int true "Inventory ID"
-// @Success 200 {object} dataset.Inventory
-// @Failure 400 {object} map[string]interface{} "Invalid ID format"
-// @Failure 403 {object} map[string]interface{} "This item does not belong to you"
-// @Failure 404 {object} map[string]interface{} "Inventory not found"
-// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Success 200 {object} dataset.Inventory "Inventory"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 403 {object} dataset.ErrorResponse "This item does not belong to you"
+// @Failure 404 {object} dataset.ErrorResponse "Inventory not found"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /myinventory/{id} [get]
 func GetMyInventoryByID(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -230,8 +233,8 @@ func findInventoryById(id uint) (*dataset.Inventory, error) {
 // @Produce json
 // @Param inventory body dataset.Inventory true "Inventory"
 // @Success 201 {object} dataset.Inventory
-// @Failure 400 {object} map[string]interface{} "Invalid payload"
-// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /inventories [post]
 func PostInventory(c *gin.Context) {
 	var newInventory dataset.Inventory
@@ -258,22 +261,25 @@ func PostInventory(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param inventory body dataset.Inventory true "Inventory"
-// @Success 201 {object} dataset.Inventory
-// @Failure 400 {object} map[string]interface{} "Invalid payload"
-// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Success 201 {object} dataset.Inventory "Inventory Updated"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid payload"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /myinventory [post]
 func PostMyInventory(c *gin.Context) {
 	var newInventory dataset.Inventory
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
 	newInventory.User_id = user_id
 
-	if err := c.BindJSON(&newInventory); err != nil {
+	err = c.BindJSON(&newInventory)
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -316,9 +322,9 @@ func InsertInventory(i *dataset.Inventory) error {
 // @Param id path int true "Inventory ID"
 // @Param inventory body dataset.Inventory true "Inventory"
 // @Success 200 {object} dataset.Inventory
-// @Failure 400 {object} map[string]interface{} "Invalid ID format"
-// @Failure 400 {object} map[string]interface{} "Invalid payload"
-// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /inventories/{id} [put]
 func PutInventoryByID(c *gin.Context) {
 	var updatedInventory dataset.Inventory
@@ -355,9 +361,10 @@ func PutInventoryByID(c *gin.Context) {
 // @Produce json
 // @Param id path int true "Inventory ID"
 // @Param inventory body dataset.Inventory true "Inventory"
-// @Success 200 {object} dataset.Inventory
+// @Success 200 {object} dataset.Inventory "Inventory Updated"
 // @Failure 400 {object} map[string]interface{} "Invalid ID format"
 // @Failure 400 {object} map[string]interface{} "Invalid payload"
+// @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 403 {object} map[string]interface{} "This item does not belong to you"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /myinventory/{id} [put]
@@ -366,7 +373,7 @@ func PutMyInventoryByID(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -426,9 +433,9 @@ func updateInventoryById(id uint, i *dataset.Inventory) error {
 // @Tags Internal
 // @Produce json
 // @Param id path int true "Inventory ID"
-// @Success 200 {object} string "Inventory deleted"
-// @Failure 400 {object} map[string]interface{} "Invalid ID format"
-// @Failure 500 {object} map[string]interface{} "Internal Server Error"
+// @Success 200 {object} dataset.OkResponse "Inventory deleted"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /inventories/{id} [delete]
 func DeleteInventoryByID(c *gin.Context) {
 

@@ -120,8 +120,16 @@ type LoginInput struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type PasswordUpdateInput struct {
+	Password string `json:"password"`
+}
+
 type Token struct {
 	Token string `json:"token"`
+}
+
+type OkResponse struct {
+	Response string `json:"message"`
 }
 
 type ErrorResponse struct {

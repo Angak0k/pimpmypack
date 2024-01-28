@@ -24,7 +24,7 @@ import (
 // @Tags Internal
 // @Produce  json
 // @Success 200 {object} dataset.Packs
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /packs [get]
 func GetPacks(c *gin.Context) {
 
@@ -83,9 +83,9 @@ func returnPacks() (dataset.Packs, error) {
 // @Produce  json
 // @Param id path int true "Pack ID"
 // @Success 200 {object} dataset.Pack
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 404 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
+// @Failure 404 {object} dataset.ErrorResponse "Pack not found"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /packs/{id} [get]
 func GetPackByID(c *gin.Context) {
 
@@ -119,15 +119,17 @@ func GetPackByID(c *gin.Context) {
 // @Produce  json
 // @Param id path int true "Pack ID"
 // @Success 200 {object} dataset.Pack
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 404 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
+// @Failure 404 {object} dataset.ErrorResponse "Pack not found"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /mypack/{id} [get]
 func GetMyPackByID(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -157,7 +159,7 @@ func GetMyPackByID(c *gin.Context) {
 			return
 		}
 	} else {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
 }
@@ -187,8 +189,8 @@ func findPackById(id uint) (*dataset.Pack, error) {
 // @Produce  json
 // @Param pack body dataset.Pack true "Pack"
 // @Success 201 {object} dataset.Pack
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /packs [post]
 func PostPack(c *gin.Context) {
 	var newPack dataset.Pack
@@ -216,16 +218,17 @@ func PostPack(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Param pack body dataset.Pack true "Pack"
-// @Success 201 {object} dataset.Pack
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Success 201 {object} dataset.Pack "Pack created"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid Body format"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /mypack [post]
 func PostMyPack(c *gin.Context) {
 	var newPack dataset.Pack
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -272,8 +275,8 @@ func insertPack(p *dataset.Pack) error {
 // @Param id path int true "Pack ID"
 // @Param pack body dataset.Pack true "Pack"
 // @Success 200 {object} dataset.Pack
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /packs/{id} [put]
 func PutPackByID(c *gin.Context) {
 	var updatedPack dataset.Pack
@@ -307,9 +310,12 @@ func PutPackByID(c *gin.Context) {
 // @Produce  json
 // @Param id path int true "Pack ID"
 // @Param pack body dataset.Pack true "Pack"
-// @Success 200 {object} dataset.Pack
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Success 200 {object} dataset.Pack "Pack updated"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid Payload"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /mypack/{id} [put]
 func PutMyPackByID(c *gin.Context) {
 	var updatedPack dataset.Pack
@@ -321,13 +327,13 @@ func PutMyPackByID(c *gin.Context) {
 	}
 
 	if err := c.BindJSON(&updatedPack); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Json body"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Payload"})
 		return
 	}
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -346,7 +352,7 @@ func PutMyPackByID(c *gin.Context) {
 		}
 		c.IndentedJSON(http.StatusOK, updatedPack)
 	} else {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
 }
@@ -377,9 +383,9 @@ func updatePackById(id uint, p *dataset.Pack) error {
 // @Tags Internal
 // @Produce  json
 // @Param id path int true "Pack ID"
-// @Success 200 {object} map[string]string "message"
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Success 200 {object} dataset.OkResponse
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /packs/{id} [delete]
 
 func DeletePackByID(c *gin.Context) {
@@ -407,9 +413,11 @@ func DeletePackByID(c *gin.Context) {
 // @Tags Packs
 // @Produce  json
 // @Param id path int true "Pack ID"
-// @Success 200 {object} map[string]string "message"
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Success 200 {object} dataset.OkResponse "Pack deleted"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /mypack/{id} [delete]
 func DeleteMyPackByID(c *gin.Context) {
 
@@ -421,7 +429,7 @@ func DeleteMyPackByID(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -439,7 +447,7 @@ func DeleteMyPackByID(c *gin.Context) {
 		}
 		c.IndentedJSON(http.StatusOK, gin.H{"message": "Pack deleted"})
 	} else {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
 }
@@ -465,7 +473,7 @@ func deletePackById(id uint) error {
 // @Tags Internal
 // @Produce  json
 // @Success 200 {object} dataset.PackContents
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /packcontents [get]
 func GetPackContents(c *gin.Context) {
 
@@ -512,9 +520,9 @@ func returnPackContents() (*dataset.PackContents, error) {
 // @Produce  json
 // @Param id path int true "Pack Content ID"
 // @Success 200 {object} dataset.PackContent
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 404 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 404 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /packcontents/{id} [get]
 func GetPackContentByID(c *gin.Context) {
 
@@ -564,8 +572,8 @@ func findPackContentById(id uint) (*dataset.PackContent, error) {
 // @Produce  json
 // @Param packcontent body dataset.PackContent true "Pack Content"
 // @Success 201 {object} dataset.PackContent
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /packcontents [post]
 func PostPackContent(c *gin.Context) {
 	var newPackContent dataset.PackContent
@@ -594,8 +602,10 @@ func PostPackContent(c *gin.Context) {
 // @Produce  json
 // @Param packcontent body dataset.PackContent true "Pack Content"
 // @Success 201 {object} dataset.PackContent
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 401 {object} dataset.ErrorResponse
+// @Failure 403 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /mypackcontent [post]
 func PostMyPackContent(c *gin.Context) {
 	var newPackContent dataset.PackContent
@@ -608,7 +618,7 @@ func PostMyPackContent(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -632,7 +642,7 @@ func PostMyPackContent(c *gin.Context) {
 		}
 		c.IndentedJSON(http.StatusCreated, newPackContent)
 	} else {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
 }
@@ -662,8 +672,8 @@ func insertPackContent(pc *dataset.PackContent) error {
 // @Param id path int true "Pack Content ID"
 // @Param packcontent body dataset.PackContent true "Pack Content"
 // @Success 200 {object} dataset.PackContent
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /packcontents/{id} [put]
 func PutPackContentByID(c *gin.Context) {
 
@@ -690,6 +700,23 @@ func PutPackContentByID(c *gin.Context) {
 
 }
 
+// Update My pack content ID by Pack ID
+// @Summary Update My pack content ID by Pack ID
+// @Description Update My pack content ID by Pack ID
+// @Security Bearer
+// @Tags Packs
+// @Accept  json
+// @Produce  json
+// @Param id path int true "Pack ID"
+// @Param item_id path int true "Item ID"
+// @Param packcontent body dataset.PackContent true "Pack Content"
+// @Success 200 {object} dataset.PackContent "Pack Content updated"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid Body format"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Router /mypack/{id}/packcontent/{item_id} [put]
 func PutMyPackContentByID(c *gin.Context) {
 
 	var updatedPackContent dataset.PackContent
@@ -708,7 +735,7 @@ func PutMyPackContentByID(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -732,7 +759,7 @@ func PutMyPackContentByID(c *gin.Context) {
 		}
 		c.IndentedJSON(http.StatusOK, updatedPackContent)
 	} else {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
 }
@@ -762,8 +789,8 @@ func updatePackContentByID(id uint, pc *dataset.PackContent) error {
 // @Produce  json
 // @Param id path int true "Pack Content ID"
 // @Success 200 {object} map[string]string "message"
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /packcontents/{id} [delete]
 func DeletePackContentByID(c *gin.Context) {
 
@@ -783,34 +810,37 @@ func DeletePackContentByID(c *gin.Context) {
 
 }
 
-// Delete a pack content by ID
+// Delete a pack content ID by Pack ID
 // @Summary Delete a pack content by ID
 // @Description Delete a pack content by ID
 // @Security Bearer
 // @Tags Packs
 // @Produce  json
-// @Param id path int true "Pack Content ID"
-// @Success 200 {object} map[string]string "message"
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
-// @Router /mypackcontent/{id} [delete]
+// @Param id path int true "Pack ID"
+// @Param item_id path int true "Item ID"
+// @Success 200 {object} dataset.OkResponse "Pack Item deleted"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Router /mypack/{id}/packcontent/{item_id} [delete]
 func DeleteMyPackContentByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Pack ID format"})
 		return
 	}
 
 	item_id, err := helper.StringToUint(c.Param("item_id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Item ID format"})
 		return
 	}
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -828,7 +858,7 @@ func DeleteMyPackContentByID(c *gin.Context) {
 		}
 		c.IndentedJSON(http.StatusOK, gin.H{"message": "Pack Item deleted"})
 	} else {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
 }
@@ -852,7 +882,9 @@ func deletePackContentById(id uint) error {
 // @Tags Internal
 // @Produce  json
 // @Success 200 {object} dataset.PackContents
-// @Failure 500 {object} map[string]interface{} "error"
+// @Failure 400 {object} dataset.ErrorResponse
+// @Failure 404 {object} dataset.ErrorResponse
+// @Failure 500 {object} dataset.ErrorResponse
 // @Router /packs/:id/packcontents [get]
 func GetPackContentsByPackID(c *gin.Context) {
 
@@ -883,10 +915,12 @@ func GetPackContentsByPackID(c *gin.Context) {
 // @Tags Packs
 // @Produce  json
 // @Param id path int true "Pack Content ID"
-// @Success 200 {object} dataset.PackContent
-// @Failure 400 {object} map[string]interface{} "error"
-// @Failure 404 {object} map[string]interface{} "error"
-// @Failure 500 {object} map[string]interface{} "error"
+// @Success 200 {object} dataset.PackContent "Pack Item"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
+// @Failure 404 {object} dataset.ErrorResponse "Pack not found"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /mypackcontent/{id} [get]
 func GetMyPackContentsByPackID(c *gin.Context) {
 	var packContents *dataset.PackContentWithItems
@@ -899,7 +933,7 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -921,7 +955,7 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 		}
 		c.IndentedJSON(http.StatusOK, packContents)
 	} else {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
 }
@@ -955,20 +989,22 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 	return &packWithItems, nil
 }
 
-// Get all packs
-// @Summary [ADMIN] Get all packs
-// @Description Get all packs - for admin use only
+// Get My packs
+// @Summary Get My Packs
+// @Description Get my packs
 // @Security Bearer
-// @Tags Internal
+// @Tags Packs
 // @Produce  json
-// @Success 200 {object} []dataset.Pack
-// @Failure 500 {object} map[string]interface{} "error"
+// @Success 200 {object} dataset.Packs "Packs"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 404 {object} dataset.ErrorResponse "No pack found"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /mypacks [get]
 func GetMyPacks(c *gin.Context) {
 	user_id, err := security.ExtractTokenID(c)
 
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -1041,15 +1077,17 @@ func checkPackOwnership(id uint, user_id uint) (bool, error) {
 // @Accept  multipart/form-data
 // @Produce  json
 // @Param file formData file true "CSV file"
-// @Success 200 {object} map[string]string "message"
-// @Failure 400 {object} map[string]interface{} "error"
+// @Success 200 {object} dataset.OkResponse "CSV data imported successfully"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid CSV format"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /mypack/import [post]
 func ImportFromLighterPack(c *gin.Context) {
 	var lighterPack dataset.LighterPack
 
 	user_id, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 

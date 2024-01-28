@@ -41,13 +41,14 @@ func init() {
 }
 
 // @title PimpMyPack API
-// @description This is an API server to manage Backpack Inventory
+// @description API server to manage Backpack Inventory and Packing Lists
 // @version 1.0
-// @host pimpmypack.alki.earth
-// @BasePath /api/v1
+// @host pmp-dev.alki.earth
+// @Schemes https
+// @BasePath /api
 func main() {
 
-	if config.Stage == "DEV" {
+	if config.Stage == "DEV" || config.Stage == "LOCAL" {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
@@ -105,12 +106,19 @@ func main() {
 	private.DELETE("/packcontents/:id", packs.DeletePackContentByID)
 	private.GET("/packs/:id/packcontents", packs.GetPackContentsByPackID)
 
-	if config.Stage == "DEV" {
+	if config.Stage == "DEV" || config.Stage == "LOCAL" {
 		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
-	err := router.Run(":8080")
-	if err != nil {
-		panic(err)
+	if config.Stage == "LOCAL" {
+		err := router.Run("localhost:8080")
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		err := router.Run(":8080")
+		if err != nil {
+			panic(err)
+		}
 	}
 }
