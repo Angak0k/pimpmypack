@@ -17,6 +17,11 @@ var (
 	Stage         string
 	ApiSecret     string
 	TokenLifespan int
+	MailIdentity  string
+	MailUsername  string
+	MailPassword  string
+	MailServer    string
+	MailPort      int
 )
 
 func EnvInit(envFilePath string) error {
@@ -40,6 +45,13 @@ func EnvInit(envFilePath string) error {
 	if err != nil {
 		TokenLifespan = 1
 	}
-
+	MailIdentity = os.Getenv("MAIL_IDENTITY")
+	MailUsername = os.Getenv("MAIL_USERNAME")
+	MailPassword = os.Getenv("MAIL_PASSWORD")
+	MailServer = os.Getenv("MAIL_SERVER")
+	MailPort, err = strconv.Atoi(os.Getenv("MAIL_PORT"))
+	if err != nil {
+		return err
+	}
 	return nil
 }

@@ -1,8 +1,10 @@
 package helper
 
 import (
+	"net/smtp"
 	"strconv"
 
+	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/dataset"
 	"github.com/joho/godotenv"
 )
@@ -64,4 +66,17 @@ func FinItemIDByItemName(inventories dataset.Inventories, itemname string) uint 
 		}
 	}
 	return 0
+}
+
+func SendEmail(to, subject, body string) error {
+
+	auth := smtp.PlainAuth("", config.MailUsername, config.MailPassword, config.MailServer)
+
+	msg := []byte("To: " + to + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"\r\n" +
+		body + "\r\n")
+
+	return smtp.SendMail(config.MailServer+":"+strconv.Itoa(config.MailPort), auth, config.MailIdentity, []string{to}, msg)
+
 }
