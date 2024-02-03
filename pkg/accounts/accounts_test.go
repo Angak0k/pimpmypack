@@ -378,7 +378,7 @@ func TestRegister(t *testing.T) {
 
 	// Sample account data
 	newAccount := dataset.RegisterInput{
-		Username:  "newuser",
+		Username:  fmt.Sprintf("user-%s", random.UniqueId()),
 		Password:  "password",
 		Email:     "jane.doe@pmp.com",
 		Firstname: "Jane",
