@@ -9,6 +9,8 @@ import (
 )
 
 var (
+	Scheme        string
+	HostName      string
 	DbHost        string
 	DbUser        string
 	DbPassword    string
@@ -34,6 +36,8 @@ func EnvInit(envFilePath string) error {
 		}
 	}
 
+	Scheme = os.Getenv("SCHEME")
+	HostName = os.Getenv("HOSTNAME")
 	DbHost = os.Getenv("DB_HOST")
 	DbUser = os.Getenv("DB_USER")
 	DbPassword = os.Getenv("DB_PASSWORD")

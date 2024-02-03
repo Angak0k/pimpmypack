@@ -120,8 +120,12 @@ type LoginInput struct {
 	Password string `json:"password" binding:"required"`
 }
 
+type ForgotPasswordInput struct {
+	Email string `json:"email" binding:"required"`
+}
+
 type PasswordUpdateInput struct {
-	Password string `json:"password"`
+	Password string `json:"password" binding:"required"`
 }
 
 type Token struct {

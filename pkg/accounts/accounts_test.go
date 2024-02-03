@@ -212,7 +212,7 @@ func TestPostAccount(t *testing.T) {
 
 		// Query the database to get the inserted account
 		var insertedAccount dataset.Account
-		row := database.Db().QueryRow("SELECT * FROM account WHERE username = $1;", newAccount.Username)
+		row := database.Db().QueryRow("SELECT id,username, email, firstname, lastname, role, status, created_at, updated_at FROM account WHERE username = $1;", newAccount.Username)
 		err = row.Scan(&insertedAccount.ID, &insertedAccount.Username, &insertedAccount.Email, &insertedAccount.Firstname, &insertedAccount.Lastname, &insertedAccount.Role, &insertedAccount.Status, &insertedAccount.Created_at, &insertedAccount.Updated_at)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -294,7 +294,7 @@ func TestPutAccountByID(t *testing.T) {
 
 		// Query the database to get the inserted account
 		var updatedAccount dataset.Account
-		row := database.Db().QueryRow("SELECT * FROM account WHERE id = $1;", TestUpdatedAccount.ID)
+		row := database.Db().QueryRow("SELECT id,username, email, firstname, lastname, role, status, created_at, updated_at FROM account WHERE id = $1;", TestUpdatedAccount.ID)
 		err = row.Scan(&updatedAccount.ID, &updatedAccount.Username, &updatedAccount.Email, &updatedAccount.Firstname, &updatedAccount.Lastname, &updatedAccount.Role, &updatedAccount.Status, &updatedAccount.Created_at, &updatedAccount.Updated_at)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
@@ -460,7 +460,7 @@ func TestLogin(t *testing.T) {
 		Firstname:  "Jules",
 		Lastname:   "Doe",
 		Role:       "standard",
-		Status:     "pending",
+		Status:     "active",
 		Created_at: time.Now().Truncate(time.Second),
 		Updated_at: time.Now().Truncate(time.Second),
 	}
@@ -518,6 +518,35 @@ func TestLogin(t *testing.T) {
 
 		if receivedToken.Token == "" {
 			t.Errorf("Expected token but got nil")
+		}
+	})
+	t.Run("Login pending user", func(t *testing.T) {
+
+		// set status to pending in DB
+		statement, err := database.Db().Prepare("UPDATE account SET status = 'pending' WHERE username = $1;")
+		if err != nil {
+			t.Fatalf("failed to prepare update statement: %v", err)
+		}
+		defer statement.Close()
+
+		_, err = statement.Exec(newUser.Username)
+		if err != nil {
+			t.Fatalf("failed to execute update query: %v", err)
+		}
+
+		// Set up a test scenario: sending a POST request with JSON data
+		req, err := http.NewRequest("POST", "/login", bytes.NewBuffer(jsonData))
+		if err != nil {
+			t.Fatalf("Failed to create request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Check the HTTP status code
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
 		}
 	})
 }

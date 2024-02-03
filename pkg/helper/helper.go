@@ -1,6 +1,8 @@
 package helper
 
 import (
+	"crypto/rand"
+	"math/big"
 	"net/smtp"
 	"strconv"
 
@@ -66,6 +68,19 @@ func FinItemIDByItemName(inventories dataset.Inventories, itemname string) uint 
 		}
 	}
 	return 0
+}
+
+func GenerateRandomCode(length int) (string, error) {
+	const charset = "pimpMyPackIsBetterThanLighterPack"
+	var code string
+	for i := 0; i < length; i++ {
+		charIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", err
+		}
+		code += string(charset[charIndex.Int64()])
+	}
+	return code, nil
 }
 
 func SendEmail(to, subject, body string) error {
