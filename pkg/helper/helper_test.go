@@ -1,7 +1,6 @@
 package helper
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"testing"
@@ -21,16 +20,17 @@ func TestMain(m *testing.M) {
 
 }
 
-func TestSendEmail(t *testing.T) {
-	mailRcpt := "pimpmypack@alki.earth"
-	mailSubject := "PimpMyPack - Test"
-	mailBody := "This is a test email from PimpMyPack."
-
-	t.Run("Test sending email", func(t *testing.T) {
-		fmt.Println("Running TestSendEmail")
-		err := SendEmail(mailRcpt, mailSubject, mailBody)
-		if err != nil {
-			t.Error(err)
-		}
-	})
-}
+// should implement a smtp mock server to test this function
+// func TestSendEmail(t *testing.T) {
+//	mailRcpt := "pimpmypack@alki.earth"
+//	mailSubject := "PimpMyPack - Test"
+//	mailBody := "This is a test email from PimpMyPack."
+//
+//	t.Run("Test sending email", func(t *testing.T) {
+//		fmt.Println("Running TestSendEmail")
+//		err := SendEmail(mailRcpt, mailSubject, mailBody)
+//		if err != nil {
+//			t.Error(err)
+//		}
+//	})
+//}
