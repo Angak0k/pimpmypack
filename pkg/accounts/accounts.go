@@ -118,7 +118,7 @@ func sendConfirmationEmail(u dataset.User, code string) error {
 // @Router /confirmemail [get]
 func ConfirmEmail(c *gin.Context) {
 
-	//Retrieve the fonfirmation code from the url query
+	// Retrieve the confirmation code from the url query
 	confirmationCode := c.Query("code")
 	userID := c.Query("id")
 	if confirmationCode == "" || userID == "" {
