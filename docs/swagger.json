@@ -1,17 +1,997 @@
 {
+    "schemes": [
+        "https"
+    ],
     "swagger": "2.0",
     "info": {
-        "description": "This is an API server to manage Backpack Inventory",
+        "description": "API server to manage Backpack Inventory and Packing Lists",
         "title": "PimpMyPack API",
         "contact": {},
         "version": "1.0"
     },
-    "host": "pimpmypack.alki.earth",
-    "basePath": "/api/v1",
+    "host": "pmp-dev.alki.earth",
+    "basePath": "/api",
     "paths": {
-        "/login": {
+        "/admin/accounts": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get all accounts - for admin use only",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Get all accounts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Account"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
-                "description": "Logs in a user by providing username and password",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new account - for admin use only",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Create a new account",
+                "parameters": [
+                    {
+                        "description": "Account Information",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Account"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Account"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/accounts/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get account by ID - for admin use only",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Get account by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Account ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Account"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update account by ID - for admin use only",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Update account by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Account ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Account Information",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Account"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Account"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Delete account by ID - for admin use only",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Delete account by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Account ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.OkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/inventories": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Retrieves a list of all inventories -  for admin use only",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Get all inventories",
+                "responses": {
+                    "200": {
+                        "description": "List of Inventories",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Inventory"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Creates an inventory -  for admin use only",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Create an inventory",
+                "parameters": [
+                    {
+                        "description": "Inventory",
+                        "name": "inventory",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Inventory"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Inventory"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/inventories/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Retrieves an inventory by ID -  for admin use only",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Get an inventory by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Inventory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Inventory"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Updates an inventory by ID -  for admin use only",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Update an inventory by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Inventory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Inventory",
+                        "name": "inventory",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Inventory"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Inventory"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Deletes an inventory by ID -  for admin use only",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Delete an inventory by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Inventory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inventory deleted",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.OkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/packcontents": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get all pack contents - for admin use only",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Get all pack contents",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dataset.PackContent"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new pack content - for admin use only",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Create a new pack content",
+                "parameters": [
+                    {
+                        "description": "Pack Content",
+                        "name": "packcontent",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dataset.PackContent"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.PackContent"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/packcontents/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get pack content by ID - for admin use only",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Get pack content by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pack Content ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.PackContent"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update a pack content by ID - for admin use only",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Update a pack content by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pack Content ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pack Content",
+                        "name": "packcontent",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dataset.PackContent"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.PackContent"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Delete a pack content by ID - for admin use only",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Delete a pack content by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pack Content ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "message",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/packs": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get all packs - for admin use only",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Get all packs",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dataset.Pack"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new pack - for admin use only",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Create a new pack",
+                "parameters": [
+                    {
+                        "description": "Pack",
+                        "name": "pack",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Pack"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Pack"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/packs/:id/packcontents": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get all pack contents - for admin use only",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Get all pack contents",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dataset.PackContent"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/packs/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Get pack by ID - for admin use only",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Get pack by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pack ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Pack"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Pack not found",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update a pack by ID - for admin use only",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Internal"
+                ],
+                "summary": "[ADMIN] Update a pack by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pack ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pack",
+                        "name": "pack",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Pack"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Pack"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/confirmemail": {
+            "get": {
+                "description": "Confirm email address by providing username and email",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Confirm email address",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.OkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/forgotpassword": {
+            "post": {
+                "description": "Send a new password to the user's email",
                 "consumes": [
                     "application/json"
                 ],
@@ -21,48 +1001,118 @@
                 "tags": [
                     "Public"
                 ],
-                "summary": "User login",
+                "summary": "Reset password",
                 "parameters": [
                     {
-                        "description": "Username",
-                        "name": "username",
+                        "description": "Email Address",
+                        "name": "input",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "string"
-                        }
-                    },
-                    {
-                        "description": "Password",
-                        "name": "password",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/dataset.ForgotPasswordInput"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "token",
+                        "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dataset.OkResponse"
                         }
                     },
-                    "403": {
-                        "description": "error: credentials are incorrect or token generation failed",
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/myaccount": {
+        "/login": {
+            "post": {
+                "description": "Log in a user by providing username and password",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public"
+                ],
+                "summary": "User login",
+                "parameters": [
+                    {
+                        "description": "Credentials Info",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dataset.LoginInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.Token"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/register": {
+            "post": {
+                "description": "Register a new user with username, password, email, firstname, and lastname",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Register new user",
+                "parameters": [
+                    {
+                        "description": "Register Informations",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dataset.RegisterInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.OkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/myaccount": {
             "get": {
                 "security": [
                     {
@@ -84,25 +1134,22 @@
                             "$ref": "#/definitions/dataset.Account"
                         }
                     },
-                    "400": {
-                        "description": "error",
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "error: Account not found",
+                        "description": "Account not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "error",
+                        "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
@@ -143,23 +1190,27 @@
                         }
                     },
                     "400": {
-                        "description": "error",
+                        "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "error",
+                        "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/myinventory": {
+        "/v1/myinventory": {
             "get": {
                 "security": [
                     {
@@ -184,11 +1235,22 @@
                             }
                         }
                     },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No Inventory Found",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
@@ -223,7 +1285,7 @@
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
+                        "description": "Inventory Updated",
                         "schema": {
                             "$ref": "#/definitions/dataset.Inventory"
                         }
@@ -231,21 +1293,25 @@
                     "400": {
                         "description": "Invalid payload",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/myinventory/{id}": {
+        "/v1/myinventory/{id}": {
             "get": {
                 "security": [
                     {
@@ -271,37 +1337,33 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Inventory",
                         "schema": {
                             "$ref": "#/definitions/dataset.Inventory"
                         }
                     },
-                    "400": {
-                        "description": "Invalid ID format",
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "This item does not belong to you",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Inventory not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
@@ -343,13 +1405,20 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Inventory Updated",
                         "schema": {
                             "$ref": "#/definitions/dataset.Inventory"
                         }
                     },
                     "400": {
                         "description": "Invalid payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
@@ -372,7 +1441,7 @@
                 }
             }
         },
-        "/mypack": {
+        "/v1/mypack": {
             "post": {
                 "security": [
                     {
@@ -403,29 +1472,33 @@
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
+                        "description": "Pack created",
                         "schema": {
                             "$ref": "#/definitions/dataset.Pack"
                         }
                     },
                     "400": {
-                        "description": "error",
+                        "description": "Invalid Body format",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "error",
+                        "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/mypack/import": {
+        "/v1/mypack/import": {
             "post": {
                 "security": [
                     {
@@ -454,25 +1527,33 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "message",
+                        "description": "CSV data imported successfully",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dataset.OkResponse"
                         }
                     },
                     "400": {
-                        "description": "error",
+                        "description": "Invalid CSV format",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/mypack/{id}": {
+        "/v1/mypack/{id}": {
             "get": {
                 "security": [
                     {
@@ -504,24 +1585,33 @@
                         }
                     },
                     "400": {
-                        "description": "error",
+                        "description": "Invalid ID format",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "This pack does not belong to you",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "error",
+                        "description": "Pack not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "error",
+                        "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
@@ -563,23 +1653,33 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Pack updated",
                         "schema": {
                             "$ref": "#/definitions/dataset.Pack"
                         }
                     },
                     "400": {
-                        "description": "error",
+                        "description": "Invalid Payload",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "This pack does not belong to you",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "error",
+                        "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
@@ -609,32 +1709,179 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "message",
+                        "description": "Pack deleted",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dataset.OkResponse"
                         }
                     },
                     "400": {
-                        "description": "error",
+                        "description": "Invalid ID format",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "This pack does not belong to you",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "error",
+                        "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/mypackcontent": {
+        "/v1/mypack/{id}/packcontent/{item_id}": {
+            "put": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Update My pack content ID by Pack ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Packs"
+                ],
+                "summary": "Update My pack content ID by Pack ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pack ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Item ID",
+                        "name": "item_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Pack Content",
+                        "name": "packcontent",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dataset.PackContent"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pack Content updated",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.PackContent"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid Body format",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "This pack does not belong to you",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Delete a pack content by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Packs"
+                ],
+                "summary": "Delete a pack content by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pack ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Item ID",
+                        "name": "item_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pack Item deleted",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.OkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "This pack does not belong to you",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/mypackcontent": {
             "post": {
                 "security": [
                     {
@@ -671,23 +1918,33 @@
                         }
                     },
                     "400": {
-                        "description": "error",
+                        "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "error",
+                        "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/mypackcontent/{id}": {
+        "/v1/mypackcontent/{id}": {
             "get": {
                 "security": [
                     {
@@ -713,85 +1970,91 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Pack Item",
                         "schema": {
                             "$ref": "#/definitions/dataset.PackContent"
                         }
                     },
                     "400": {
-                        "description": "error",
+                        "description": "Invalid ID format",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "This pack does not belong to you",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "error",
+                        "description": "Pack not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "error",
+                        "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
-            },
-            "delete": {
+            }
+        },
+        "/v1/mypacks": {
+            "get": {
                 "security": [
                     {
                         "Bearer": []
                     }
                 ],
-                "description": "Delete a pack content by ID",
+                "description": "Get my packs",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "Packs"
                 ],
-                "summary": "Delete a pack content by ID",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "Pack Content ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
+                "summary": "Get My Packs",
                 "responses": {
                     "200": {
-                        "description": "message",
+                        "description": "Packs",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dataset.Pack"
                             }
                         }
                     },
-                    "400": {
-                        "description": "error",
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "No pack found",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "error",
+                        "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/mypassword": {
+        "/v1/mypassword": {
             "put": {
                 "security": [
                     {
@@ -811,76 +2074,38 @@
                 "summary": "Update password",
                 "parameters": [
                     {
-                        "description": "Updated Password",
+                        "description": "New Password",
                         "name": "password",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/dataset.PasswordUpdateInput"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Updated password successfully",
+                        "description": "Password updated",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/dataset.OkResponse"
                         }
                     },
                     "400": {
-                        "description": "error",
+                        "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "error",
+                        "description": "Internal Server Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/register": {
-            "post": {
-                "description": "Register a new user with username, password, email, firstname, and lastname",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Public"
-                ],
-                "summary": "Register new user",
-                "parameters": [
-                    {
-                        "description": "Register Info",
-                        "name": "input",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dataset.RegisterInput"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "registration success",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/dataset.ErrorResponse"
                         }
                     }
                 }
@@ -916,6 +2141,25 @@
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "dataset.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "dataset.ForgotPasswordInput": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
                     "type": "string"
                 }
             }
@@ -957,6 +2201,29 @@
                     "type": "integer"
                 },
                 "weight_unit": {
+                    "type": "string"
+                }
+            }
+        },
+        "dataset.LoginInput": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "dataset.OkResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
                     "type": "string"
                 }
             }
@@ -1013,6 +2280,17 @@
                 }
             }
         },
+        "dataset.PasswordUpdateInput": {
+            "type": "object",
+            "required": [
+                "password"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
         "dataset.RegisterInput": {
             "type": "object",
             "required": [
@@ -1036,6 +2314,14 @@
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "dataset.Token": {
+            "type": "object",
+            "properties": {
+                "token": {
                     "type": "string"
                 }
             }
