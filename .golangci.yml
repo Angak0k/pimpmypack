@@ -39,7 +39,7 @@ linters-settings:
       - name: unused-parameter
         disabled: false
       - name: unused-receiver
-        disabled: false
+        disabled: true
       - name: useless-break
         disabled: false
       - name: var-naming

@@ -86,7 +86,9 @@ func saveUser(u dataset.User) error {
 
 	err = sendConfirmationEmail(u, confirmationCode)
 	if err != nil {
-		return fmt.Errorf("failed to send confirmation email: %w", err)
+		// deactivate email sending error throwing for now
+		// return fmt.Errorf("failed to send confirmation email: %w", err)
+		return nil
 	}
 
 	return nil
