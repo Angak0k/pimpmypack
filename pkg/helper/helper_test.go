@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
 )
 
 func TestMain(m *testing.M) {
@@ -34,18 +33,15 @@ type Email struct {
 }
 
 // SendMail records the email sending action without actually sending an email.
-func (m *MockEmailSender) SendEmail(to, subject, body string, _ dataset.MailServer) error {
+func (m *MockEmailSender) SendEmail(to, subject, body string) error {
 	m.SentEmails = append(m.SentEmails, Email{To: to, Subject: subject, Body: body})
 	return nil // Return nil to simulate a successful send
 }
 func TestSendEmail(t *testing.T) {
+	// Create a new instance of the mock
 	mockSender := &MockEmailSender{}
 
-	// Example test using the mock
-	mailServer := dataset.MailServer{
-		// Configuration for your mock mail server
-	}
-	err := mockSender.SendEmail("example@example.com", "Test Subject", "This is a test.", mailServer)
+	err := mockSender.SendEmail("example@example.com", "Test Subject", "This is a test.")
 	if err != nil {
 		t.Errorf("SendMail failed: %v", err)
 	}
@@ -53,5 +49,15 @@ func TestSendEmail(t *testing.T) {
 	// Verify that the email was "sent"
 	if len(mockSender.SentEmails) != 1 {
 		t.Errorf("Expected 1 email to be sent, got %d", len(mockSender.SentEmails))
+	}
+}
+
+func TestGenerateRandomCode(t *testing.T) {
+	code, err := GenerateRandomCode(10)
+	if err != nil {
+		t.Errorf("GenerateRandomCode failed: %v", err)
+	}
+	if len(code) != 10 {
+		t.Errorf("Expected code length of 10, got %d", len(code))
 	}
 }

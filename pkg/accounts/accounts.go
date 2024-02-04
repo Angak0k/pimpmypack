@@ -102,7 +102,7 @@ func sendConfirmationEmail(u dataset.User, code string) error {
 	mailBody := "Please confirm your email address by clicking on the following link: " + config.Scheme + "://" + config.HostName + "/api/confirmemail?id=" + strconv.Itoa(int(u.ID)) + "&code=" + code
 	smtpClient := helper.SMTPClient{}
 
-	err := smtpClient.SendEmail(mailRcpt, mailSubject, mailBody, config.MailServer)
+	err := smtpClient.SendEmail(mailRcpt, mailSubject, mailBody)
 	if err != nil {
 		return fmt.Errorf("failed to send confirmation email: %w", err)
 	}
@@ -219,7 +219,7 @@ func forgotPassword(email string) error {
 	mailBody := "Hi! your password has been reset. If you did not request this, please contact us.\n\nYour new password is: " + newPassword
 	smtpClient := helper.SMTPClient{}
 
-	err = smtpClient.SendEmail(mailRcpt, mailSubject, mailBody, config.MailServer)
+	err = smtpClient.SendEmail(mailRcpt, mailSubject, mailBody)
 	if err != nil {
 		return fmt.Errorf("failed to send password reset email: %w", err)
 	}
