@@ -34,7 +34,7 @@ type Email struct {
 }
 
 // SendMail records the email sending action without actually sending an email.
-func (m *MockEmailSender) SendEmail(to, subject, body string, mailserver dataset.MailServer) error {
+func (m *MockEmailSender) SendEmail(to, subject, body string, _ dataset.MailServer) error {
 	m.SentEmails = append(m.SentEmails, Email{To: to, Subject: subject, Body: body})
 	return nil // Return nil to simulate a successful send
 }
