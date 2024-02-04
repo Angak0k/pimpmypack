@@ -6,7 +6,6 @@ import (
 	"net/smtp"
 	"strconv"
 
-	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/dataset"
 	"github.com/joho/godotenv"
 )
@@ -89,15 +88,17 @@ type EmailSender interface {
 }
 
 // SMTPClient struct implements EmailSender interface.
-type SMTPClient struct{}
+type SMTPClient struct {
+	Server dataset.MailServer
+}
 
 // SendMail sends an email using the SMTP protocol.
 func (s *SMTPClient) SendEmail(to, subject, body string) error {
-	auth := smtp.PlainAuth("", config.MailServer.MailUsername, config.MailServer.MailPassword, config.MailServer.MailServer)
+	auth := smtp.PlainAuth("", s.Server.MailUsername, s.Server.MailPassword, s.Server.MailServer)
 	msg := []byte("To: " + to + "\r\n" +
 		"Subject: " + subject + "\r\n" +
 		"\r\n" +
 		body + "\r\n")
 
-	return smtp.SendMail(config.MailServer.MailServer+":"+strconv.Itoa(config.MailServer.MailPort), auth, config.MailServer.MailIdentity, []string{to}, msg)
+	return smtp.SendMail(s.Server.MailServer+":"+strconv.Itoa(s.Server.MailPort), auth, s.Server.MailIdentity, []string{to}, msg)
 }
