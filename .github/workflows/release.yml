@@ -51,33 +51,6 @@ jobs:
           TOKEN_HOUR_LIFESPAN: 1
         run: make test
 
-      - name: Install Swaggo
-        run: go install github.com/swaggo/swag/cmd/swag@latest
-      - name: Generate Swagger Documentation
-        run: |
-          # Generate Swagger documentation
-          $(go env GOPATH)/bin/swag init --tags \!Internal
-
-          # Configure Git
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-
-          # Create a new branch for the Swagger doc update
-          git checkout -b swagger-doc-update
-
-          # Commit and push if there are changes
-          git add docs/
-          git commit -m "Update Swagger documentation" -a || echo "No changes to commit"
-          git push origin swagger-doc-update
-      - name: Auto-merge
-        uses: pascalgn/automerge-action@v0.14.2
-        if: github.ref == 'refs/heads/swagger-doc-update'
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          mergeMethod: merge
-          commitMessage: "chore: merge swagger-doc-update into main"
-          pullRequestFilterLabels: "documentation"
-
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
