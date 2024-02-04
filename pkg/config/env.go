@@ -5,10 +5,13 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/Angak0k/pimpmypack/pkg/dataset"
 	"github.com/joho/godotenv"
 )
 
 var (
+	Scheme        string
+	HostName      string
 	DbHost        string
 	DbUser        string
 	DbPassword    string
@@ -17,6 +20,7 @@ var (
 	Stage         string
 	ApiSecret     string
 	TokenLifespan int
+	MailServer    dataset.MailServer
 )
 
 func EnvInit(envFilePath string) error {
@@ -29,6 +33,8 @@ func EnvInit(envFilePath string) error {
 		}
 	}
 
+	Scheme = os.Getenv("SCHEME")
+	HostName = os.Getenv("HOSTNAME")
 	DbHost = os.Getenv("DB_HOST")
 	DbUser = os.Getenv("DB_USER")
 	DbPassword = os.Getenv("DB_PASSWORD")
@@ -39,6 +45,16 @@ func EnvInit(envFilePath string) error {
 	TokenLifespan, err = strconv.Atoi(os.Getenv("TOKEN_HOUR_LIFESPAN"))
 	if err != nil {
 		TokenLifespan = 1
+	}
+	MailServer.MailIdentity = os.Getenv("MAIL_IDENTITY")
+	MailServer.MailUsername = os.Getenv("MAIL_USERNAME")
+	MailServer.MailPassword = os.Getenv("MAIL_PASSWORD")
+	MailServer.MailServer = os.Getenv("MAIL_SERVER")
+	if os.Getenv("MAIL_PORT") != "" {
+		MailServer.MailPort, err = strconv.Atoi(os.Getenv("MAIL_PORT"))
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

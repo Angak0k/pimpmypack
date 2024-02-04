@@ -1,6 +1,9 @@
 package helper
 
 import (
+	"crypto/rand"
+	"math/big"
+	"net/smtp"
 	"strconv"
 
 	"github.com/Angak0k/pimpmypack/pkg/dataset"
@@ -64,4 +67,38 @@ func FinItemIDByItemName(inventories dataset.Inventories, itemname string) uint 
 		}
 	}
 	return 0
+}
+
+func GenerateRandomCode(length int) (string, error) {
+	const charset = "pimpMyPackIsBetterThanLighterPack"
+	var code string
+	for i := 0; i < length; i++ {
+		charIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
+		if err != nil {
+			return "", err
+		}
+		code += string(charset[charIndex.Int64()])
+	}
+	return code, nil
+}
+
+// EmailSender defines the interface for sending emails.
+type EmailSender interface {
+	SendEmail(to, subject, body string) error
+}
+
+// SMTPClient struct implements EmailSender interface.
+type SMTPClient struct {
+	Server dataset.MailServer
+}
+
+// SendMail sends an email using the SMTP protocol.
+func (s *SMTPClient) SendEmail(to, subject, body string) error {
+	auth := smtp.PlainAuth("", s.Server.MailUsername, s.Server.MailPassword, s.Server.MailServer)
+	msg := []byte("To: " + to + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"\r\n" +
+		body + "\r\n")
+
+	return smtp.SendMail(s.Server.MailServer+":"+strconv.Itoa(s.Server.MailPort), auth, s.Server.MailIdentity, []string{to}, msg)
 }

@@ -22,7 +22,7 @@ import (
 // @Success 200 {object} dataset.Inventory "List of Inventories"
 // @Failure 404 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /inventories [get]
+// @Router /admin/inventories [get]
 func GetInventories(c *gin.Context) {
 
 	inventories, err := returnInventories()
@@ -77,7 +77,7 @@ func returnInventories() (*dataset.Inventories, error) {
 // @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 404 {object} dataset.ErrorResponse "No Inventory Found"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /myinventory [get]
+// @Router /v1/myinventory [get]
 func GetMyInventory(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
@@ -138,7 +138,7 @@ func returnInventoriesByUserID(user_id uint) (*dataset.Inventories, error) {
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 404 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /inventories/{id} [get]
+// @Router /admin/inventories/{id} [get]
 func GetInventoryByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
@@ -174,7 +174,7 @@ func GetInventoryByID(c *gin.Context) {
 // @Failure 403 {object} dataset.ErrorResponse "This item does not belong to you"
 // @Failure 404 {object} dataset.ErrorResponse "Inventory not found"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /myinventory/{id} [get]
+// @Router /v1/myinventory/{id} [get]
 func GetMyInventoryByID(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
@@ -235,7 +235,7 @@ func findInventoryById(id uint) (*dataset.Inventory, error) {
 // @Success 201 {object} dataset.Inventory
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /inventories [post]
+// @Router /admin/inventories [post]
 func PostInventory(c *gin.Context) {
 	var newInventory dataset.Inventory
 
@@ -265,7 +265,7 @@ func PostInventory(c *gin.Context) {
 // @Failure 400 {object} dataset.ErrorResponse "Invalid payload"
 // @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /myinventory [post]
+// @Router /v1/myinventory [post]
 func PostMyInventory(c *gin.Context) {
 	var newInventory dataset.Inventory
 
@@ -325,7 +325,7 @@ func InsertInventory(i *dataset.Inventory) error {
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /inventories/{id} [put]
+// @Router /admin/inventories/{id} [put]
 func PutInventoryByID(c *gin.Context) {
 	var updatedInventory dataset.Inventory
 
@@ -367,7 +367,7 @@ func PutInventoryByID(c *gin.Context) {
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
 // @Failure 403 {object} map[string]interface{} "This item does not belong to you"
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
-// @Router /myinventory/{id} [put]
+// @Router /v1/myinventory/{id} [put]
 func PutMyInventoryByID(c *gin.Context) {
 	var updatedInventory dataset.Inventory
 
@@ -436,7 +436,7 @@ func updateInventoryById(id uint, i *dataset.Inventory) error {
 // @Success 200 {object} dataset.OkResponse "Inventory deleted"
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /inventories/{id} [delete]
+// @Router /admin/inventories/{id} [delete]
 func DeleteInventoryByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))

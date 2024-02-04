@@ -25,7 +25,7 @@ import (
 // @Produce  json
 // @Success 200 {object} dataset.Packs
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /packs [get]
+// @Router /admin/packs [get]
 func GetPacks(c *gin.Context) {
 
 	packs, err := returnPacks()
@@ -86,7 +86,7 @@ func returnPacks() (dataset.Packs, error) {
 // @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
 // @Failure 404 {object} dataset.ErrorResponse "Pack not found"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /packs/{id} [get]
+// @Router /admin/packs/{id} [get]
 func GetPackByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
@@ -124,7 +124,7 @@ func GetPackByID(c *gin.Context) {
 // @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
 // @Failure 404 {object} dataset.ErrorResponse "Pack not found"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /mypack/{id} [get]
+// @Router /v1/mypack/{id} [get]
 func GetMyPackByID(c *gin.Context) {
 
 	user_id, err := security.ExtractTokenID(c)
@@ -191,7 +191,7 @@ func findPackById(id uint) (*dataset.Pack, error) {
 // @Success 201 {object} dataset.Pack
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /packs [post]
+// @Router /admin/packs [post]
 func PostPack(c *gin.Context) {
 	var newPack dataset.Pack
 
@@ -222,7 +222,7 @@ func PostPack(c *gin.Context) {
 // @Failure 400 {object} dataset.ErrorResponse "Invalid Body format"
 // @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /mypack [post]
+// @Router /v1/mypack [post]
 func PostMyPack(c *gin.Context) {
 	var newPack dataset.Pack
 
@@ -277,7 +277,7 @@ func insertPack(p *dataset.Pack) error {
 // @Success 200 {object} dataset.Pack
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /packs/{id} [put]
+// @Router /admin/packs/{id} [put]
 func PutPackByID(c *gin.Context) {
 	var updatedPack dataset.Pack
 	id, err := helper.StringToUint(c.Param("id"))
@@ -316,7 +316,7 @@ func PutPackByID(c *gin.Context) {
 // @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /mypack/{id} [put]
+// @Router /v1/mypack/{id} [put]
 func PutMyPackByID(c *gin.Context) {
 	var updatedPack dataset.Pack
 
@@ -386,7 +386,7 @@ func updatePackById(id uint, p *dataset.Pack) error {
 // @Success 200 {object} dataset.OkResponse
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /packs/{id} [delete]
+// @Router /admin/packs/{id} [delete]
 
 func DeletePackByID(c *gin.Context) {
 
@@ -418,7 +418,7 @@ func DeletePackByID(c *gin.Context) {
 // @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /mypack/{id} [delete]
+// @Router /v1/mypack/{id} [delete]
 func DeleteMyPackByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
@@ -474,7 +474,7 @@ func deletePackById(id uint) error {
 // @Produce  json
 // @Success 200 {object} dataset.PackContents
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /packcontents [get]
+// @Router /admin/packcontents [get]
 func GetPackContents(c *gin.Context) {
 
 	packContents, err := returnPackContents()
@@ -523,7 +523,7 @@ func returnPackContents() (*dataset.PackContents, error) {
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 404 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /packcontents/{id} [get]
+// @Router /admin/packcontents/{id} [get]
 func GetPackContentByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
@@ -574,7 +574,7 @@ func findPackContentById(id uint) (*dataset.PackContent, error) {
 // @Success 201 {object} dataset.PackContent
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /packcontents [post]
+// @Router /admin/packcontents [post]
 func PostPackContent(c *gin.Context) {
 	var newPackContent dataset.PackContent
 
@@ -606,7 +606,7 @@ func PostPackContent(c *gin.Context) {
 // @Failure 401 {object} dataset.ErrorResponse
 // @Failure 403 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /mypackcontent [post]
+// @Router /v1/mypackcontent [post]
 func PostMyPackContent(c *gin.Context) {
 	var newPackContent dataset.PackContent
 
@@ -674,7 +674,7 @@ func insertPackContent(pc *dataset.PackContent) error {
 // @Success 200 {object} dataset.PackContent
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /packcontents/{id} [put]
+// @Router /admin/packcontents/{id} [put]
 func PutPackContentByID(c *gin.Context) {
 
 	var updatedPackContent dataset.PackContent
@@ -716,7 +716,7 @@ func PutPackContentByID(c *gin.Context) {
 // @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /mypack/{id}/packcontent/{item_id} [put]
+// @Router /v1/mypack/{id}/packcontent/{item_id} [put]
 func PutMyPackContentByID(c *gin.Context) {
 
 	var updatedPackContent dataset.PackContent
@@ -791,7 +791,7 @@ func updatePackContentByID(id uint, pc *dataset.PackContent) error {
 // @Success 200 {object} map[string]string "message"
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /packcontents/{id} [delete]
+// @Router /admin/packcontents/{id} [delete]
 func DeletePackContentByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
@@ -823,7 +823,7 @@ func DeletePackContentByID(c *gin.Context) {
 // @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /mypack/{id}/packcontent/{item_id} [delete]
+// @Router /v1/mypack/{id}/packcontent/{item_id} [delete]
 func DeleteMyPackContentByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
@@ -885,7 +885,7 @@ func deletePackContentById(id uint) error {
 // @Failure 400 {object} dataset.ErrorResponse
 // @Failure 404 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /packs/:id/packcontents [get]
+// @Router /admin/packs/:id/packcontents [get]
 func GetPackContentsByPackID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
@@ -921,7 +921,7 @@ func GetPackContentsByPackID(c *gin.Context) {
 // @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
 // @Failure 404 {object} dataset.ErrorResponse "Pack not found"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /mypackcontent/{id} [get]
+// @Router /v1/mypackcontent/{id} [get]
 func GetMyPackContentsByPackID(c *gin.Context) {
 	var packContents *dataset.PackContentWithItems
 
@@ -999,7 +999,7 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 // @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 404 {object} dataset.ErrorResponse "No pack found"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /mypacks [get]
+// @Router /v1/mypacks [get]
 func GetMyPacks(c *gin.Context) {
 	user_id, err := security.ExtractTokenID(c)
 
@@ -1081,7 +1081,7 @@ func checkPackOwnership(id uint, user_id uint) (bool, error) {
 // @Failure 400 {object} dataset.ErrorResponse "Invalid CSV format"
 // @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /mypack/import [post]
+// @Router /v1/mypack/import [post]
 func ImportFromLighterPack(c *gin.Context) {
 	var lighterPack dataset.LighterPack
 

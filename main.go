@@ -59,6 +59,8 @@ func main() {
 	public := router.Group("/api")
 	public.POST("/register", accounts.Register)
 	public.POST("/login", accounts.Login)
+	public.GET("/confirmemail", accounts.ConfirmEmail)
+	public.POST("/forgotpassword", accounts.ForgotPassword)
 
 	protected := router.Group("/api/v1")
 	protected.Use(security.JwtAuthProcessor())
