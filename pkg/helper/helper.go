@@ -6,7 +6,6 @@ import (
 	"net/smtp"
 	"strconv"
 
-	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/dataset"
 	"github.com/joho/godotenv"
 )
@@ -83,15 +82,21 @@ func GenerateRandomCode(length int) (string, error) {
 	return code, nil
 }
 
-func SendEmail(to, subject, body string) error {
+// EmailSender defines the interface for sending emails.
+type EmailSender interface {
+	SendEmail(to, subject, body string, mailserver dataset.MailServer) error
+}
 
-	auth := smtp.PlainAuth("", config.MailUsername, config.MailPassword, config.MailServer)
+// SMTPClient struct implements EmailSender interface.
+type SMTPClient struct{}
 
+// SendMail sends an email using the SMTP protocol.
+func (s *SMTPClient) SendEmail(to, subject, body string, mailserver dataset.MailServer) error {
+	auth := smtp.PlainAuth("", mailserver.MailUsername, mailserver.MailPassword, mailserver.MailServer)
 	msg := []byte("To: " + to + "\r\n" +
 		"Subject: " + subject + "\r\n" +
 		"\r\n" +
 		body + "\r\n")
 
-	return smtp.SendMail(config.MailServer+":"+strconv.Itoa(config.MailPort), auth, config.MailIdentity, []string{to}, msg)
-
+	return smtp.SendMail(mailserver.MailServer+":"+strconv.Itoa(mailserver.MailPort), auth, mailserver.MailIdentity, []string{to}, msg)
 }

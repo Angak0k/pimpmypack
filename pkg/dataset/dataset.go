@@ -115,6 +115,14 @@ type User struct {
 	Updated_at   time.Time `json:"updated_at"`
 }
 
+type MailServer struct {
+	MailServer   string `json:"mail_server"`
+	MailPort     int    `json:"mail_port"`
+	MailIdentity string `json:"mail_identity"`
+	MailUsername string `json:"mail_username"`
+	MailPassword string `json:"mail_password"`
+}
+
 type LoginInput struct {
 	Username string `json:"username" binding:"required"`
 	Password string `json:"password" binding:"required"`
