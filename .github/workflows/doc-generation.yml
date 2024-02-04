@@ -23,7 +23,7 @@ jobs:
 
       - name: Generate Swagger Documentation
         run: |
-          $(go env GOPATH)/bin/swag init
+          $(go env GOPATH)/bin/swag init --tags \!Internal
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add docs/ 
