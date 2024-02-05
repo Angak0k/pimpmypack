@@ -57,5 +57,39 @@ func EnvInit(envFilePath string) error {
 		}
 	}
 
+	// validate configuration
+	switch {
+	case Scheme != "http" && Scheme != "https":
+		Scheme = "https"
+	case HostName == "":
+		return fmt.Errorf("HOSTNAME is not set and needed for generationg links")
+	case DbHost == "":
+		return fmt.Errorf("DB_HOST is not set")
+	case DbUser == "":
+		return fmt.Errorf("DB_USER is not set")
+	case DbPassword == "":
+		return fmt.Errorf("DB_PASSWORD is not set")
+	case DbName == "":
+		return fmt.Errorf("DB_NAME is not set")
+	case DbPort == "":
+		DbPort = "5432"
+	case Stage == "":
+		Stage = "prod"
+	case ApiSecret == "":
+		ApiSecret = "defaultApiSecret"
+	case TokenLifespan == 0:
+		TokenLifespan = 1
+	case MailServer.MailIdentity == "":
+		return fmt.Errorf("MAIL_IDENTITY is not set")
+	case MailServer.MailUsername == "":
+		return fmt.Errorf("MAIL_USERNAME is not set")
+	case MailServer.MailPassword == "":
+		return fmt.Errorf("MAIL_PASSWORD is not set")
+	case MailServer.MailServer == "":
+		return fmt.Errorf("MAIL_SERVER is not set")
+	case MailServer.MailPort == 0:
+		MailServer.MailPort = 587
+	}
+
 	return nil
 }
