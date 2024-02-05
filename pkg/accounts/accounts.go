@@ -48,50 +48,54 @@ func Register(c *gin.Context) {
 	user.Created_at = time.Now().Truncate(time.Second)
 	user.Updated_at = time.Now().Truncate(time.Second)
 
-	err := saveUser(user)
+	err, emailSended := registerUser(user)
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "registration success"})
+	if !emailSended {
+		c.JSON(http.StatusAccepted, gin.H{"message": "registration succeed but failed to send confirmation email"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "registration succeed, please check your email to confirm your account"})
 
 }
 
-func saveUser(u dataset.User) error {
+func registerUser(u dataset.User) (error, bool) {
 	var id int
 
 	confirmationCode, err := helper.GenerateRandomCode(30)
 	if err != nil {
-		return fmt.Errorf("failed to generate confirmation code: %w", err)
+		return fmt.Errorf("failed to generate confirmation code: %w", err), false
 	}
 
 	err = database.Db().QueryRow("INSERT INTO account (username, email, firstname, lastname, role, status, confirmation_code, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8, $9) RETURNING id;", u.Username, u.Email, u.Firstname, u.Lastname, u.Role, u.Status, confirmationCode, u.Created_at, u.Updated_at).Scan(&id)
 	if err != nil {
-		return fmt.Errorf("failed to insert user: %w", err)
+		return fmt.Errorf("failed to insert user: %w", err), false
 	}
 
 	u.ID = uint(id)
 
 	hashedPassword, err := security.HashPassword(u.Password)
 	if err != nil {
-		return fmt.Errorf("failed to hash password: %w", err)
+		return fmt.Errorf("failed to hash password: %w", err), false
 	}
 
 	err = database.Db().QueryRow("INSERT INTO password (user_id, password, updated_at) VALUES ($1,$2,$3) RETURNING id;", id, hashedPassword, u.Updated_at).Scan(&id)
 	if err != nil {
-		return fmt.Errorf("failed to insert password: %w", err)
+		return fmt.Errorf("failed to insert password: %w", err), false
 	}
 
 	err = sendConfirmationEmail(u, confirmationCode)
 	if err != nil {
-		// deactivate email sending error throwing for now
-		// return fmt.Errorf("failed to send confirmation email: %w", err)
-		return nil
+		// we haven't succed to send the email but the user is created
+		return nil, false
 	}
 
-	return nil
+	return nil, true
 }
 
 // Send confirmation email
