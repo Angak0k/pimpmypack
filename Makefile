@@ -10,4 +10,7 @@ build: test
 	go build
 
 lint:
-	docker run --rm -v $(PWD):/app -w /app golangci/golangci-lint:v1.52 golangci-lint run -v
+	@echo "Running staticcheck..."
+	@staticcheck ./...
+	@echo "Running golangci-lint..."
+	@golangci-lint run --timeout=5m --out-format=colored-line-number	

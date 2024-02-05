@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	"github.com/Angak0k/pimpmypack/pkg/dataset"
-	"github.com/joho/godotenv"
 )
 
 func StringToUint(s string) (uint, error) {
@@ -28,15 +27,6 @@ func ConvertWeightUnit(unit string) string {
 		return "IMPERIAL"
 	}
 	return "METRIC"
-}
-
-func EnvInit() error {
-	// Load environment variables from .env file
-	err := godotenv.Load()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func FinUserIDByUsername(users []dataset.User, username string) uint {

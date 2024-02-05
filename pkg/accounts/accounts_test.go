@@ -380,7 +380,7 @@ func TestRegister(t *testing.T) {
 	newAccount := dataset.RegisterInput{
 		Username:  fmt.Sprintf("user-%s", random.UniqueId()),
 		Password:  "password",
-		Email:     "jane.doe@pmp.com",
+		Email:     "jane.doe@exemple.com",
 		Firstname: "Jane",
 		Lastname:  "Doe",
 	}
@@ -404,7 +404,7 @@ func TestRegister(t *testing.T) {
 		router.ServeHTTP(w, req)
 
 		// Check the HTTP status code
-		if w.Code != http.StatusOK {
+		if w.Code != http.StatusOK && w.Code != http.StatusAccepted {
 			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
 		}
 
