@@ -10,7 +10,7 @@ func TestEnvInit(t *testing.T) {
 
 	t.Run("Importing valid env file", func(t *testing.T) {
 		// Test a valid .env file
-		err := EnvInit(".env.testSuccess")
+		err := EnvInit("test/.env.testSuccess")
 		if err != nil {
 			t.Errorf("EnvInit failed: %v", err)
 		}
@@ -18,7 +18,7 @@ func TestEnvInit(t *testing.T) {
 
 	t.Run("Importing invalid env file", func(t *testing.T) {
 		// Test an invalid .env file
-		err := EnvInit(".env.testFailure")
+		err := EnvInit("test/.env.testFailure")
 		if err == nil {
 			t.Errorf("Expected an error, got nil")
 		}
