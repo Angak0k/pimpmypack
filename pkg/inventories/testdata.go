@@ -108,9 +108,9 @@ func loadingInventoryDataset() error {
 	for i := range inventories {
 		switch inventories[i].User_id {
 		case 1:
-			inventories[i].User_id = helper.FinUserIDByUsername(users, users[0].Username)
+			inventories[i].User_id = helper.FindUserIDByUsername(users, users[0].Username)
 		case 2:
-			inventories[i].User_id = helper.FinUserIDByUsername(users, users[0].Username)
+			inventories[i].User_id = helper.FindUserIDByUsername(users, users[0].Username)
 		}
 	}
 

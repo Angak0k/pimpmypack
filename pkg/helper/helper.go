@@ -29,7 +29,7 @@ func ConvertWeightUnit(unit string) string {
 	return "METRIC"
 }
 
-func FinUserIDByUsername(users []dataset.User, username string) uint {
+func FindUserIDByUsername(users []dataset.User, username string) uint {
 	// Find a user ID by username
 	for _, user := range users {
 		if user.Username == username {
@@ -39,7 +39,7 @@ func FinUserIDByUsername(users []dataset.User, username string) uint {
 	return 0
 }
 
-func FinPackIDByPackName(packs dataset.Packs, packname string) uint {
+func FindPackIDByPackName(packs dataset.Packs, packname string) uint {
 	// Find a pack ID by packname
 	for _, pack := range packs {
 		if pack.Pack_name == packname {
@@ -49,7 +49,7 @@ func FinPackIDByPackName(packs dataset.Packs, packname string) uint {
 	return 0
 }
 
-func FinItemIDByItemName(inventories dataset.Inventories, itemname string) uint {
+func FindItemIDByItemName(inventories dataset.Inventories, itemname string) uint {
 	// Find an item ID by itemname
 	for _, item := range inventories {
 		if item.Item_name == itemname {
@@ -72,7 +72,7 @@ func GenerateRandomCode(length int) (string, error) {
 	return code, nil
 }
 
-// EmailSender defines the interface for sending emails.
+// EmailSender defines the interface for sending emails. Needed for testing without real SMTP server.
 type EmailSender interface {
 	SendEmail(to, subject, body string) error
 }

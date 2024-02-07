@@ -190,9 +190,9 @@ func loadingPackDataset() error {
 	for i := range inventories_user_pack1 {
 		switch inventories_user_pack1[i].User_id {
 		case 1:
-			inventories_user_pack1[i].User_id = helper.FinUserIDByUsername(users, users[0].Username)
+			inventories_user_pack1[i].User_id = helper.FindUserIDByUsername(users, users[0].Username)
 		case 2:
-			inventories_user_pack1[i].User_id = helper.FinUserIDByUsername(users, users[0].Username)
+			inventories_user_pack1[i].User_id = helper.FindUserIDByUsername(users, users[0].Username)
 		}
 	}
 
@@ -200,9 +200,9 @@ func loadingPackDataset() error {
 	for i := range packs {
 		switch packs[i].User_id {
 		case 1:
-			packs[i].User_id = helper.FinUserIDByUsername(users, users[0].Username)
+			packs[i].User_id = helper.FindUserIDByUsername(users, users[0].Username)
 		case 2:
-			packs[i].User_id = helper.FinUserIDByUsername(users, users[0].Username)
+			packs[i].User_id = helper.FindUserIDByUsername(users, users[0].Username)
 		}
 	}
 
@@ -237,34 +237,34 @@ func loadingPackDataset() error {
 	for i := range packItems {
 		switch packItems[i].Pack_id {
 		case 1:
-			packItems[i].Pack_id = helper.FinPackIDByPackName(packs, "First Pack")
+			packItems[i].Pack_id = helper.FindPackIDByPackName(packs, "First Pack")
 		case 2:
-			packItems[i].Pack_id = helper.FinPackIDByPackName(packs, "Second Pack")
+			packItems[i].Pack_id = helper.FindPackIDByPackName(packs, "Second Pack")
 		case 3:
-			packItems[i].Pack_id = helper.FinPackIDByPackName(packs, "Third Pack")
+			packItems[i].Pack_id = helper.FindPackIDByPackName(packs, "Third Pack")
 		case 4:
-			packItems[i].Pack_id = helper.FinPackIDByPackName(packs, "Special Pack")
+			packItems[i].Pack_id = helper.FindPackIDByPackName(packs, "Special Pack")
 		}
 		switch packItems[i].Item_id {
 		case 1:
-			packItems[i].Item_id = helper.FinItemIDByItemName(inventories_user_pack1, "Backpack")
+			packItems[i].Item_id = helper.FindItemIDByItemName(inventories_user_pack1, "Backpack")
 		case 2:
-			packItems[i].Item_id = helper.FinItemIDByItemName(inventories_user_pack1, "Tent")
+			packItems[i].Item_id = helper.FindItemIDByItemName(inventories_user_pack1, "Tent")
 		case 3:
-			packItems[i].Item_id = helper.FinItemIDByItemName(inventories_user_pack1, "Sleeping Bag")
+			packItems[i].Item_id = helper.FindItemIDByItemName(inventories_user_pack1, "Sleeping Bag")
 		}
 	}
 
 	for i := range packWithItems {
 		switch packWithItems[i].Pack_id {
 		case 1:
-			packWithItems[i].Pack_id = helper.FinPackIDByPackName(packs, "First Pack")
+			packWithItems[i].Pack_id = helper.FindPackIDByPackName(packs, "First Pack")
 		case 2:
-			packWithItems[i].Pack_id = helper.FinPackIDByPackName(packs, "Second Pack")
+			packWithItems[i].Pack_id = helper.FindPackIDByPackName(packs, "Second Pack")
 		case 3:
-			packWithItems[i].Pack_id = helper.FinPackIDByPackName(packs, "Third Pack")
+			packWithItems[i].Pack_id = helper.FindPackIDByPackName(packs, "Third Pack")
 		case 4:
-			packWithItems[i].Pack_id = helper.FinPackIDByPackName(packs, "Special Pack")
+			packWithItems[i].Pack_id = helper.FindPackIDByPackName(packs, "Special Pack")
 		}
 	}
 
