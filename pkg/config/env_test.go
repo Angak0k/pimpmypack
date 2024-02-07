@@ -264,7 +264,7 @@ func TestEnvInit(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			//Load environment varialble from test case
+			// Load environment varialble from test case
 			for _, conf := range tc.envSlice {
 				key := strings.Split(conf, "=")[0]
 				value := strings.Split(conf, "=")[1]
