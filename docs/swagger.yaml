@@ -85,6 +85,8 @@ definitions:
         type: string
       pack_name:
         type: string
+      sharing_code:
+        type: string
       updated_at:
         type: string
       user_id:
@@ -220,6 +222,35 @@ paths:
           schema:
             $ref: '#/definitions/dataset.ErrorResponse'
       summary: User login
+      tags:
+      - Public
+  /public/packs/{sharing_code}:
+    get:
+      description: Get pack content for a given sharing code
+      parameters:
+      - description: Sharing Code
+        in: path
+        name: sharing_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Pack Contents
+          schema:
+            items:
+              $ref: '#/definitions/dataset.PackContent'
+            type: array
+        "404":
+          description: Pack not found
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+      summary: Get pack content for a given sharing code
       tags:
       - Public
   /register:
@@ -570,7 +601,7 @@ paths:
             $ref: '#/definitions/dataset.ErrorResponse'
       security:
       - Bearer: []
-      summary: Get pack by ID
+      summary: Get My pack by ID
       tags:
       - Packs
     put:

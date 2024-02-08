@@ -130,6 +130,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/public/packs/{sharing_code}": {
+            "get": {
+                "description": "Get pack content for a given sharing code",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Get pack content for a given sharing code",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Sharing Code",
+                        "name": "sharing_code",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pack Contents",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dataset.PackContent"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Pack not found",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/register": {
             "post": {
                 "description": "Register a new user with username, password, email, firstname, and lastname",
@@ -625,7 +669,7 @@ const docTemplate = `{
                 "tags": [
                     "Packs"
                 ],
-                "summary": "Get pack by ID",
+                "summary": "Get My pack by ID",
                 "parameters": [
                     {
                         "type": "integer",
@@ -1299,6 +1343,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "pack_name": {
+                    "type": "string"
+                },
+                "sharing_code": {
                     "type": "string"
                 },
                 "updated_at": {
