@@ -61,6 +61,7 @@ func main() {
 	public.POST("/login", accounts.Login)
 	public.GET("/confirmemail", accounts.ConfirmEmail)
 	public.POST("/forgotpassword", accounts.ForgotPassword)
+	public.GET("/sharedlist/:sharing_code", packs.SharedList)
 
 	protected := router.Group("/api/v1")
 	protected.Use(security.JwtAuthProcessor())
@@ -81,7 +82,6 @@ func main() {
 	protected.POST("/myinventory", inventories.PostMyInventory)
 	protected.PUT("/myinventory/:id", inventories.PutMyInventoryByID)
 	protected.DELETE("/myinventory/:id", inventories.DeleteMyInventoryByID)
-
 	protected.POST("/importfromlighterpack", packs.ImportFromLighterPack)
 
 	private := router.Group("/api/admin")

@@ -40,6 +40,7 @@ type Pack struct {
 	User_id          uint      `json:"user_id"`
 	Pack_name        string    `json:"pack_name"`
 	Pack_description string    `json:"pack_description"`
+	Sharing_code     string    `json:"sharing_code"`
 	Created_at       time.Time `json:"created_at"`
 	Updated_at       time.Time `json:"updated_at"`
 }

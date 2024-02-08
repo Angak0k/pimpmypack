@@ -45,7 +45,7 @@ func GetPacks(c *gin.Context) {
 func returnPacks() (dataset.Packs, error) {
 	var packs dataset.Packs
 
-	rows, err := database.Db().Query("SELECT id, user_id, pack_name, pack_description, created_at, updated_at FROM pack;")
+	rows, err := database.Db().Query("SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at FROM pack;")
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func returnPacks() (dataset.Packs, error) {
 
 	for rows.Next() {
 		var pack dataset.Pack
-		err := rows.Scan(&pack.ID, &pack.User_id, &pack.Pack_name, &pack.Pack_description, &pack.Created_at, &pack.Updated_at)
+		err := rows.Scan(&pack.ID, &pack.User_id, &pack.Pack_name, &pack.Pack_description, &pack.Sharing_code, &pack.Created_at, &pack.Updated_at)
 		if err != nil {
 			return nil, err
 		}
@@ -111,8 +111,8 @@ func GetPackByID(c *gin.Context) {
 
 }
 
-// Get pack by ID
-// @Summary Get pack by ID
+// Get My pack by ID
+// @Summary Get My pack by ID
 // @Description Get pack by ID
 // @Security Bearer
 // @Tags Packs
@@ -167,8 +167,8 @@ func GetMyPackByID(c *gin.Context) {
 func findPackById(id uint) (*dataset.Pack, error) {
 	var pack dataset.Pack
 
-	row := database.Db().QueryRow("SELECT id, user_id, pack_name, pack_description, created_at, updated_at FROM pack WHERE id = $1;", id)
-	err := row.Scan(&pack.ID, &pack.User_id, &pack.Pack_name, &pack.Pack_description, &pack.Created_at, &pack.Updated_at)
+	row := database.Db().QueryRow("SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at FROM pack WHERE id = $1;", id)
+	err := row.Scan(&pack.ID, &pack.User_id, &pack.Pack_name, &pack.Pack_description, &pack.Sharing_code, &pack.Created_at, &pack.Updated_at)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -250,13 +250,18 @@ func PostMyPack(c *gin.Context) {
 }
 
 func insertPack(p *dataset.Pack) error {
+	var err error
 	if p == nil {
 		return errors.New("payload is empty")
 	}
 	p.Created_at = time.Now().Truncate(time.Second)
 	p.Updated_at = time.Now().Truncate(time.Second)
+	p.Sharing_code, err = helper.GenerateRandomCode(30)
+	if err != nil {
+		return errors.New("failed to generate a sharing code")
+	}
 
-	err := database.Db().QueryRow("INSERT INTO pack (user_id, pack_name, pack_description, created_at, updated_at) VALUES ($1,$2,$3,$4,$5) RETURNING id;", p.User_id, p.Pack_name, p.Pack_description, p.Created_at, p.Updated_at).Scan(&p.ID)
+	err = database.Db().QueryRow("INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id;", p.User_id, p.Pack_name, p.Pack_description, p.Sharing_code, p.Created_at, p.Updated_at).Scan(&p.ID)
 	if err != nil {
 		return err
 	}
@@ -1027,7 +1032,7 @@ func GetMyPacks(c *gin.Context) {
 func findPacksByUserId(id uint) (*dataset.Packs, error) {
 	var packs dataset.Packs
 
-	rows, err := database.Db().Query("SELECT id, user_id, pack_name, pack_description, created_at, updated_at FROM pack WHERE user_id = $1;", id)
+	rows, err := database.Db().Query("SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at FROM pack WHERE user_id = $1;", id)
 	if err != nil {
 		return nil, err
 	}
@@ -1035,7 +1040,7 @@ func findPacksByUserId(id uint) (*dataset.Packs, error) {
 
 	for rows.Next() {
 		var pack dataset.Pack
-		err := rows.Scan(&pack.ID, &pack.User_id, &pack.Pack_name, &pack.Pack_description, &pack.Created_at, &pack.Updated_at)
+		err := rows.Scan(&pack.ID, &pack.User_id, &pack.Pack_name, &pack.Pack_description, &pack.Sharing_code, &pack.Created_at, &pack.Updated_at)
 		if err != nil {
 			return nil, err
 		}
@@ -1172,7 +1177,7 @@ func ImportFromLighterPack(c *gin.Context) {
 		lighterPack = append(lighterPack, lighterPackItem)
 	}
 
-	// Perform your database insertion
+	// Perform database insertion
 	err = insertLighterPack(&lighterPack, user_id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -1224,4 +1229,53 @@ func insertLighterPack(lp *dataset.LighterPack, user_id uint) error {
 		}
 	}
 	return nil
+}
+
+// Get pack content for a given sharing code
+// @Summary Get pack content for a given sharing code
+// @Description Get pack content for a given sharing code
+// @Tags Public
+// @Produce  json
+// @Param sharing_code path string true "Sharing Code"
+// @Success 200 {object} dataset.PackContents "Pack Contents"
+// @Failure 404 {object} dataset.ErrorResponse "Pack not found"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Router /public/packs/{sharing_code} [get]
+func SharedList(c *gin.Context) {
+	sharing_code := c.Param("sharing_code")
+
+	pack_id, err := findPackIdBySharingCode(sharing_code)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if pack_id == 0 {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+		return
+	}
+
+	packContents, err := returnPackContentsByPackID(pack_id)
+	if err != nil {
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	if packContents == nil {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, packContents)
+}
+
+func findPackIdBySharingCode(sharing_code string) (uint, error) {
+	var pack_id uint
+	row := database.Db().QueryRow("SELECT id FROM pack WHERE sharing_code = $1;", sharing_code)
+	err := row.Scan(&pack_id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	return pack_id, nil
 }
