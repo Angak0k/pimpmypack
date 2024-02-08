@@ -25,7 +25,7 @@ var users = []dataset.User{
 	{
 		Username:     fmt.Sprintf("user-%s", random.UniqueId()),
 		Email:        fmt.Sprintf("user-%s@exemple.com", random.UniqueId()),
-		Firstname:    "John",
+		Firstname:    "Jane",
 		Lastname:     "Doe",
 		Role:         "standard",
 		Status:       "active",
@@ -75,21 +75,25 @@ var packs = dataset.Packs{
 		User_id:          1,
 		Pack_name:        "First Pack",
 		Pack_description: "Description for the first pack",
+		Sharing_code:     "123456",
 	},
 	{
 		User_id:          1,
 		Pack_name:        "Second Pack",
 		Pack_description: "Description for the second pack",
+		Sharing_code:     "654321",
 	},
 	{
 		User_id:          2,
 		Pack_name:        "Third Pack",
 		Pack_description: "Description for the third pack",
+		Sharing_code:     "789456",
 	},
 	{
 		User_id:          1,
 		Pack_name:        "Special Pack",
 		Pack_description: "Description for the second pack",
+		Sharing_code:     "321654",
 	},
 }
 
@@ -224,8 +228,8 @@ func loadingPackDataset() error {
 
 	// Insert packs dataset
 	for i := range packs {
-		err := database.Db().QueryRow("INSERT INTO pack (user_id, pack_name, pack_description, created_at, updated_at) VALUES ($1,$2,$3,$4,$5) RETURNING id;",
-			packs[i].User_id, packs[i].Pack_name, packs[i].Pack_description, time.Now().Truncate(time.Second), time.Now().Truncate(time.Second)).Scan(&packs[i].ID)
+		err := database.Db().QueryRow("INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id;",
+			packs[i].User_id, packs[i].Pack_name, packs[i].Pack_description, packs[i].Sharing_code, time.Now().Truncate(time.Second), time.Now().Truncate(time.Second)).Scan(&packs[i].ID)
 		if err != nil {
 			return err
 		}

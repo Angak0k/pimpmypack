@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
@@ -106,18 +107,24 @@ func TestGetPacks(t *testing.T) {
 				t.Errorf("Expected Pack Name %v but got %v", packs[0].Pack_name, getPacks[0].Pack_name)
 			case !cmp.Equal(getPacks[0].Pack_description, packs[0].Pack_description):
 				t.Errorf("Expected Pack Description %v but got %v", packs[0].Pack_description, getPacks[0].Pack_description)
+			case !cmp.Equal(getPacks[0].Sharing_code, packs[0].Sharing_code):
+				t.Errorf("Expected Sharing Code %v but got %v", packs[0].Sharing_code, getPacks[0].Sharing_code)
 			case !cmp.Equal(getPacks[1].User_id, packs[1].User_id):
 				t.Errorf("Expected User ID %v but got %v", packs[1].User_id, getPacks[1].User_id)
 			case !cmp.Equal(getPacks[1].Pack_name, packs[1].Pack_name):
 				t.Errorf("Expected Pack Name %v but got %v", packs[1].Pack_name, getPacks[1].Pack_name)
 			case !cmp.Equal(getPacks[1].Pack_description, packs[1].Pack_description):
 				t.Errorf("Expected Pack Description %v but got %v", packs[1].Pack_description, getPacks[1].Pack_description)
+			case !cmp.Equal(getPacks[1].Sharing_code, packs[1].Sharing_code):
+				t.Errorf("Expected Sharing Code %v but got %v", packs[1].Sharing_code, getPacks[1].Sharing_code)
 			case !cmp.Equal(getPacks[2].User_id, packs[2].User_id):
 				t.Errorf("Expected User ID %v but got %v", packs[2].User_id, getPacks[2].User_id)
 			case !cmp.Equal(getPacks[2].Pack_name, packs[2].Pack_name):
 				t.Errorf("Expected Pack Name %v but got %v", packs[2].Pack_name, getPacks[2].Pack_name)
 			case !cmp.Equal(getPacks[2].Pack_description, packs[2].Pack_description):
 				t.Errorf("Expected Pack Description %v but got %v", packs[2].Pack_description, getPacks[2].Pack_description)
+			case !cmp.Equal(getPacks[2].Sharing_code, packs[2].Sharing_code):
+				t.Errorf("Expected Sharing Code %v but got %v", packs[2].Sharing_code, getPacks[2].Sharing_code)
 			}
 		}
 	})
@@ -162,6 +169,8 @@ func TestGetPackByID(t *testing.T) {
 			t.Errorf("Expected Pack Name %v but got %v", packs[0].Pack_name, receivedPack.Pack_name)
 		case receivedPack.Pack_description != packs[0].Pack_description:
 			t.Errorf("Expected Pack Description %v but got %v", packs[0].Pack_description, receivedPack.Pack_description)
+		case receivedPack.Sharing_code != packs[0].Sharing_code:
+			t.Errorf("Expected Sharing Code %v but got %v", packs[0].Sharing_code, receivedPack.Sharing_code)
 		}
 	})
 
@@ -223,8 +232,8 @@ func TestPostPack(t *testing.T) {
 
 		// Query the database to get the inserted pack
 		var insertedPack dataset.Pack
-		row := database.Db().QueryRow("SELECT * FROM pack WHERE pack_name = $1;", newPack.Pack_name)
-		err = row.Scan(&insertedPack.ID, &insertedPack.User_id, &insertedPack.Pack_name, &insertedPack.Pack_description, &insertedPack.Created_at, &insertedPack.Updated_at)
+		row := database.Db().QueryRow("SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at FROM pack WHERE pack_name = $1;", newPack.Pack_name)
+		err = row.Scan(&insertedPack.ID, &insertedPack.User_id, &insertedPack.Pack_name, &insertedPack.Pack_description, &insertedPack.Sharing_code, &insertedPack.Created_at, &insertedPack.Updated_at)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				fmt.Println("No rows were returned!")
@@ -246,6 +255,8 @@ func TestPostPack(t *testing.T) {
 			t.Errorf("Expected Pack Name %v but got %v", insertedPack.Pack_name, receivedPack.Pack_name)
 		case receivedPack.Pack_description != insertedPack.Pack_description:
 			t.Errorf("Expected Pack Description %v but got %v", insertedPack.Pack_description, receivedPack.Pack_description)
+		case receivedPack.Sharing_code == "":
+			t.Errorf("Expected a non empty Sharing Code but got %v", receivedPack.Sharing_code)
 		}
 	})
 }
@@ -293,8 +304,8 @@ func TestPutPackByID(t *testing.T) {
 
 		// Query the database to get the updated pack
 		var updatedPack dataset.Pack
-		row := database.Db().QueryRow("SELECT * FROM pack WHERE id = $1;", packs[2].ID)
-		err = row.Scan(&updatedPack.ID, &updatedPack.User_id, &updatedPack.Pack_name, &updatedPack.Pack_description, &updatedPack.Created_at, &updatedPack.Updated_at)
+		row := database.Db().QueryRow("SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at FROM pack WHERE id = $1;", packs[2].ID)
+		err = row.Scan(&updatedPack.ID, &updatedPack.User_id, &updatedPack.Pack_name, &updatedPack.Pack_description, &updatedPack.Sharing_code, &updatedPack.Created_at, &updatedPack.Updated_at)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				fmt.Println("No rows were returned!")
@@ -835,6 +846,138 @@ item2,category2,description2,2,150,g,http://example2.com,20,,consumable`
 
 			if w.Code != tt.expectedCode {
 				t.Errorf("expected status code %d, got %d", tt.expectedCode, w.Code)
+			}
+		})
+	}
+}
+
+func TestCheckPackOwnership(t *testing.T) {
+	testCases := []struct {
+		packID   uint
+		userID   uint
+		expected bool
+		name     string
+	}{
+		{
+			packID:   packs[3].ID,
+			userID:   packs[3].User_id,
+			expected: true,
+			name:     "Owner checks their own pack",
+		},
+		{
+			packID:   packs[2].ID,
+			userID:   packs[3].User_id,
+			expected: false,
+			name:     "Non-owner checks someone else's pack",
+		},
+	}
+
+	// Loop through each test case
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Call the function under test
+			test, err := checkPackOwnership(tc.packID, tc.userID)
+			if err != nil {
+				t.Fatalf("Failed to check pack ownership: %v", err)
+			}
+			if test != tc.expected {
+				t.Errorf("Expected %v but got %v", tc.expected, test)
+			}
+		})
+	}
+}
+
+func TestFindPackIdBySharingCode(t *testing.T) {
+	testCases := []struct {
+		sharingCode string
+		expected    uint
+		name        string
+	}{
+		{
+			sharingCode: packs[3].Sharing_code,
+			expected:    packs[3].ID,
+			name:        "Valid sharing code",
+		},
+		{
+			sharingCode: "invalid",
+			expected:    0,
+			name:        "Invalid sharing code",
+		},
+	}
+
+	// Loop through each test case
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			// Call the function under test
+			test, err := findPackIdBySharingCode(tc.sharingCode)
+			if err != nil {
+				t.Fatalf("Failed to find pack ID by sharing code: %v", err)
+			}
+			if test != tc.expected {
+				t.Errorf("Expected %v but got %v", tc.expected, test)
+			}
+		})
+	}
+}
+
+func TestGetPackBySharingCode(t *testing.T) {
+	testCases := []struct {
+		sharingCode  string
+		responseCode int
+		expected     dataset.PackContents
+		name         string
+	}{
+		{
+			sharingCode:  packs[0].Sharing_code,
+			responseCode: http.StatusOK,
+			expected:     packItems[0:1],
+			name:         "Valid sharing code",
+		},
+		{
+			sharingCode:  "invalid",
+			responseCode: http.StatusNotFound,
+			expected:     dataset.PackContents{},
+			name:         "Invalid sharing code",
+		},
+	}
+	// Set Gin to test mode
+	gin.SetMode(gin.TestMode)
+
+	// Create a Gin router instance
+	router := gin.Default()
+
+	// Define the endpoint for DeletePackByID handler
+	router.GET("/sharedlist/:sharing_code", SharedList)
+
+	// Loop through each test case
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var returnedPackContents dataset.PackContents
+			// Set up a test scenario: sending a GET request
+			path := fmt.Sprintf("/sharedlist/%s", tc.sharingCode)
+			req, err := http.NewRequest("GET", path, nil)
+			if err != nil {
+				t.Fatalf("Failed to create request: %v", err)
+			}
+			req.Header.Set("Content-Type", "application/json")
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, req)
+
+			if w.Code != tc.responseCode {
+				t.Errorf("Expected status code %d but got %d", tc.responseCode, w.Code)
+			}
+
+			if tc.responseCode == http.StatusOK {
+				// Unmarshal the response body into a slice of packs struct
+				if err := json.Unmarshal(w.Body.Bytes(), &returnedPackContents); err != nil {
+					t.Fatalf("Failed to unmarshal response body: %v", err)
+				}
+
+				// determine if the answer is correct
+				if reflect.DeepEqual(returnedPackContents, tc.expected) {
+					t.Errorf("Expected %v but got %v", tc.expected, returnedPackContents)
+				}
 			}
 		})
 	}
