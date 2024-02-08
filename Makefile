@@ -4,7 +4,7 @@ test:
 	go test -covermode=atomic -coverprofile=coverage.out -race ./...
 
 api-doc:
-	swag init 
+	swag init --tags \!Internal
 
 build: test
 	go build
