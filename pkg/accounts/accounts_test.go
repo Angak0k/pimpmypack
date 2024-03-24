@@ -177,23 +177,23 @@ func TestPostAccount(t *testing.T) {
 	// Define the endpoint for PostAccounts handler
 	router.POST("/accounts", PostAccount)
 
-	// Sample account data
-	newAccount := dataset.Account{
-		Username:  "Jane",
-		Email:     "jane.doe@example.com",
-		Firstname: "Jane",
-		Lastname:  "Doe",
-		Role:      "standard",
-		Status:    "active",
-	}
-
-	// Convert account data to JSON
-	jsonData, err := json.Marshal(newAccount)
-	if err != nil {
-		t.Fatalf("Failed to marshal account data: %v", err)
-	}
-
 	t.Run("Insert account", func(t *testing.T) {
+
+		// Sample account data
+		newAccount := dataset.Account{
+			Username:  "Jane",
+			Email:     "jane.doe@example.com",
+			Firstname: "Jane",
+			Lastname:  "Doe",
+			Role:      "standard",
+			Status:    "active",
+		}
+
+		// Convert account data to JSON
+		jsonData, err := json.Marshal(newAccount)
+		if err != nil {
+			t.Fatalf("Failed to marshal account data: %v", err)
+		}
 
 		// Set up a test scenario: sending a POST request with JSON data
 		req, err := http.NewRequest("POST", "/accounts", bytes.NewBuffer(jsonData))
@@ -241,6 +241,40 @@ func TestPostAccount(t *testing.T) {
 			t.Errorf("Expected Role %v but got %v", insertedAccount.Role, receivedAccount.Role)
 		case receivedAccount.Status != insertedAccount.Status:
 			t.Errorf("Expected Status %v but got %v", insertedAccount.Status, receivedAccount.Status)
+		}
+	})
+
+	t.Run("Insert account with bad email", func(t *testing.T) {
+
+		// Sample account data
+		badAccount := dataset.Account{
+			Username:  "Jules",
+			Email:     "jules.doe@example",
+			Firstname: "Jules",
+			Lastname:  "Doe",
+			Role:      "standard",
+			Status:    "active",
+		}
+
+		// Convert account data to JSON
+		jsonData, err := json.Marshal(badAccount)
+		if err != nil {
+			t.Fatalf("Failed to marshal account data: %v", err)
+		}
+
+		// Set up a test scenario: sending a POST request with JSON data
+		req, err := http.NewRequest("POST", "/accounts", bytes.NewBuffer(jsonData))
+		if err != nil {
+			t.Fatalf("Failed to create request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Check the HTTP status code
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code %d but got %d", http.StatusBadRequest, w.Code)
 		}
 	})
 }
@@ -376,22 +410,22 @@ func TestRegister(t *testing.T) {
 	// Define the endpoint for Register handler
 	router.POST("/register", Register)
 
-	// Sample account data
-	newAccount := dataset.RegisterInput{
-		Username:  fmt.Sprintf("user-%s", random.UniqueId()),
-		Password:  "password",
-		Email:     "jane.doe@exemple.com",
-		Firstname: "Jane",
-		Lastname:  "Doe",
-	}
-
-	// Convert account data to JSON
-	jsonData, err := json.Marshal(newAccount)
-	if err != nil {
-		t.Fatalf("Failed to marshal account data: %v", err)
-	}
-
 	t.Run("Register account", func(t *testing.T) {
+
+		// Sample account data
+		newAccount := dataset.RegisterInput{
+			Username:  fmt.Sprintf("user-%s", random.UniqueId()),
+			Password:  "password",
+			Email:     "jane.doe@exemple.com",
+			Firstname: "Jane",
+			Lastname:  "Doe",
+		}
+
+		// Convert account data to JSON
+		jsonData, err := json.Marshal(newAccount)
+		if err != nil {
+			t.Fatalf("Failed to marshal account data: %v", err)
+		}
 
 		// Set up a test scenario: sending a POST request with JSON data
 		req, err := http.NewRequest("POST", "/register", bytes.NewBuffer(jsonData))
@@ -437,6 +471,39 @@ func TestRegister(t *testing.T) {
 			t.Errorf("Expected Role %v but got %v", "standard", insertedUser.Role)
 		case insertedUser.Status != "pending":
 			t.Errorf("Expected Status %v but got %v", "pending", insertedUser.Status)
+		}
+	})
+
+	t.Run("Register account with bad email", func(t *testing.T) {
+
+		// Sample account data
+		newAccount := dataset.RegisterInput{
+			Username:  fmt.Sprintf("user-%s", random.UniqueId()),
+			Password:  "password",
+			Email:     "jane.doe@exemple",
+			Firstname: "Jane",
+			Lastname:  "Doe",
+		}
+
+		// Convert account data to JSON
+		jsonData, err := json.Marshal(newAccount)
+		if err != nil {
+			t.Fatalf("Failed to marshal account data: %v", err)
+		}
+
+		// Set up a test scenario: sending a POST request with JSON data
+		req, err := http.NewRequest("POST", "/register", bytes.NewBuffer(jsonData))
+		if err != nil {
+			t.Fatalf("Failed to create request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		// Check the HTTP status code
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code %d but got %d", http.StatusBadRequest, w.Code)
 		}
 	})
 }
