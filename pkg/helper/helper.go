@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"math/big"
 	"net/smtp"
+	"regexp"
 	"strconv"
 
 	"github.com/Angak0k/pimpmypack/pkg/dataset"
@@ -70,6 +71,12 @@ func GenerateRandomCode(length int) (string, error) {
 		code += string(charset[charIndex.Int64()])
 	}
 	return code, nil
+}
+
+func IsValidEmail(email string) bool {
+	// Check if an email is valid
+	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
+	return emailRegex.MatchString(email)
 }
 
 // EmailSender defines the interface for sending emails. Needed for testing without real SMTP server.

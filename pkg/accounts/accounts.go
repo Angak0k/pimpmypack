@@ -38,29 +38,35 @@ func Register(c *gin.Context) {
 
 	user := dataset.User{}
 
-	user.Username = input.Username
-	user.Password = input.Password
-	user.Email = input.Email
-	user.Firstname = input.Firstname
-	user.Lastname = input.Lastname
-	user.Role = "standard"
-	user.Status = "pending"
-	user.Created_at = time.Now().Truncate(time.Second)
-	user.Updated_at = time.Now().Truncate(time.Second)
+	if helper.IsValidEmail(input.Email) {
+		user.Email = input.Email
+		user.Username = input.Username
+		user.Password = input.Password
+		user.Firstname = input.Firstname
+		user.Lastname = input.Lastname
+		user.Role = "standard"
+		user.Status = "pending"
+		user.Created_at = time.Now().Truncate(time.Second)
+		user.Updated_at = time.Now().Truncate(time.Second)
 
-	err, emailSended := registerUser(user)
+		err, emailSended := registerUser(user)
 
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		if !emailSended {
+			c.JSON(http.StatusAccepted, gin.H{"message": "registration succeed but failed to send confirmation email"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "registration succeed, please check your email to confirm your account"})
+
+	} else {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
 		return
 	}
-
-	if !emailSended {
-		c.JSON(http.StatusAccepted, gin.H{"message": "registration succeed but failed to send confirmation email"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "registration succeed, please check your email to confirm your account"})
 
 }
 
@@ -566,15 +572,19 @@ func PostAccount(c *gin.Context) {
 		return
 	}
 
-	// Insert the new account into the database.
-	err := insertAccount(&newAccount)
-	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if helper.IsValidEmail(newAccount.Email) {
+		// Insert the new account into the database.
+		err := insertAccount(&newAccount)
+		if err != nil {
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		c.IndentedJSON(http.StatusCreated, newAccount)
+	} else {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
 		return
 	}
-
-	c.IndentedJSON(http.StatusCreated, newAccount)
-
 }
 
 func insertAccount(a *dataset.Account) error {

@@ -222,3 +222,28 @@ func TestGenerateRandomCode(t *testing.T) {
 		})
 	}
 }
+
+func TestIsValidEmail(t *testing.T) {
+
+	testCases := []struct {
+		name     string // Name of the test case for readability
+		email    string // Input email
+		expected bool   // Expected output
+	}{
+		{"standard email", "test@exemple.com", true},
+		{"no tld", "test@exemple", false},
+		{"no @", "testexemple.com", false},
+		{"no tld, dot terminated", "test@exemple.", false},
+		{"composed tld", "test@exemple.co.test", true},
+	}
+
+	// Iterate through test cases
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			output := IsValidEmail(tc.email)
+			if output != tc.expected {
+				t.Errorf("IsValidEmail(%s): expected %t, got %t", tc.email, tc.expected, output)
+			}
+		})
+	}
+}
