@@ -63,7 +63,7 @@ jobs:
         id: go
 
       - name: staticcheck
-        uses: dominikh/staticcheck-action@v1.3.0
+        uses: dominikh/staticcheck-action@v1.3.1
 
       - name: lint
         uses: golangci/golangci-lint-action@v4.0.0
