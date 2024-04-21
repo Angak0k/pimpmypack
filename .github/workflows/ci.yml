@@ -57,7 +57,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: 1.21
+          go-version: 1.22.2
           cache: true
           cache-dependency-path: go.sum
         id: go
@@ -68,7 +68,7 @@ jobs:
       - name: lint
         uses: golangci/golangci-lint-action@v4.0.0
         with:
-          version: v1.52.2
+          version: latest
           args: --timeout=5m --out-format=colored-line-number
           skip-cache: true
           skip-pkg-cache: true
