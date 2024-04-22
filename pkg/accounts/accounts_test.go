@@ -23,7 +23,6 @@ import (
 )
 
 func TestMain(m *testing.M) {
-
 	// init env
 	err := config.EnvInit("../../.env")
 	if err != nil {
@@ -31,13 +30,13 @@ func TestMain(m *testing.M) {
 	}
 
 	// init DB
-	err = database.DatabaseInit()
+	err = database.Initialization()
 	if err != nil {
 		log.Fatalf("Error connecting database : %v", err)
 	}
 
 	// init DB migration
-	err = database.DatabaseMigrate()
+	err = database.Migrate()
 	if err != nil {
 		log.Fatalf("Error migrating database : %v", err)
 	}
@@ -66,7 +65,7 @@ func TestGetAccounts(t *testing.T) {
 	t.Run("Account List Retrieved", func(t *testing.T) {
 		var getAccounts dataset.Accounts
 		// Create a mock HTTP request to the /accounts endpoint
-		req, err := http.NewRequest("GET", "/accounts", nil)
+		req, err := http.NewRequest(http.MethodGet, "/accounts", nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -112,11 +111,10 @@ func TestGetAccountByID(t *testing.T) {
 
 	// Set up a test scenario: account found
 	t.Run("Account Found", func(t *testing.T) {
-
 		// identify the user_id of the first user in the dataset
 		path := fmt.Sprintf("/accounts/%d", users[0].ID)
 
-		req, err := http.NewRequest("GET", path, nil)
+		req, err := http.NewRequest(http.MethodGet, path, nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -153,7 +151,7 @@ func TestGetAccountByID(t *testing.T) {
 
 	// Set up a test scenario: account not found
 	t.Run("Account Not Found", func(t *testing.T) {
-		req, err := http.NewRequest("GET", "/accounts/1000", nil)
+		req, err := http.NewRequest(http.MethodGet, "/accounts/1000", nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -178,7 +176,6 @@ func TestPostAccount(t *testing.T) {
 	router.POST("/accounts", PostAccount)
 
 	t.Run("Insert account", func(t *testing.T) {
-
 		// Sample account data
 		newAccount := dataset.Account{
 			Username:  "Jane",
@@ -196,7 +193,7 @@ func TestPostAccount(t *testing.T) {
 		}
 
 		// Set up a test scenario: sending a POST request with JSON data
-		req, err := http.NewRequest("POST", "/accounts", bytes.NewBuffer(jsonData))
+		req, err := http.NewRequest(http.MethodPost, "/accounts", bytes.NewBuffer(jsonData))
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -212,8 +209,20 @@ func TestPostAccount(t *testing.T) {
 
 		// Query the database to get the inserted account
 		var insertedAccount dataset.Account
-		row := database.Db().QueryRow("SELECT id,username, email, firstname, lastname, role, status, created_at, updated_at FROM account WHERE username = $1;", newAccount.Username)
-		err = row.Scan(&insertedAccount.ID, &insertedAccount.Username, &insertedAccount.Email, &insertedAccount.Firstname, &insertedAccount.Lastname, &insertedAccount.Role, &insertedAccount.Status, &insertedAccount.Created_at, &insertedAccount.Updated_at)
+		row := database.DB().QueryRow(
+			`SELECT id,username, email, firstname, lastname, role, status, created_at, updated_at 
+			FROM account WHERE username = $1;`,
+			newAccount.Username)
+		err = row.Scan(
+			&insertedAccount.ID,
+			&insertedAccount.Username,
+			&insertedAccount.Email,
+			&insertedAccount.Firstname,
+			&insertedAccount.Lastname,
+			&insertedAccount.Role,
+			&insertedAccount.Status,
+			&insertedAccount.CreatedAt,
+			&insertedAccount.UpdatedAt)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				fmt.Println("No rows were returned!")
@@ -245,7 +254,6 @@ func TestPostAccount(t *testing.T) {
 	})
 
 	t.Run("Insert account with bad email", func(t *testing.T) {
-
 		// Sample account data
 		badAccount := dataset.Account{
 			Username:  "Jules",
@@ -263,7 +271,7 @@ func TestPostAccount(t *testing.T) {
 		}
 
 		// Set up a test scenario: sending a POST request with JSON data
-		req, err := http.NewRequest("POST", "/accounts", bytes.NewBuffer(jsonData))
+		req, err := http.NewRequest(http.MethodPost, "/accounts", bytes.NewBuffer(jsonData))
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -290,7 +298,7 @@ func TestPutAccountByID(t *testing.T) {
 	router.PUT("/accounts/:id", PutAccountByID)
 
 	// Sample account data (with the third user in the dataset)
-	TestUpdatedAccount := dataset.Account{
+	testUpdatedAccount := dataset.Account{
 		ID:        users[2].ID,
 		Username:  users[2].Username,
 		Email:     "joseph.doe@example.com",
@@ -301,18 +309,17 @@ func TestPutAccountByID(t *testing.T) {
 	}
 
 	// Convert account data to JSON
-	jsonData, err := json.Marshal(TestUpdatedAccount)
+	jsonData, err := json.Marshal(testUpdatedAccount)
 	if err != nil {
 		t.Fatalf("Failed to marshal account data: %v", err)
 	}
 
 	t.Run("Update account", func(t *testing.T) {
-
 		// Format the path to the account ID
-		path := fmt.Sprintf("/accounts/%d", TestUpdatedAccount.ID)
+		path := fmt.Sprintf("/accounts/%d", testUpdatedAccount.ID)
 
 		// Set up a test scenario: sending a PUT request with JSON data
-		req, err := http.NewRequest("PUT", path, bytes.NewBuffer(jsonData))
+		req, err := http.NewRequest(http.MethodPut, path, bytes.NewBuffer(jsonData))
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -328,8 +335,21 @@ func TestPutAccountByID(t *testing.T) {
 
 		// Query the database to get the inserted account
 		var updatedAccount dataset.Account
-		row := database.Db().QueryRow("SELECT id,username, email, firstname, lastname, role, status, created_at, updated_at FROM account WHERE id = $1;", TestUpdatedAccount.ID)
-		err = row.Scan(&updatedAccount.ID, &updatedAccount.Username, &updatedAccount.Email, &updatedAccount.Firstname, &updatedAccount.Lastname, &updatedAccount.Role, &updatedAccount.Status, &updatedAccount.Created_at, &updatedAccount.Updated_at)
+		row := database.DB().QueryRow(
+			`SELECT id,username, email, firstname, lastname, role, status, created_at, updated_at 
+			FROM account 
+			WHERE id = $1;`,
+			testUpdatedAccount.ID)
+		err = row.Scan(
+			&updatedAccount.ID,
+			&updatedAccount.Username,
+			&updatedAccount.Email,
+			&updatedAccount.Firstname,
+			&updatedAccount.Lastname,
+			&updatedAccount.Role,
+			&updatedAccount.Status,
+			&updatedAccount.CreatedAt,
+			&updatedAccount.UpdatedAt)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				fmt.Println("No rows were returned!")
@@ -339,18 +359,18 @@ func TestPutAccountByID(t *testing.T) {
 
 		// Compare the data in DB with Test dataset
 		switch {
-		case updatedAccount.Username != TestUpdatedAccount.Username:
-			t.Errorf("Expected Username %v but got %v", TestUpdatedAccount.Username, updatedAccount.Username)
-		case updatedAccount.Email != TestUpdatedAccount.Email:
-			t.Errorf("Expected Email %v but got %v", TestUpdatedAccount.Email, updatedAccount.Email)
-		case updatedAccount.Firstname != TestUpdatedAccount.Firstname:
-			t.Errorf("Expected Firstname %v but got %v", TestUpdatedAccount.Firstname, updatedAccount.Firstname)
-		case updatedAccount.Lastname != TestUpdatedAccount.Lastname:
-			t.Errorf("Expected Lastname %v but got %v", TestUpdatedAccount.Lastname, updatedAccount.Lastname)
-		case updatedAccount.Role != TestUpdatedAccount.Role:
-			t.Errorf("Expected Role %v but got %v", TestUpdatedAccount.Role, updatedAccount.Role)
-		case updatedAccount.Status != TestUpdatedAccount.Status:
-			t.Errorf("Expected Status %v but got %v", TestUpdatedAccount.Status, updatedAccount.Status)
+		case updatedAccount.Username != testUpdatedAccount.Username:
+			t.Errorf("Expected Username %v but got %v", testUpdatedAccount.Username, updatedAccount.Username)
+		case updatedAccount.Email != testUpdatedAccount.Email:
+			t.Errorf("Expected Email %v but got %v", testUpdatedAccount.Email, updatedAccount.Email)
+		case updatedAccount.Firstname != testUpdatedAccount.Firstname:
+			t.Errorf("Expected Firstname %v but got %v", testUpdatedAccount.Firstname, updatedAccount.Firstname)
+		case updatedAccount.Lastname != testUpdatedAccount.Lastname:
+			t.Errorf("Expected Lastname %v but got %v", testUpdatedAccount.Lastname, updatedAccount.Lastname)
+		case updatedAccount.Role != testUpdatedAccount.Role:
+			t.Errorf("Expected Role %v but got %v", testUpdatedAccount.Role, updatedAccount.Role)
+		case updatedAccount.Status != testUpdatedAccount.Status:
+			t.Errorf("Expected Status %v but got %v", testUpdatedAccount.Status, updatedAccount.Status)
 		}
 	})
 }
@@ -366,12 +386,11 @@ func TestDeleteAccountByID(t *testing.T) {
 	router.DELETE("/accounts/:id", DeleteAccountByID)
 
 	t.Run("Delete account", func(t *testing.T) {
-
 		// Format the path to the third user of the dataset
 		path := fmt.Sprintf("/accounts/%d", users[2].ID)
 
 		// Set up a test scenario: sending a DELETE request
-		req, err := http.NewRequest("DELETE", path, nil)
+		req, err := http.NewRequest(http.MethodDelete, path, nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -383,18 +402,17 @@ func TestDeleteAccountByID(t *testing.T) {
 		// Check the HTTP status code
 		if w.Code != http.StatusOK {
 			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
-
 		}
 
 		// check in database if the account has been deleted
 		var username string
-		row := database.Db().QueryRow("SELECT username FROM account WHERE id = $1;", users[2].ID)
+		row := database.DB().QueryRow("SELECT username FROM account WHERE id = $1;", users[2].ID)
 		err = row.Scan(&username)
 		if err == nil {
-			t.Errorf("Account ID %v associated to username %s should be deleted and it is still in DB", users[2].ID, username)
+			t.Errorf("Account ID %v associated to username %s should be deleted and it is still in DB",
+				users[2].ID, username)
 		} else if !errors.Is(err, sql.ErrNoRows) {
 			t.Fatalf("Failed to create request: %v", err)
-
 		}
 	})
 }
@@ -411,7 +429,6 @@ func TestRegister(t *testing.T) {
 	router.POST("/register", Register)
 
 	t.Run("Register account", func(t *testing.T) {
-
 		// Sample account data
 		newAccount := dataset.RegisterInput{
 			Username:  fmt.Sprintf("user-%s", random.UniqueId()),
@@ -428,7 +445,7 @@ func TestRegister(t *testing.T) {
 		}
 
 		// Set up a test scenario: sending a POST request with JSON data
-		req, err := http.NewRequest("POST", "/register", bytes.NewBuffer(jsonData))
+		req, err := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(jsonData))
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -444,8 +461,22 @@ func TestRegister(t *testing.T) {
 
 		// Query the database to get the inserted account
 		var insertedUser dataset.User
-		row := database.Db().QueryRow("SELECT a.username, a.email, a.firstname, a.lastname, a.role, a.status, p.password, a.created_at, a.updated_at FROM account a INNER JOIN password p ON a.id = p.user_id WHERE a.username = $1;", newAccount.Username)
-		err = row.Scan(&insertedUser.Username, &insertedUser.Email, &insertedUser.Firstname, &insertedUser.Lastname, &insertedUser.Role, &insertedUser.Status, &insertedUser.Password, &insertedUser.Created_at, &insertedUser.Updated_at)
+		row := database.DB().QueryRow(
+			`SELECT a.username, a.email, a.firstname, a.lastname, a.role, a.status, p.password, 
+				a.created_at, a.updated_at 
+			FROM account a INNER JOIN password p ON a.id = p.user_id 
+			WHERE a.username = $1;`,
+			newAccount.Username)
+		err = row.Scan(
+			&insertedUser.Username,
+			&insertedUser.Email,
+			&insertedUser.Firstname,
+			&insertedUser.Lastname,
+			&insertedUser.Role,
+			&insertedUser.Status,
+			&insertedUser.Password,
+			&insertedUser.CreatedAt,
+			&insertedUser.UpdatedAt)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				t.Fatalf("No user founded!")
@@ -475,7 +506,6 @@ func TestRegister(t *testing.T) {
 	})
 
 	t.Run("Register account with bad email", func(t *testing.T) {
-
 		// Sample account data
 		newAccount := dataset.RegisterInput{
 			Username:  fmt.Sprintf("user-%s", random.UniqueId()),
@@ -492,7 +522,7 @@ func TestRegister(t *testing.T) {
 		}
 
 		// Set up a test scenario: sending a POST request with JSON data
-		req, err := http.NewRequest("POST", "/register", bytes.NewBuffer(jsonData))
+		req, err := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(jsonData))
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -509,7 +539,6 @@ func TestRegister(t *testing.T) {
 }
 
 func TestLogin(t *testing.T) {
-
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -521,15 +550,15 @@ func TestLogin(t *testing.T) {
 
 	// Sample account data
 	newUser := dataset.User{
-		Username:   fmt.Sprintf("user-%s", random.UniqueId()),
-		Password:   "password2",
-		Email:      "newuser2@pmp.com",
-		Firstname:  "Jules",
-		Lastname:   "Doe",
-		Role:       "standard",
-		Status:     "active",
-		Created_at: time.Now().Truncate(time.Second),
-		Updated_at: time.Now().Truncate(time.Second),
+		Username:  fmt.Sprintf("user-%s", random.UniqueId()),
+		Password:  "password2",
+		Email:     "newuser2@pmp.com",
+		Firstname: "Jules",
+		Lastname:  "Doe",
+		Role:      "standard",
+		Status:    "active",
+		CreatedAt: time.Now().Truncate(time.Second),
+		UpdatedAt: time.Now().Truncate(time.Second),
 	}
 	userLogin := dataset.LoginInput{
 		Username: newUser.Username,
@@ -539,7 +568,19 @@ func TestLogin(t *testing.T) {
 	// insert account in database
 	var id int
 
-	err := database.Db().QueryRow("INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id;", newUser.Username, newUser.Email, newUser.Firstname, newUser.Lastname, newUser.Role, newUser.Status, newUser.Created_at, newUser.Updated_at).Scan(&id)
+	//nolint:execinquery
+	err := database.DB().QueryRow(
+		`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
+		RETURNING id;`,
+		newUser.Username,
+		newUser.Email,
+		newUser.Firstname,
+		newUser.Lastname,
+		newUser.Role,
+		newUser.Status,
+		newUser.CreatedAt,
+		newUser.UpdatedAt).Scan(&id)
 	if err != nil {
 		t.Fatalf("failed to insert user: %v", err)
 	}
@@ -549,7 +590,14 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("failed to hash password: %v", err)
 	}
 
-	err = database.Db().QueryRow("INSERT INTO password (user_id, password, updated_at) VALUES ($1,$2,$3) RETURNING id;", id, hashedPassword, newUser.Updated_at).Scan(&id)
+	//nolint:execinquery
+	err = database.DB().QueryRow(
+		`INSERT INTO password (user_id, password, updated_at) 
+		VALUES ($1,$2,$3) 
+		RETURNING id;`,
+		id,
+		hashedPassword,
+		newUser.UpdatedAt).Scan(&id)
 	if err != nil {
 		t.Fatalf("failed to insert password: %v", err)
 	}
@@ -561,9 +609,8 @@ func TestLogin(t *testing.T) {
 	}
 
 	t.Run("Login user", func(t *testing.T) {
-
 		// Set up a test scenario: sending a POST request with JSON data
-		req, err := http.NewRequest("POST", "/login", bytes.NewBuffer(jsonData))
+		req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(jsonData))
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -588,9 +635,8 @@ func TestLogin(t *testing.T) {
 		}
 	})
 	t.Run("Login pending user", func(t *testing.T) {
-
 		// set status to pending in DB
-		statement, err := database.Db().Prepare("UPDATE account SET status = 'pending' WHERE username = $1;")
+		statement, err := database.DB().Prepare("UPDATE account SET status = 'pending' WHERE username = $1;")
 		if err != nil {
 			t.Fatalf("failed to prepare update statement: %v", err)
 		}
@@ -602,7 +648,7 @@ func TestLogin(t *testing.T) {
 		}
 
 		// Set up a test scenario: sending a POST request with JSON data
-		req, err := http.NewRequest("POST", "/login", bytes.NewBuffer(jsonData))
+		req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(jsonData))
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}

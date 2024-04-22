@@ -12,13 +12,13 @@ import (
 var (
 	Scheme        string
 	HostName      string
-	DbHost        string
-	DbUser        string
-	DbPassword    string
-	DbName        string
-	DbPort        string
+	DBHost        string
+	DBUser        string
+	DBPassword    string
+	DBName        string
+	DBPort        int
 	Stage         string
-	ApiSecret     string
+	APISecret     string
 	TokenLifespan int
 	MailServer    dataset.MailServer
 )
@@ -35,13 +35,16 @@ func EnvInit(envFilePath string) error {
 
 	Scheme = os.Getenv("SCHEME")
 	HostName = os.Getenv("HOSTNAME")
-	DbHost = os.Getenv("DB_HOST")
-	DbUser = os.Getenv("DB_USER")
-	DbPassword = os.Getenv("DB_PASSWORD")
-	DbName = os.Getenv("DB_NAME")
-	DbPort = os.Getenv("DB_PORT")
+	DBHost = os.Getenv("DB_HOST")
+	DBUser = os.Getenv("DB_USER")
+	DBPassword = os.Getenv("DB_PASSWORD")
+	DBName = os.Getenv("DB_NAME")
+	DBPort, err = strconv.Atoi(os.Getenv("DB_PORT"))
+	if err != nil {
+		DBPort = 5432
+	}
 	Stage = os.Getenv("STAGE")
-	ApiSecret = os.Getenv("API_SECRET")
+	APISecret = os.Getenv("API_SECRET")
 	TokenLifespan, err = strconv.Atoi(os.Getenv("TOKEN_HOUR_LIFESPAN"))
 	if err != nil {
 		TokenLifespan = 1
@@ -63,20 +66,20 @@ func EnvInit(envFilePath string) error {
 		Scheme = "https"
 	case HostName == "":
 		return fmt.Errorf("HOSTNAME is not set and needed for generationg links")
-	case DbHost == "":
+	case DBHost == "":
 		return fmt.Errorf("DB_HOST is not set")
-	case DbUser == "":
+	case DBUser == "":
 		return fmt.Errorf("DB_USER is not set")
-	case DbPassword == "":
+	case DBPassword == "":
 		return fmt.Errorf("DB_PASSWORD is not set")
-	case DbName == "":
+	case DBName == "":
 		return fmt.Errorf("DB_NAME is not set")
-	case DbPort == "":
-		DbPort = "5432"
+	case DBPort == 0:
+		DBPort = 5432
 	case Stage == "":
 		Stage = "prod"
-	case ApiSecret == "":
-		ApiSecret = "defaultApiSecret"
+	case APISecret == "":
+		APISecret = "defaultApiSecret"
 	case TokenLifespan == 0:
 		TokenLifespan = 1
 	case MailServer.MailIdentity == "":

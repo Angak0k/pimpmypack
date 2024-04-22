@@ -5,88 +5,88 @@ import (
 )
 
 type Account struct {
-	ID         uint      `json:"id"`
-	Username   string    `json:"username"`
-	Email      string    `json:"email"`
-	Firstname  string    `json:"firstname"`
-	Lastname   string    `json:"lastname"`
-	Role       string    `json:"role"`
-	Status     string    `json:"status"`
-	Created_at time.Time `json:"created_at"`
-	Updated_at time.Time `json:"updated_at"`
+	ID        uint      `json:"id"`
+	Username  string    `json:"username"`
+	Email     string    `json:"email"`
+	Firstname string    `json:"firstname"`
+	Lastname  string    `json:"lastname"`
+	Role      string    `json:"role"`
+	Status    string    `json:"status"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type Accounts []Account
 
 type Inventory struct {
 	ID          uint      `json:"id"`
-	User_id     uint      `json:"user_id"`
-	Item_name   string    `json:"item_name"`
+	UserID      uint      `json:"user_id"`
+	ItemName    string    `json:"item_name"`
 	Category    string    `json:"category"`
 	Description string    `json:"description"`
 	Weight      int       `json:"weight"`
-	Weight_unit string    `json:"weight_unit"`
-	Url         string    `json:"url"`
+	WeightUnit  string    `json:"weight_unit"`
+	URL         string    `json:"url"`
 	Price       int       `json:"price"`
 	Currency    string    `json:"currency"`
-	Created_at  time.Time `json:"created_at"`
-	Updated_at  time.Time `json:"updated_at"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 type Inventories []Inventory
 
 type Pack struct {
-	ID               uint      `json:"id"`
-	User_id          uint      `json:"user_id"`
-	Pack_name        string    `json:"pack_name"`
-	Pack_description string    `json:"pack_description"`
-	Sharing_code     string    `json:"sharing_code"`
-	Created_at       time.Time `json:"created_at"`
-	Updated_at       time.Time `json:"updated_at"`
+	ID              uint      `json:"id"`
+	UserID          uint      `json:"user_id"`
+	PackName        string    `json:"pack_name"`
+	PackDescription string    `json:"pack_description"`
+	SharingCode     string    `json:"sharing_code"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 type Packs []Pack
 
 type PackContent struct {
 	ID         uint      `json:"id"`
-	Pack_id    uint      `json:"pack_id"`
-	Item_id    uint      `json:"item_id"`
+	PackID     uint      `json:"pack_id"`
+	ItemID     uint      `json:"item_id"`
 	Quantity   int       `json:"quantity"`
 	Worn       bool      `json:"worn"`
 	Consumable bool      `json:"consumable"`
-	Created_at time.Time `json:"created_at"`
-	Updated_at time.Time `json:"updated_at"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
 type PackContents []PackContent
 
 type PackContentWithItem struct {
-	Pack_content_id  uint   `json:"pack_content_id"`
-	Pack_id          uint   `json:"pack_id"`
-	Inventory_id     uint   `json:"inventory_id"`
-	Item_name        string `json:"item_name"`
-	Category         string `json:"category"`
-	Item_description string `json:"item_description"`
-	Weight           int    `json:"weight"`
-	Weight_unit      string `json:"weight_unit"`
-	Item_url         string `json:"item_url"`
-	Price            int    `json:"price"`
-	Currency         string `json:"currency"`
-	Quantity         int    `json:"quantity"`
-	Worn             bool   `json:"worn"`
-	Consumable       bool   `json:"consumable"`
+	PackContentID   uint   `json:"pack_content_id"`
+	PackID          uint   `json:"pack_id"`
+	InventoryID     uint   `json:"inventory_id"`
+	ItemName        string `json:"item_name"`
+	Category        string `json:"category"`
+	ItemDescription string `json:"item_description"`
+	Weight          int    `json:"weight"`
+	WeightUnit      string `json:"weight_unit"`
+	ItemURL         string `json:"item_url"`
+	Price           int    `json:"price"`
+	Currency        string `json:"currency"`
+	Quantity        int    `json:"quantity"`
+	Worn            bool   `json:"worn"`
+	Consumable      bool   `json:"consumable"`
 }
 
 type PackContentWithItems []PackContentWithItem
 
 type LighterPackItem struct {
-	Item_name  string `json:"item_name"`
+	ItemName   string `json:"item_name"`
 	Category   string `json:"category"`
 	Desc       string `json:"desc"`
 	Qty        int    `json:"qty"`
 	Weight     int    `json:"weight"`
 	Unit       string `json:"unit"`
-	Url        string `json:"url"`
+	URL        string `json:"url"`
 	Price      int    `json:"price"`
 	Worn       bool   `json:"worn"`
 	Consumable bool   `json:"consumable"`
@@ -112,8 +112,8 @@ type User struct {
 	Status       string    `json:"status"`
 	Password     string    `json:"password"`
 	LastPassword string    `json:"last_password"`
-	Created_at   time.Time `json:"created_at"`
-	Updated_at   time.Time `json:"updated_at"`
+	CreatedAt    time.Time `json:"created_at"`
+	UpdatedAt    time.Time `json:"updated_at"`
 }
 
 type MailServer struct {

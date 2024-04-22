@@ -21,7 +21,6 @@ import (
 )
 
 func TestMain(m *testing.M) {
-
 	// init env
 	err := config.EnvInit("../../.env")
 	if err != nil {
@@ -29,13 +28,13 @@ func TestMain(m *testing.M) {
 	}
 
 	// init DB
-	err = database.DatabaseInit()
+	err = database.Initialization()
 	if err != nil {
 		log.Fatalf("Error connecting database : %v", err)
 	}
 
 	// init DB migration
-	err = database.DatabaseMigrate()
+	err = database.Migrate()
 	if err != nil {
 		log.Fatalf("Error migrating database : %v", err)
 	}
@@ -63,7 +62,7 @@ func TestGetInventories(t *testing.T) {
 
 	t.Run("Inventories List Retrieved", func(t *testing.T) {
 		// Create a mock HTTP request to the /inventories endpoint
-		req, err := http.NewRequest("GET", "/inventories", nil)
+		req, err := http.NewRequest(http.MethodGet, "/inventories", nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -95,20 +94,21 @@ func TestGetInventories(t *testing.T) {
 			t.Errorf("Expected almost 3 inventory but got %d", len(getInventories))
 		} else {
 			switch {
-			case !cmp.Equal(getInventories[0].User_id, inventories[0].User_id):
-				t.Errorf("Expected User_id %v but got %v", inventories[0].User_id, getInventories[0].User_id)
-			case !cmp.Equal(getInventories[0].Item_name, inventories[0].Item_name):
-				t.Errorf("Expected Item Name %v but got %v", inventories[0].Item_name, getInventories[0].Item_name)
+			case !cmp.Equal(getInventories[0].UserID, inventories[0].UserID):
+				t.Errorf("Expected UserID %v but got %v", inventories[0].UserID, getInventories[0].UserID)
+			case !cmp.Equal(getInventories[0].ItemName, inventories[0].ItemName):
+				t.Errorf("Expected Item Name %v but got %v", inventories[0].ItemName, getInventories[0].ItemName)
 			case !cmp.Equal(getInventories[0].Category, inventories[0].Category):
 				t.Errorf("Expected Category %v but got %v", inventories[0].Category, getInventories[0].Category)
 			case !cmp.Equal(getInventories[0].Description, inventories[0].Description):
-				t.Errorf("Expected Description %v but got %v", inventories[0].Description, getInventories[0].Description)
+				t.Errorf("Expected Description %v but got %v",
+					inventories[0].Description, getInventories[0].Description)
 			case !cmp.Equal(getInventories[0].Weight, inventories[0].Weight):
 				t.Errorf("Expected Weight %v but got %v", inventories[0].Weight, getInventories[0].Weight)
-			case !cmp.Equal(getInventories[0].Weight_unit, inventories[0].Weight_unit):
-				t.Errorf("Expected Weight_unit %v but got %v", inventories[0].Weight_unit, getInventories[0].Weight_unit)
-			case !cmp.Equal(getInventories[0].Url, inventories[0].Url):
-				t.Errorf("Expected Url %v but got %v", inventories[0].Url, getInventories[0].Url)
+			case !cmp.Equal(getInventories[0].WeightUnit, inventories[0].WeightUnit):
+				t.Errorf("Expected WeightUnit %v but got %v", inventories[0].WeightUnit, getInventories[0].WeightUnit)
+			case !cmp.Equal(getInventories[0].URL, inventories[0].URL):
+				t.Errorf("Expected URL %v but got %v", inventories[0].URL, getInventories[0].URL)
 			case !cmp.Equal(getInventories[0].Price, inventories[0].Price):
 				t.Errorf("Expected Price %v but got %v", inventories[0].Price, getInventories[0].Price)
 			case !cmp.Equal(getInventories[0].Currency, inventories[0].Currency):
@@ -134,7 +134,7 @@ func TestGetMyInventory(t *testing.T) {
 			t.Fatalf("Failed to generate token: %v", err)
 		}
 		// Create a mock HTTP request to the /myinventory endpoint
-		req, err := http.NewRequest("GET", "/myinventory", nil)
+		req, err := http.NewRequest(http.MethodGet, "/myinventory", nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -172,26 +172,27 @@ func TestGetMyInventory(t *testing.T) {
 			t.Errorf("Expected almost 3 inventory but got %d", len(myInventories))
 		} else {
 			switch {
-			case !cmp.Equal(myInventories[0].User_id, inventories[0].User_id):
-				t.Errorf("Expected User_id %v but got %v", inventories[0].User_id, myInventories[0].User_id)
-			case !cmp.Equal(myInventories[0].Item_name, inventories[0].Item_name):
-				t.Errorf("Expected Item Name %v but got %v", inventories[0].Item_name, myInventories[0].Item_name)
+			case !cmp.Equal(myInventories[0].UserID, inventories[0].UserID):
+				t.Errorf("Expected UserID %v but got %v", inventories[0].UserID, myInventories[0].UserID)
+			case !cmp.Equal(myInventories[0].ItemName, inventories[0].ItemName):
+				t.Errorf("Expected Item Name %v but got %v", inventories[0].ItemName, myInventories[0].ItemName)
 			case !cmp.Equal(myInventories[0].Category, inventories[0].Category):
 				t.Errorf("Expected Category %v but got %v", inventories[0].Category, myInventories[0].Category)
 			case !cmp.Equal(myInventories[0].Description, inventories[0].Description):
 				t.Errorf("Expected Description %v but got %v", inventories[0].Description, myInventories[0].Description)
 			case !cmp.Equal(myInventories[0].Weight, inventories[0].Weight):
 				t.Errorf("Expected Weight %v but got %v", inventories[0].Weight, myInventories[0].Weight)
-			case !cmp.Equal(myInventories[0].Weight_unit, inventories[0].Weight_unit):
-				t.Errorf("Expected Weight_unit %v but got %v", inventories[0].Weight_unit, myInventories[0].Weight_unit)
-			case !cmp.Equal(myInventories[0].Url, inventories[0].Url):
-				t.Errorf("Expected Url %v but got %v", inventories[0].Url, myInventories[0].Url)
+			case !cmp.Equal(myInventories[0].WeightUnit, inventories[0].WeightUnit):
+				t.Errorf("Expected WeightUnit %v but got %v", inventories[0].WeightUnit, myInventories[0].WeightUnit)
+			case !cmp.Equal(myInventories[0].URL, inventories[0].URL):
+				t.Errorf("Expected URL %v but got %v", inventories[0].URL, myInventories[0].URL)
 			case !cmp.Equal(myInventories[0].Price, inventories[0].Price):
 				t.Errorf("Expected Price %v but got %v", inventories[0].Price, myInventories[0].Price)
 			case !cmp.Equal(myInventories[0].Currency, inventories[0].Currency):
 				t.Errorf("Expected Currency %v but got %v", inventories[0].Currency, myInventories[0].Currency)
-			case cmp.Equal(myInventories[1].Updated_at, inventories[1].Updated_at):
-				t.Errorf("Expected Updated_at %v should be different than %v", inventories[1].Updated_at, myInventories[1].Updated_at)
+			case cmp.Equal(myInventories[1].UpdatedAt, inventories[1].UpdatedAt):
+				t.Errorf("Expected UpdatedAt %v should be different than %v",
+					inventories[1].UpdatedAt, myInventories[1].UpdatedAt)
 			}
 		}
 	})
@@ -210,7 +211,7 @@ func TestGetInventoryByID(t *testing.T) {
 	t.Run("Inventory Retrieved", func(t *testing.T) {
 		// Create a mock HTTP request to the /inventories endpoint
 		path := fmt.Sprintf("/inventories/%d", inventories[0].ID)
-		req, err := http.NewRequest("GET", path, nil)
+		req, err := http.NewRequest(http.MethodGet, path, nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -234,20 +235,20 @@ func TestGetInventoryByID(t *testing.T) {
 
 		// Compare the received Inventory with the expected Inventory
 		switch {
-		case receivedInventory.User_id != inventories[0].User_id:
-			t.Errorf("Expected User_id %v but got %v", inventories[0].User_id, receivedInventory.User_id)
-		case receivedInventory.Item_name != inventories[0].Item_name:
-			t.Errorf("Expected Item_name %v but got %v", inventories[0].Item_name, receivedInventory.Item_name)
+		case receivedInventory.UserID != inventories[0].UserID:
+			t.Errorf("Expected UserID %v but got %v", inventories[0].UserID, receivedInventory.UserID)
+		case receivedInventory.ItemName != inventories[0].ItemName:
+			t.Errorf("Expected ItemName %v but got %v", inventories[0].ItemName, receivedInventory.ItemName)
 		case receivedInventory.Category != inventories[0].Category:
 			t.Errorf("Expected Category %v but got %v", inventories[0].Category, receivedInventory.Category)
 		case receivedInventory.Description != inventories[0].Description:
 			t.Errorf("Expected Description %v but got %v", inventories[0].Description, receivedInventory.Description)
 		case receivedInventory.Weight != inventories[0].Weight:
 			t.Errorf("Expected Weight %v but got %v", inventories[0].Weight, receivedInventory.Weight)
-		case receivedInventory.Weight_unit != inventories[0].Weight_unit:
-			t.Errorf("Expected Weight_unit %v but got %v", inventories[0].Weight_unit, receivedInventory.Weight_unit)
-		case receivedInventory.Url != inventories[0].Url:
-			t.Errorf("Expected Url %v but got %v", inventories[0].Url, receivedInventory.Url)
+		case receivedInventory.WeightUnit != inventories[0].WeightUnit:
+			t.Errorf("Expected WeightUnit %v but got %v", inventories[0].WeightUnit, receivedInventory.WeightUnit)
+		case receivedInventory.URL != inventories[0].URL:
+			t.Errorf("Expected URL %v but got %v", inventories[0].URL, receivedInventory.URL)
 		case receivedInventory.Price != inventories[0].Price:
 			t.Errorf("Expected Price %v but got %v", inventories[0].Price, receivedInventory.Price)
 		case receivedInventory.Currency != inventories[0].Currency:
@@ -257,7 +258,7 @@ func TestGetInventoryByID(t *testing.T) {
 
 	// Set up a test scenario: inventory not found
 	t.Run("Inventory Not Found", func(t *testing.T) {
-		req, err := http.NewRequest("GET", "/inventories/1000", nil)
+		req, err := http.NewRequest(http.MethodGet, "/inventories/1000", nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -283,13 +284,13 @@ func TestPostInventory(t *testing.T) {
 
 	// Sample inventory data
 	newInventory := dataset.Inventory{
-		User_id:     users[0].ID,
-		Item_name:   "Light",
+		UserID:      users[0].ID,
+		ItemName:    "Light",
 		Category:    "Outdoor Gear",
 		Description: "Headed Light",
 		Weight:      29,
-		Weight_unit: "METRIC",
-		Url:         "https://example.com/light",
+		WeightUnit:  "METRIC",
+		URL:         "https://example.com/light",
 		Price:       30,
 		Currency:    "USD",
 	}
@@ -301,9 +302,8 @@ func TestPostInventory(t *testing.T) {
 	}
 
 	t.Run("Insert Inventory", func(t *testing.T) {
-
 		// Set up a test scenario: sending a POST request with JSON data
-		req, err := http.NewRequest("POST", "/inventories", bytes.NewBuffer(jsonData))
+		req, err := http.NewRequest(http.MethodPost, "/inventories", bytes.NewBuffer(jsonData))
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -319,8 +319,20 @@ func TestPostInventory(t *testing.T) {
 
 		// Query the database to get the inserted inventory
 		var insertedInventory dataset.Inventory
-		row := database.Db().QueryRow("SELECT * FROM inventory WHERE item_name = $1;", newInventory.Item_name)
-		err = row.Scan(&insertedInventory.ID, &insertedInventory.User_id, &insertedInventory.Item_name, &insertedInventory.Category, &insertedInventory.Description, &insertedInventory.Weight, &insertedInventory.Weight_unit, &insertedInventory.Url, &insertedInventory.Price, &insertedInventory.Currency, &insertedInventory.Created_at, &insertedInventory.Updated_at)
+		row := database.DB().QueryRow("SELECT * FROM inventory WHERE item_name = $1;", newInventory.ItemName)
+		err = row.Scan(
+			&insertedInventory.ID,
+			&insertedInventory.UserID,
+			&insertedInventory.ItemName,
+			&insertedInventory.Category,
+			&insertedInventory.Description,
+			&insertedInventory.Weight,
+			&insertedInventory.WeightUnit,
+			&insertedInventory.URL,
+			&insertedInventory.Price,
+			&insertedInventory.Currency,
+			&insertedInventory.CreatedAt,
+			&insertedInventory.UpdatedAt)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				fmt.Println("No rows were returned!")
@@ -338,20 +350,20 @@ func TestPostInventory(t *testing.T) {
 		switch {
 		case receivedInventory.ID != insertedInventory.ID:
 			t.Errorf("Expected ID %v but got %v", insertedInventory.ID, receivedInventory.ID)
-		case receivedInventory.User_id != insertedInventory.User_id:
-			t.Errorf("Expected User_ID %v but got %v", insertedInventory.User_id, receivedInventory.User_id)
-		case receivedInventory.Item_name != insertedInventory.Item_name:
-			t.Errorf("Expected Item_name %v but got %v", insertedInventory.Item_name, receivedInventory.Item_name)
+		case receivedInventory.UserID != insertedInventory.UserID:
+			t.Errorf("Expected User_ID %v but got %v", insertedInventory.UserID, receivedInventory.UserID)
+		case receivedInventory.ItemName != insertedInventory.ItemName:
+			t.Errorf("Expected ItemName %v but got %v", insertedInventory.ItemName, receivedInventory.ItemName)
 		case receivedInventory.Category != insertedInventory.Category:
 			t.Errorf("Expected Category %v but got %v", insertedInventory.Category, receivedInventory.Category)
 		case receivedInventory.Description != insertedInventory.Description:
 			t.Errorf("Expected Description %v but got %v", insertedInventory.Description, receivedInventory.Description)
 		case receivedInventory.Weight != insertedInventory.Weight:
 			t.Errorf("Expected Weight %v but got %v", insertedInventory.Weight, receivedInventory.Weight)
-		case receivedInventory.Weight_unit != insertedInventory.Weight_unit:
-			t.Errorf("Expected Weight_unit %v but got %v", insertedInventory.Weight_unit, receivedInventory.Weight_unit)
-		case receivedInventory.Url != insertedInventory.Url:
-			t.Errorf("Expected Url %v but got %v", insertedInventory.Url, receivedInventory.Url)
+		case receivedInventory.WeightUnit != insertedInventory.WeightUnit:
+			t.Errorf("Expected WeightUnit %v but got %v", insertedInventory.WeightUnit, receivedInventory.WeightUnit)
+		case receivedInventory.URL != insertedInventory.URL:
+			t.Errorf("Expected URL %v but got %v", insertedInventory.URL, receivedInventory.URL)
 		case receivedInventory.Price != insertedInventory.Price:
 			t.Errorf("Expected Price %v but got %v", insertedInventory.Price, receivedInventory.Price)
 		case receivedInventory.Currency != insertedInventory.Currency:
@@ -371,30 +383,29 @@ func TestPutInventoryByID(t *testing.T) {
 	router.PUT("/inventories/:id", PutInventoryByID)
 
 	// Sample inventory data (with the first user of the dataset and the second inventory of the dataset)
-	TestUpdatedInventory := dataset.Inventory{
+	testUpdatedInventory := dataset.Inventory{
 		ID:          inventories[1].ID,
-		User_id:     users[0].ID,
-		Item_name:   "Tent",
+		UserID:      users[0].ID,
+		ItemName:    "Tent",
 		Category:    "Outdoor Gear",
 		Description: "Lightweight tent for camping",
 		Weight:      1200,
-		Weight_unit: "METRIC",
-		Url:         "https://example.com/tent",
+		WeightUnit:  "METRIC",
+		URL:         "https://example.com/tent",
 		Price:       200,
 		Currency:    "USD",
 	}
 
 	// Convert inventory data to JSON
-	jsonData, err := json.Marshal(TestUpdatedInventory)
+	jsonData, err := json.Marshal(testUpdatedInventory)
 	if err != nil {
 		t.Fatalf("Failed to marshal inventory data: %v", err)
 	}
 
 	t.Run("Update Inventory", func(t *testing.T) {
-
 		// Set up a test scenario: sending a PUT request with JSON data
-		path := fmt.Sprintf("/inventories/%d", TestUpdatedInventory.ID)
-		req, err := http.NewRequest("PUT", path, bytes.NewBuffer(jsonData))
+		path := fmt.Sprintf("/inventories/%d", testUpdatedInventory.ID)
+		req, err := http.NewRequest(http.MethodPut, path, bytes.NewBuffer(jsonData))
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -410,8 +421,20 @@ func TestPutInventoryByID(t *testing.T) {
 
 		// Query the database to get the updated inventories
 		var updatedInventory dataset.Inventory
-		row := database.Db().QueryRow("SELECT * FROM inventory WHERE id = $1;", TestUpdatedInventory.ID)
-		err = row.Scan(&updatedInventory.ID, &updatedInventory.User_id, &updatedInventory.Item_name, &updatedInventory.Category, &updatedInventory.Description, &updatedInventory.Weight, &updatedInventory.Weight_unit, &updatedInventory.Url, &updatedInventory.Price, &updatedInventory.Currency, &updatedInventory.Created_at, &updatedInventory.Updated_at)
+		row := database.DB().QueryRow("SELECT * FROM inventory WHERE id = $1;", testUpdatedInventory.ID)
+		err = row.Scan(
+			&updatedInventory.ID,
+			&updatedInventory.UserID,
+			&updatedInventory.ItemName,
+			&updatedInventory.Category,
+			&updatedInventory.Description,
+			&updatedInventory.Weight,
+			&updatedInventory.WeightUnit,
+			&updatedInventory.URL,
+			&updatedInventory.Price,
+			&updatedInventory.Currency,
+			&updatedInventory.CreatedAt,
+			&updatedInventory.UpdatedAt)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				fmt.Println("No rows were returned!")
@@ -421,20 +444,21 @@ func TestPutInventoryByID(t *testing.T) {
 
 		// Compare the data in DB with Test dataset
 		switch {
-		case updatedInventory.Item_name != TestUpdatedInventory.Item_name:
-			t.Errorf("Expected Item_name %v but got %v", TestUpdatedInventory.Item_name, updatedInventory.Item_name)
-		case updatedInventory.Category != TestUpdatedInventory.Category:
-			t.Errorf("Expected Category %v but got %v", TestUpdatedInventory.Category, updatedInventory.Category)
-		case updatedInventory.Description != TestUpdatedInventory.Description:
-			t.Errorf("Expected Description %v but got %v", TestUpdatedInventory.Description, updatedInventory.Description)
-		case updatedInventory.Weight != TestUpdatedInventory.Weight:
-			t.Errorf("Expected Weight %v but got %v", TestUpdatedInventory.Weight, updatedInventory.Weight)
-		case updatedInventory.Weight_unit != TestUpdatedInventory.Weight_unit:
-			t.Errorf("Expected Weight_unit %v but got %v", TestUpdatedInventory.Weight_unit, updatedInventory.Weight_unit)
-		case updatedInventory.Url != TestUpdatedInventory.Url:
-			t.Errorf("Expected Url %v but got %v", TestUpdatedInventory.Url, updatedInventory.Url)
-		case updatedInventory.Price != TestUpdatedInventory.Price:
-			t.Errorf("Expected Price %v but got %v", TestUpdatedInventory.Price, updatedInventory.Price)
+		case updatedInventory.ItemName != testUpdatedInventory.ItemName:
+			t.Errorf("Expected ItemName %v but got %v", testUpdatedInventory.ItemName, updatedInventory.ItemName)
+		case updatedInventory.Category != testUpdatedInventory.Category:
+			t.Errorf("Expected Category %v but got %v", testUpdatedInventory.Category, updatedInventory.Category)
+		case updatedInventory.Description != testUpdatedInventory.Description:
+			t.Errorf("Expected Description %v but got %v",
+				testUpdatedInventory.Description, updatedInventory.Description)
+		case updatedInventory.Weight != testUpdatedInventory.Weight:
+			t.Errorf("Expected Weight %v but got %v", testUpdatedInventory.Weight, updatedInventory.Weight)
+		case updatedInventory.WeightUnit != testUpdatedInventory.WeightUnit:
+			t.Errorf("Expected WeightUnit %v but got %v", testUpdatedInventory.WeightUnit, updatedInventory.WeightUnit)
+		case updatedInventory.URL != testUpdatedInventory.URL:
+			t.Errorf("Expected URL %v but got %v", testUpdatedInventory.URL, updatedInventory.URL)
+		case updatedInventory.Price != testUpdatedInventory.Price:
+			t.Errorf("Expected Price %v but got %v", testUpdatedInventory.Price, updatedInventory.Price)
 		}
 	})
 }
@@ -450,10 +474,9 @@ func TestDeleteInventoryByID(t *testing.T) {
 	router.DELETE("/inventories/:id", DeleteInventoryByID)
 
 	t.Run("Delete inventory", func(t *testing.T) {
-
 		// Set up a test scenario: sending a DELETE request with the third inventory of the dataset
 		path := fmt.Sprintf("/inventories/%d", inventories[2].ID)
-		req, err := http.NewRequest("DELETE", path, nil)
+		req, err := http.NewRequest(http.MethodDelete, path, nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -465,15 +488,14 @@ func TestDeleteInventoryByID(t *testing.T) {
 		// Check the HTTP status code
 		if w.Code != http.StatusOK {
 			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
-
 		}
 
 		// check in database if the inventory has been deleted
-		var item_name string
-		row := database.Db().QueryRow("SELECT item_name FROM inventory WHERE id = $1;", inventories[2].ID)
-		err = row.Scan(&item_name)
+		var itemName string
+		row := database.DB().QueryRow("SELECT item_name FROM inventory WHERE id = $1;", inventories[2].ID)
+		err = row.Scan(&itemName)
 		if err == nil {
-			t.Errorf("Inventory ID 3 associated to item_name %s should be deleted and it is still in DB", item_name)
+			t.Errorf("Inventory ID 3 associated to item_name %s should be deleted and it is still in DB", itemName)
 		} else if !errors.Is(err, sql.ErrNoRows) {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -481,9 +503,7 @@ func TestDeleteInventoryByID(t *testing.T) {
 }
 
 func TestCheckInventoryOwnership(t *testing.T) {
-
 	t.Run("Test Pack Ownership", func(t *testing.T) {
-
 		inventoryID := inventories[0].ID
 		userID := users[0].ID
 		wrongUserID := users[1].ID
@@ -503,7 +523,6 @@ func TestCheckInventoryOwnership(t *testing.T) {
 		if notmyInventory {
 			t.Errorf("Expected false but got true")
 		}
-
 	})
 }
 
@@ -523,7 +542,7 @@ func TestGetMyInventoryByID(t *testing.T) {
 		}
 		// Create a mock HTTP request to the /myinventory endpoint
 		path := fmt.Sprintf("/myinventory/%d", inventories[0].ID)
-		req, err := http.NewRequest("GET", path, nil)
+		req, err := http.NewRequest(http.MethodGet, path, nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}
@@ -551,20 +570,20 @@ func TestGetMyInventoryByID(t *testing.T) {
 
 		// Compare the received Inventory with the expected Inventory
 		switch {
-		case receivedInventory.User_id != inventories[0].User_id:
-			t.Errorf("Expected User_id %v but got %v", inventories[0].User_id, receivedInventory.User_id)
-		case receivedInventory.Item_name != inventories[0].Item_name:
-			t.Errorf("Expected Item_name %v but got %v", inventories[0].Item_name, receivedInventory.Item_name)
+		case receivedInventory.UserID != inventories[0].UserID:
+			t.Errorf("Expected UserID %v but got %v", inventories[0].UserID, receivedInventory.UserID)
+		case receivedInventory.ItemName != inventories[0].ItemName:
+			t.Errorf("Expected ItemName %v but got %v", inventories[0].ItemName, receivedInventory.ItemName)
 		case receivedInventory.Category != inventories[0].Category:
 			t.Errorf("Expected Category %v but got %v", inventories[0].Category, receivedInventory.Category)
 		case receivedInventory.Description != inventories[0].Description:
 			t.Errorf("Expected Description %v but got %v", inventories[0].Description, receivedInventory.Description)
 		case receivedInventory.Weight != inventories[0].Weight:
 			t.Errorf("Expected Weight %v but got %v", inventories[0].Weight, receivedInventory.Weight)
-		case receivedInventory.Weight_unit != inventories[0].Weight_unit:
-			t.Errorf("Expected Weight_unit %v but got %v", inventories[0].Weight_unit, receivedInventory.Weight_unit)
-		case receivedInventory.Url != inventories[0].Url:
-			t.Errorf("Expected Url %v but got %v", inventories[0].Url, receivedInventory.Url)
+		case receivedInventory.WeightUnit != inventories[0].WeightUnit:
+			t.Errorf("Expected WeightUnit %v but got %v", inventories[0].WeightUnit, receivedInventory.WeightUnit)
+		case receivedInventory.URL != inventories[0].URL:
+			t.Errorf("Expected URL %v but got %v", inventories[0].URL, receivedInventory.URL)
 		case receivedInventory.Price != inventories[0].Price:
 			t.Errorf("Expected Price %v but got %v", inventories[0].Price, receivedInventory.Price)
 		case receivedInventory.Currency != inventories[0].Currency:
@@ -578,7 +597,7 @@ func TestGetMyInventoryByID(t *testing.T) {
 		}
 		// Create a mock HTTP request to the /myinventory endpoint
 		path := fmt.Sprintf("/myinventory/%d", inventories[0].ID)
-		req, err := http.NewRequest("GET", path, nil)
+		req, err := http.NewRequest(http.MethodGet, path, nil)
 		if err != nil {
 			t.Fatalf("Failed to create request: %v", err)
 		}

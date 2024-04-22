@@ -7,7 +7,6 @@ import (
 )
 
 func TestVerifyPassword(t *testing.T) {
-
 	firsthashedPassword, err := HashPassword("password")
 	if err != nil {
 		t.Fatalf("failed to hash password: %v", err)

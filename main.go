@@ -15,29 +15,32 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func init() {
+const (
+	envDev   = "DEV"
+	envLocal = "LOCAL"
+)
 
+func init() {
 	// init env
 	err := config.EnvInit(".env")
 	if err != nil {
 		log.Fatalf("Error loading .env file or environment variable : %v", err)
 	}
-	println("Environment variables loaded")
+	log.Println("Environment variables loaded")
 
 	// init DB
-	err = database.DatabaseInit()
+	err = database.Initialization()
 	if err != nil {
 		log.Fatalf("Error connecting database : %v", err)
 	}
-	println("Database connected")
+	log.Println("Database connected")
 
 	// init DB migration
-	err = database.DatabaseMigrate()
+	err = database.Migrate()
 	if err != nil {
 		log.Fatalf("Error migrating database : %v", err)
 	}
-	println("Database migrated")
-
+	log.Println("Database migrated")
 }
 
 // @title PimpMyPack API
@@ -47,8 +50,7 @@ func init() {
 // @Schemes https
 // @BasePath /api
 func main() {
-
-	if config.Stage == "DEV" || config.Stage == "LOCAL" {
+	if config.Stage == envDev || config.Stage == envLocal {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
@@ -108,11 +110,11 @@ func main() {
 	private.DELETE("/packcontents/:id", packs.DeletePackContentByID)
 	private.GET("/packs/:id/packcontents", packs.GetPackContentsByPackID)
 
-	if config.Stage == "DEV" || config.Stage == "LOCAL" {
+	if config.Stage == envDev || config.Stage == envLocal {
 		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
 
-	if config.Stage == "LOCAL" {
+	if config.Stage == envLocal {
 		err := router.Run("localhost:8080")
 		if err != nil {
 			panic(err)

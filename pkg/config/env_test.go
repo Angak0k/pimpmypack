@@ -7,7 +7,6 @@ import (
 )
 
 func TestEnvInit(t *testing.T) {
-
 	t.Run("Importing valid env file", func(t *testing.T) {
 		// Test a valid .env file
 		err := EnvInit("test/.env.testSuccess")

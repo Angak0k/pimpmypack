@@ -18,7 +18,6 @@ func TestMain(m *testing.M) {
 
 	ret := m.Run()
 	os.Exit(ret)
-
 }
 
 func TestStringToUint(t *testing.T) {
@@ -104,17 +103,17 @@ func TestFindPackIDByPackName(t *testing.T) {
 		expected uint   // Expected output
 	}{
 		{
-			dataset.Packs{{ID: 1, Pack_name: "pack1"}, {ID: 2, Pack_name: "pack2"}},
+			dataset.Packs{{ID: 1, PackName: "pack1"}, {ID: 2, PackName: "pack2"}},
 			"pack1",
 			1,
 		},
 		{
-			dataset.Packs{{ID: 1, Pack_name: "pack1"}, {ID: 2, Pack_name: "pack2"}},
+			dataset.Packs{{ID: 1, PackName: "pack1"}, {ID: 2, PackName: "pack2"}},
 			"pack2",
 			2,
 		},
 		{
-			dataset.Packs{{ID: 1, Pack_name: "pack1"}, {ID: 2, Pack_name: "pack2"}},
+			dataset.Packs{{ID: 1, PackName: "pack1"}, {ID: 2, PackName: "pack2"}},
 			"pack3",
 			0,
 		},
@@ -139,17 +138,17 @@ func TestFindItemIDByItemName(t *testing.T) {
 		expected    uint   // Expected output
 	}{
 		{
-			dataset.Inventories{{ID: 1, Item_name: "item1"}, {ID: 2, Item_name: "item2"}},
+			dataset.Inventories{{ID: 1, ItemName: "item1"}, {ID: 2, ItemName: "item2"}},
 			"item1",
 			1,
 		},
 		{
-			dataset.Inventories{{ID: 1, Item_name: "item1"}, {ID: 2, Item_name: "item2"}},
+			dataset.Inventories{{ID: 1, ItemName: "item1"}, {ID: 2, ItemName: "item2"}},
 			"item2",
 			2,
 		},
 		{
-			dataset.Inventories{{ID: 1, Item_name: "item1"}, {ID: 2, Item_name: "item2"}},
+			dataset.Inventories{{ID: 1, ItemName: "item1"}, {ID: 2, ItemName: "item2"}},
 			"item3",
 			0,
 		},
@@ -160,7 +159,11 @@ func TestFindItemIDByItemName(t *testing.T) {
 		t.Run(tc.itemname, func(t *testing.T) {
 			output := FindItemIDByItemName(tc.inventories, tc.itemname)
 			if output != tc.expected {
-				t.Errorf("FinItemIDByItemName(%v, %s): expected %d, got %d", tc.inventories, tc.itemname, tc.expected, output)
+				t.Errorf("FinItemIDByItemName(%v, %s): expected %d, got %d",
+					tc.inventories,
+					tc.itemname,
+					tc.expected,
+					output)
 			}
 		})
 	}
@@ -224,7 +227,6 @@ func TestGenerateRandomCode(t *testing.T) {
 }
 
 func TestIsValidEmail(t *testing.T) {
-
 	testCases := []struct {
 		name     string // Name of the test case for readability
 		email    string // Input email

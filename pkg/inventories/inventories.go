@@ -24,7 +24,6 @@ import (
 // @Failure 500 {object} dataset.ErrorResponse
 // @Router /admin/inventories [get]
 func GetInventories(c *gin.Context) {
-
 	inventories, err := returnInventories()
 
 	if err != nil {
@@ -42,7 +41,20 @@ func GetInventories(c *gin.Context) {
 func returnInventories() (*dataset.Inventories, error) {
 	var inventories dataset.Inventories
 
-	rows, err := database.Db().Query("SELECT id, user_id, item_name, category, description, weight, weight_unit, url, price, currency, created_at, updated_at FROM inventory;")
+	rows, err := database.DB().Query(
+		`SELECT id, 
+			user_id, 
+			item_name, 
+			category, 
+			description, 
+			weight, 
+			weight_unit, 
+			url, 
+			price, 
+			currency, 
+			created_at, 
+			updated_at 
+		FROM inventory;`)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -53,7 +65,19 @@ func returnInventories() (*dataset.Inventories, error) {
 
 	for rows.Next() {
 		var inventory dataset.Inventory
-		err := rows.Scan(&inventory.ID, &inventory.User_id, &inventory.Item_name, &inventory.Category, &inventory.Description, &inventory.Weight, &inventory.Weight_unit, &inventory.Url, &inventory.Price, &inventory.Currency, &inventory.Created_at, &inventory.Updated_at)
+		err := rows.Scan(
+			&inventory.ID,
+			&inventory.UserID,
+			&inventory.ItemName,
+			&inventory.Category,
+			&inventory.Description,
+			&inventory.Weight,
+			&inventory.WeightUnit,
+			&inventory.URL,
+			&inventory.Price,
+			&inventory.Currency,
+			&inventory.CreatedAt,
+			&inventory.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -79,15 +103,14 @@ func returnInventories() (*dataset.Inventories, error) {
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /v1/myinventory [get]
 func GetMyInventory(c *gin.Context) {
-
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	inventories, err := returnInventoriesByUserID(user_id)
+	inventories, err := returnInventoriesByUserID(userID)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -99,13 +122,25 @@ func GetMyInventory(c *gin.Context) {
 	} else {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "No inventories empty"})
 	}
-
 }
 
-func returnInventoriesByUserID(user_id uint) (*dataset.Inventories, error) {
+func returnInventoriesByUserID(userID uint) (*dataset.Inventories, error) {
 	var inventories dataset.Inventories
 
-	rows, err := database.Db().Query("SELECT id, user_id, item_name, category, description, weight, weight_unit, url, price, currency, created_at, updated_at FROM inventory WHERE user_id = $1 ORDER BY id;", user_id)
+	rows, err := database.DB().Query(
+		`SELECT id, 
+			user_id, 
+			item_name, 
+			category, 
+			description, 
+			weight, 
+			weight_unit, 
+			url, price, 
+			currency, 
+			created_at, 
+			updated_at 
+		FROM inventory WHERE user_id = $1 ORDER BY id;`,
+		userID)
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +148,19 @@ func returnInventoriesByUserID(user_id uint) (*dataset.Inventories, error) {
 
 	for rows.Next() {
 		var inventory dataset.Inventory
-		err := rows.Scan(&inventory.ID, &inventory.User_id, &inventory.Item_name, &inventory.Category, &inventory.Description, &inventory.Weight, &inventory.Weight_unit, &inventory.Url, &inventory.Price, &inventory.Currency, &inventory.Created_at, &inventory.Updated_at)
+		err := rows.Scan(
+			&inventory.ID,
+			&inventory.UserID,
+			&inventory.ItemName,
+			&inventory.Category,
+			&inventory.Description,
+			&inventory.Weight,
+			&inventory.WeightUnit,
+			&inventory.URL,
+			&inventory.Price,
+			&inventory.Currency,
+			&inventory.CreatedAt,
+			&inventory.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -140,14 +187,13 @@ func returnInventoriesByUserID(user_id uint) (*dataset.Inventories, error) {
 // @Failure 500 {object} dataset.ErrorResponse
 // @Router /admin/inventories/{id} [get]
 func GetInventoryByID(c *gin.Context) {
-
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	inventory, err := findInventoryById(id)
+	inventory, err := findInventoryByID(id)
 
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -176,8 +222,7 @@ func GetInventoryByID(c *gin.Context) {
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /v1/myinventory/{id} [get]
 func GetMyInventoryByID(c *gin.Context) {
-
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -189,30 +234,55 @@ func GetMyInventoryByID(c *gin.Context) {
 		return
 	}
 
-	myInventory, err := checkInventoryOwnership(id, user_id)
+	myInventory, err := checkInventoryOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if myInventory {
-		inventory, err := findInventoryById(id)
+		inventory, err := findInventoryByID(id)
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
-		} else {
-			c.IndentedJSON(http.StatusOK, inventory)
 		}
+		c.IndentedJSON(http.StatusOK, inventory)
 	} else {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
 	}
 }
 
-func findInventoryById(id uint) (*dataset.Inventory, error) {
+func findInventoryByID(id uint) (*dataset.Inventory, error) {
 	var inventory dataset.Inventory
 
-	row := database.Db().QueryRow("SELECT id, user_id, item_name, category, description, weight, weight_unit, url, price, currency, created_at, updated_at FROM inventory WHERE id = $1;", id)
-	err := row.Scan(&inventory.ID, &inventory.User_id, &inventory.Item_name, &inventory.Category, &inventory.Description, &inventory.Weight, &inventory.Weight_unit, &inventory.Url, &inventory.Price, &inventory.Currency, &inventory.Created_at, &inventory.Updated_at)
+	row := database.DB().QueryRow(
+		`SELECT id, 
+			user_id, 
+			item_name, 
+			category, 
+			description, 
+			weight, 
+			weight_unit, 
+			url, 
+			price, 
+			currency, 
+			created_at, 
+			updated_at 
+		FROM inventory WHERE id = $1;`,
+		id)
+	err := row.Scan(
+		&inventory.ID,
+		&inventory.UserID,
+		&inventory.ItemName,
+		&inventory.Category,
+		&inventory.Description,
+		&inventory.Weight,
+		&inventory.WeightUnit,
+		&inventory.URL,
+		&inventory.Price,
+		&inventory.Currency,
+		&inventory.CreatedAt,
+		&inventory.UpdatedAt)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -250,7 +320,6 @@ func PostInventory(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusCreated, newInventory)
-
 }
 
 // PostMyInventory creates an inventory
@@ -269,13 +338,13 @@ func PostInventory(c *gin.Context) {
 func PostMyInventory(c *gin.Context) {
 	var newInventory dataset.Inventory
 
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	newInventory.User_id = user_id
+	newInventory.UserID = userID
 
 	err = c.BindJSON(&newInventory)
 	if err != nil {
@@ -290,26 +359,38 @@ func PostMyInventory(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusCreated, newInventory)
-
 }
 
 func InsertInventory(i *dataset.Inventory) error {
-
 	if i == nil {
 		return errors.New("payload is empty")
 	}
 
-	i.Created_at = time.Now().Truncate(time.Second)
-	i.Updated_at = time.Now().Truncate(time.Second)
+	i.CreatedAt = time.Now().Truncate(time.Second)
+	i.UpdatedAt = time.Now().Truncate(time.Second)
 
-	err := database.Db().QueryRow("INSERT INTO inventory (user_id, item_name, category, description, weight, weight_unit, url, price, currency, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id;", i.User_id, i.Item_name, i.Category, i.Description, i.Weight, i.Weight_unit, i.Url, i.Price, i.Currency, i.Created_at, i.Updated_at).Scan(&i.ID)
+	//nolint:execinquery
+	err := database.DB().QueryRow(
+		`INSERT INTO inventory 
+		(user_id, item_name, category, description, weight, weight_unit, url, price, currency, created_at, updated_at) 
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) 
+		RETURNING id;`,
+		i.UserID,
+		i.ItemName,
+		i.Category,
+		i.Description,
+		i.Weight,
+		i.WeightUnit,
+		i.URL, i.Price,
+		i.Currency,
+		i.CreatedAt,
+		i.UpdatedAt).Scan(&i.ID)
 
 	if err != nil {
 		return err
 	}
 
 	return nil
-
 }
 
 // PutInventoryByID updates an inventory by ID
@@ -342,14 +423,13 @@ func PutInventoryByID(c *gin.Context) {
 
 	updatedInventory.ID = id
 
-	err = updateInventoryById(id, &updatedInventory)
+	err = updateInventoryByID(id, &updatedInventory)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.IndentedJSON(http.StatusOK, updatedInventory)
-
 }
 
 // PutMyInventoryByID updates an inventory by ID
@@ -371,7 +451,7 @@ func PutInventoryByID(c *gin.Context) {
 func PutMyInventoryByID(c *gin.Context) {
 	var updatedInventory dataset.Inventory
 
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -383,42 +463,66 @@ func PutMyInventoryByID(c *gin.Context) {
 		return
 	}
 
-	myInventory, err := checkInventoryOwnership(id, user_id)
+	myInventory, err := checkInventoryOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if myInventory {
-		updatedInventory.User_id = user_id
+		updatedInventory.UserID = userID
 		if err := c.BindJSON(&updatedInventory); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		err = updateInventoryById(id, &updatedInventory)
+		err = updateInventoryByID(id, &updatedInventory)
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
-		} else {
-			c.IndentedJSON(http.StatusOK, updatedInventory)
 		}
+		c.IndentedJSON(http.StatusOK, updatedInventory)
 	} else {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
 	}
 }
 
-func updateInventoryById(id uint, i *dataset.Inventory) error {
-
+func updateInventoryByID(id uint, i *dataset.Inventory) error {
 	if i == nil {
 		return errors.New("payload is empty")
 	}
 
-	i.Updated_at = time.Now().Truncate(time.Second)
-	statement, err := database.Db().Prepare("UPDATE inventory SET user_id=$1, item_name=$2, category=$3, description=$4, weight=$5, weight_unit=$6, url=$7, price=$8, currency=$9, updated_at=$10 WHERE id=$11;")
+	i.UpdatedAt = time.Now().Truncate(time.Second)
+	statement, err := database.DB().Prepare(
+		`UPDATE inventory 
+		SET user_id=$1, 
+			item_name=$2, 
+			category=$3, 
+			description=$4, 
+			weight=$5, 
+			weight_unit=$6, 
+			url=$7, 
+			price=$8, 
+			currency=$9, 
+			updated_at=$10 
+		WHERE id=$11;`)
 	if err != nil {
 		return err
 	}
-	_, err = statement.Exec(i.User_id, i.Item_name, i.Category, i.Description, i.Weight, i.Weight_unit, i.Url, i.Price, i.Currency, i.Updated_at, id)
+
+	defer statement.Close()
+
+	_, err = statement.Exec(
+		i.UserID,
+		i.ItemName,
+		i.Category,
+		i.Description,
+		i.Weight,
+		i.WeightUnit,
+		i.URL,
+		i.Price,
+		i.Currency,
+		i.UpdatedAt,
+		id)
 	if err != nil {
 		return err
 	}
@@ -438,26 +542,23 @@ func updateInventoryById(id uint, i *dataset.Inventory) error {
 // @Failure 500 {object} dataset.ErrorResponse
 // @Router /admin/inventories/{id} [delete]
 func DeleteInventoryByID(c *gin.Context) {
-
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	err = deleteInventoryById(id)
+	err = deleteInventoryByID(id)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.IndentedJSON(http.StatusOK, gin.H{"message": "Inventory deleted"})
-
 }
 
 func DeleteMyInventoryByID(c *gin.Context) {
-
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -469,14 +570,14 @@ func DeleteMyInventoryByID(c *gin.Context) {
 		return
 	}
 
-	myInventory, err := checkInventoryOwnership(id, user_id)
+	myInventory, err := checkInventoryOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if myInventory {
-		err = deleteInventoryById(id)
+		err = deleteInventoryByID(id)
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -487,11 +588,14 @@ func DeleteMyInventoryByID(c *gin.Context) {
 	}
 }
 
-func deleteInventoryById(id uint) error {
-	statement, err := database.Db().Prepare("DELETE FROM inventory WHERE id=$1;")
+func deleteInventoryByID(id uint) error {
+	statement, err := database.DB().Prepare("DELETE FROM inventory WHERE id=$1;")
 	if err != nil {
 		return err
 	}
+
+	defer statement.Close()
+
 	_, err = statement.Exec(id)
 	if err != nil {
 		return err
@@ -500,10 +604,10 @@ func deleteInventoryById(id uint) error {
 	return nil
 }
 
-func checkInventoryOwnership(id uint, user_id uint) (bool, error) {
+func checkInventoryOwnership(id uint, userID uint) (bool, error) {
 	var rows int
 
-	row := database.Db().QueryRow("SELECT COUNT(id) FROM inventory WHERE id = $1 AND user_id = $2;", id, user_id)
+	row := database.DB().QueryRow("SELECT COUNT(id) FROM inventory WHERE id = $1 AND user_id = $2;", id, userID)
 	err := row.Scan(&rows)
 	if err != nil {
 		return false, err
@@ -511,7 +615,7 @@ func checkInventoryOwnership(id uint, user_id uint) (bool, error) {
 
 	if rows == 0 {
 		return false, nil
-	} else {
-		return true, nil
 	}
+
+	return true, nil
 }
