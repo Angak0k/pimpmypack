@@ -61,10 +61,6 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
         id: go
-
-      - name: staticcheck
-        uses: dominikh/staticcheck-action@v1.3.1
-
       - name: lint
         uses: golangci/golangci-lint-action@v4.0.0
         with:
