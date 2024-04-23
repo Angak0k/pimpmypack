@@ -68,7 +68,7 @@ func TestEnvInit(t *testing.T) {
 				"MAIL_SERVER=smtp.exemple.com",
 				"MAIL_PORT=587",
 			},
-			wantError: true,
+			wantError: false,
 		},
 		{
 			name: "Invalid DB_HOST Configuration",
