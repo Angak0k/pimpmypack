@@ -161,8 +161,22 @@ var packWithItems = dataset.PackContentWithItems{
 }
 
 func loadingPackDataset() error {
+	if err := loadAccounts(); err != nil {
+		return err
+	}
+	if err := transformInventories(); err != nil {
+		return err
+	}
+	if err := loadInventories(); err != nil {
+		return err
+	}
+	if err := transformPackContents(); err != nil {
+		return err
+	}
+	return loadPackContents()
+}
 
-	// Load accounts dataset
+func loadAccounts() error {
 	println("-> Loading accounts and passwords ...")
 	for i := range users {
 		var id uint
@@ -205,9 +219,11 @@ func loadingPackDataset() error {
 			return err
 		}
 	}
-
 	println("-> Accounts Loaded...")
+	return nil
+}
 
+func transformInventories() error {
 	// Transform inventories dataset by using the real user_id
 	for i := range inventoriesUserPack1 {
 		switch inventoriesUserPack1[i].UserID {
@@ -227,11 +243,11 @@ func loadingPackDataset() error {
 			packs[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
 		}
 	}
+	return nil
+}
 
-	// Load inventories dataset
+func loadInventories() error {
 	println("-> Loading Inventories...")
-
-	// Insert inventories dataset
 	for i := range inventoriesUserPack1 {
 		//nolint:execinquery
 		err := database.DB().QueryRow(
@@ -256,8 +272,6 @@ func loadingPackDataset() error {
 		}
 	}
 	println("-> Inventories Loaded...")
-
-	// Load packs dataset
 	println("-> Loading Packs...")
 
 	// Insert packs dataset
@@ -278,7 +292,10 @@ func loadingPackDataset() error {
 		}
 	}
 	println("-> Packs Loaded...")
+	return nil
+}
 
+func transformPackContents() error {
 	// Transform packs_contents dataset
 
 	for i := range packItems {
@@ -314,11 +331,11 @@ func loadingPackDataset() error {
 			packWithItems[i].PackID = helper.FindPackIDByPackName(packs, "Special Pack")
 		}
 	}
+	return nil
+}
 
-	// Load pack_contents dataset
+func loadPackContents() error {
 	println("-> Loading Pack Contents...")
-
-	// Insert pack_contents dataset
 	for i := range packItems {
 		//nolint:execinquery
 		err := database.DB().QueryRow(
