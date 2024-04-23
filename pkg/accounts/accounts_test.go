@@ -354,8 +354,7 @@ func TestDeleteAccountByID(t *testing.T) {
 	})
 }
 
-func TestRegisterOld(t *testing.T) {
-
+func TestRegisterOK(t *testing.T) {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -441,7 +440,17 @@ func TestRegisterOld(t *testing.T) {
 			t.Errorf("Expected Status %v but got %v", "pending", insertedUser.Status)
 		}
 	})
+}
 
+func TestRegisterKO(t *testing.T) {
+	// Set Gin to test mode
+	gin.SetMode(gin.TestMode)
+
+	// Create a Gin router instance
+	router := gin.Default()
+
+	// Define the endpoint for Register handler
+	router.POST("/register", Register)
 	t.Run("Register account with bad email", func(t *testing.T) {
 		// Sample account data
 		newAccount := dataset.RegisterInput{
@@ -475,7 +484,6 @@ func TestRegisterOld(t *testing.T) {
 	})
 }
 
-// /////
 func TestLogin(t *testing.T) {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
