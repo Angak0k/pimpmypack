@@ -17,6 +17,9 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// ErrNoAccountFound is returned when no account is found for a given ID.
+var ErrNoAccountFound = errors.New("no account found")
+
 // Register a new user account
 // @Summary Register new user
 // @Description Register a new user with username, password, email, firstname, and lastname
@@ -114,6 +117,7 @@ func registerUser(u dataset.User) (bool, error) {
 	err = sendConfirmationEmail(u, confirmationCode)
 	if err != nil {
 		// we haven't succed to send the email but the user is created
+		//nolint:nilerr
 		return false, nil
 	}
 
@@ -344,14 +348,18 @@ func GetMyAccount(c *gin.Context) {
 
 	account, err := findAccountByID(userID)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, ErrNoAccountFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if account != nil {
 		c.IndentedJSON(http.StatusOK, *account)
 	} else {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Account object is null"})
 	}
 }
 
@@ -545,14 +553,19 @@ func GetAccountByID(c *gin.Context) {
 	// Call findAccountById function to lookup in database
 	account, err := findAccountByID(id)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+		if errors.Is(err, ErrNoAccountFound) {
+			// Handle the "not found" case specifically
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+		} else {
+			// Handle other errors
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 	}
 
 	if account != nil {
 		c.IndentedJSON(http.StatusOK, *account) // Dereference only if account is not nil
 	} else {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": "Account object is null"})
 	}
 }
 
@@ -578,7 +591,7 @@ func findAccountByID(id uint) (*dataset.Account, error) {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			// Handle case when no rows are returned
-			return nil, nil
+			return nil, ErrNoAccountFound
 		}
 		return nil, err
 	}

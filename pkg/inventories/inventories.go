@@ -13,6 +13,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ErrNoItemFound is returned when no item is found for a given request.
+var ErrNoItemFound = errors.New("no item found")
+
 // GetInventories gets all inventories
 // @Summary [ADMIN] Get all inventories
 // @Description Retrieves a list of all inventories -  for admin use only
@@ -27,6 +30,10 @@ func GetInventories(c *gin.Context) {
 	inventories, err := returnInventories()
 
 	if err != nil {
+		if errors.Is(err, ErrNoItemFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "No Inventory Found"})
+			return
+		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -57,7 +64,7 @@ func returnInventories() (*dataset.Inventories, error) {
 		FROM inventory;`)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, ErrNoItemFound
 		}
 		return nil, err
 	}
@@ -196,6 +203,10 @@ func GetInventoryByID(c *gin.Context) {
 	inventory, err := findInventoryByID(id)
 
 	if err != nil {
+		if errors.Is(err, ErrNoItemFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+			return
+		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -243,6 +254,10 @@ func GetMyInventoryByID(c *gin.Context) {
 	if myInventory {
 		inventory, err := findInventoryByID(id)
 		if err != nil {
+			if errors.Is(err, ErrNoItemFound) {
+				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+				return
+			}
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
@@ -286,7 +301,7 @@ func findInventoryByID(id uint) (*dataset.Inventory, error) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, ErrNoItemFound
 		}
 		return nil, err
 	}

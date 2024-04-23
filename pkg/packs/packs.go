@@ -17,6 +17,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ErrPackNotFound is returned when a pack is not found
+var ErrPackNotFound = errors.New("pack not found")
+
+// ErrPackContentNotFound is returned when no item are found in a given pack
+var ErrPackContentNotFound = errors.New("pack content not found")
+
 // Get all packs
 // @Summary [ADMIN] Get all packs
 // @Description Get all packs - for admin use only
@@ -100,6 +106,10 @@ func GetPackByID(c *gin.Context) {
 	pack, err := findPackByID(id)
 
 	if err != nil {
+		if errors.Is(err, ErrPackNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -148,16 +158,15 @@ func GetMyPackByID(c *gin.Context) {
 	if myPack {
 		pack, err := findPackByID(id)
 		if err != nil {
+			if errors.Is(err, ErrPackNotFound) {
+				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+				return
+			}
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		if pack != nil {
-			c.IndentedJSON(http.StatusOK, *pack)
-		} else {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-			return
-		}
+		c.IndentedJSON(http.StatusOK, *pack)
 	} else {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
@@ -183,7 +192,7 @@ func findPackByID(id uint) (*dataset.Pack, error) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, ErrPackNotFound
 		}
 		return nil, err
 	}
@@ -566,6 +575,10 @@ func GetPackContentByID(c *gin.Context) {
 
 	packcontent, err := findPackContentByID(id)
 	if err != nil {
+		if errors.Is(err, ErrPackContentNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack Item not found"})
+			return
+		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -598,7 +611,7 @@ func findPackContentByID(id uint) (*dataset.PackContent, error) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, ErrPackContentNotFound
 		}
 		return nil, err
 	}
@@ -952,6 +965,10 @@ func GetPackContentsByPackID(c *gin.Context) {
 
 	packContents, err := returnPackContentsByPackID(id)
 	if err != nil {
+		if errors.Is(err, ErrPackContentNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -1001,13 +1018,14 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 	if myPack {
 		packContents, err = returnPackContentsByPackID(id)
 		if err != nil {
+			if errors.Is(err, ErrPackContentNotFound) {
+				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+				return
+			}
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		if packContents == nil {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-			return
-		}
+
 		c.IndentedJSON(http.StatusOK, packContents)
 	} else {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
@@ -1070,7 +1088,7 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 	}
 
 	if len(packWithItems) == 0 {
-		return nil, nil
+		return nil, ErrPackContentNotFound
 	}
 	return &packWithItems, nil
 }
@@ -1097,6 +1115,10 @@ func GetMyPacks(c *gin.Context) {
 	packs, err := findPacksByUserID(userID)
 
 	if err != nil {
+		if errors.Is(err, ErrPackContentNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "No pack found"})
+			return
+		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -1142,7 +1164,7 @@ func findPacksByUserID(id uint) (*dataset.Packs, error) {
 	}
 
 	if len(packs) == 0 {
-		return nil, nil
+		return nil, ErrPackContentNotFound
 	}
 
 	return &packs, nil
@@ -1346,6 +1368,10 @@ func SharedList(c *gin.Context) {
 
 	packContents, err := returnPackContentsByPackID(packID)
 	if err != nil {
+		if errors.Is(err, ErrPackContentNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
