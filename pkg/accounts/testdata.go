@@ -12,8 +12,8 @@ import (
 
 var users = []dataset.User{
 	{
-		Username:     fmt.Sprintf("user-%s", random.UniqueId()),
-		Email:        fmt.Sprintf("user-%s@exemple.com", random.UniqueId()),
+		Username:     "user-" + random.UniqueId(),
+		Email:        "user-" + random.UniqueId() + "@exemple.com",
 		Firstname:    "John",
 		Lastname:     "Doe",
 		Role:         "admin",
@@ -22,8 +22,8 @@ var users = []dataset.User{
 		LastPassword: "password",
 	},
 	{
-		Username:     fmt.Sprintf("user-%s", random.UniqueId()),
-		Email:        fmt.Sprintf("user-%s@exemple.com", random.UniqueId()),
+		Username:     "user-" + random.UniqueId(),
+		Email:        "user-" + random.UniqueId() + "@exemple.com",
 		Firstname:    "Jane",
 		Lastname:     "Smith",
 		Role:         "standard",
@@ -32,8 +32,8 @@ var users = []dataset.User{
 		LastPassword: "",
 	},
 	{
-		Username:     fmt.Sprintf("user-%s", random.UniqueId()),
-		Email:        fmt.Sprintf("user-%s@exemple.com", random.UniqueId()),
+		Username:     "user-" + random.UniqueId(),
+		Email:        "user-" + random.UniqueId() + "@exemple.com",
 		Firstname:    "Alice",
 		Lastname:     "Johnson",
 		Role:         "standard",

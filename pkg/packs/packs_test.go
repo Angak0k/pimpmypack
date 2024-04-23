@@ -1003,7 +1003,7 @@ func TestGetPackBySharingCode(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var returnedPackContents dataset.PackContents
 			// Set up a test scenario: sending a GET request
-			path := fmt.Sprintf("/sharedlist/%s", tc.sharingCode)
+			path := "/sharedlist/" + tc.sharingCode
 			req, err := http.NewRequest(http.MethodGet, path, nil)
 			if err != nil {
 				t.Fatalf("Failed to create request: %v", err)

@@ -13,8 +13,8 @@ import (
 
 var users = []dataset.User{
 	{
-		Username:     fmt.Sprintf("user-%s", random.UniqueId()),
-		Email:        fmt.Sprintf("user-%s@exemple.com", random.UniqueId()),
+		Username:     "user-" + random.UniqueId(),
+		Email:        "user-" + random.UniqueId() + "@exemple.com",
 		Firstname:    "Joseph",
 		Lastname:     "Doe",
 		Role:         "standard",
@@ -23,8 +23,8 @@ var users = []dataset.User{
 		LastPassword: "password",
 	},
 	{
-		Username:     fmt.Sprintf("user-%s", random.UniqueId()),
-		Email:        fmt.Sprintf("user-%s@exemple.com", random.UniqueId()),
+		Username:     "user-" + random.UniqueId(),
+		Email:        "user-" + random.UniqueId() + "@exemple.com",
 		Firstname:    "Syvie",
 		Lastname:     "Doe",
 		Role:         "standard",

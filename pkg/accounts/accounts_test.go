@@ -367,7 +367,7 @@ func TestRegisterOK(t *testing.T) {
 	t.Run("Register account", func(t *testing.T) {
 		// Sample account data
 		newAccount := dataset.RegisterInput{
-			Username:  fmt.Sprintf("user-%s", random.UniqueId()),
+			Username:  "user-" + random.UniqueId(),
 			Password:  "password",
 			Email:     "jane.doe@exemple.com",
 			Firstname: "Jane",
@@ -454,7 +454,7 @@ func TestRegisterKO(t *testing.T) {
 	t.Run("Register account with bad email", func(t *testing.T) {
 		// Sample account data
 		newAccount := dataset.RegisterInput{
-			Username:  fmt.Sprintf("user-%s", random.UniqueId()),
+			Username:  "user-" + random.UniqueId(),
 			Password:  "password",
 			Email:     "jane.doe@exemple",
 			Firstname: "Jane",
@@ -496,7 +496,7 @@ func TestLogin(t *testing.T) {
 
 	// Sample account data
 	newUser := dataset.User{
-		Username:  fmt.Sprintf("user-%s", random.UniqueId()),
+		Username:  "user-" + random.UniqueId(),
 		Password:  "password2",
 		Email:     "newuser2@pmp.com",
 		Firstname: "Jules",

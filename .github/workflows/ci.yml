@@ -45,6 +45,10 @@ jobs:
           API_SECRET: myawsomeapisecret
           TOKEN_HOUR_LIFESPAN: 1
           STAGE: test
+          MAIL_IDENTITY: "test@exemple.com"
+          MAIL_USERNAME: "test_user"
+          MAIL_PASSWORD: "test_password"
+          MAIL_SERVER: "smtp.exemple.com"
         run: make test
 
   linter:
