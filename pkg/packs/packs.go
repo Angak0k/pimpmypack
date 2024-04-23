@@ -1248,42 +1248,10 @@ func ImportFromLighterPack(c *gin.Context) {
 			return
 		}
 
-		lighterPackItem.ItemName = record[0]
-		lighterPackItem.Category = record[1]
-		lighterPackItem.Desc = record[2]
-		lighterPackItem.Unit = record[5]
-		lighterPackItem.URL = record[6]
-
-		qty, err := strconv.Atoi(record[3])
+		lighterPackItem, err = readLineFromCSV(record)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid CSV format - failed to convert quantity to number"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
-		}
-
-		lighterPackItem.Qty = qty
-
-		weight, err := strconv.Atoi(record[4])
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid CSV format - failed to convert weight to number"})
-			return
-		}
-
-		lighterPackItem.Weight = weight
-
-		price, err := strconv.Atoi(record[7])
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid CSV format - failed to convert price to number"})
-			return
-		}
-
-		lighterPackItem.Price = price
-
-		if record[8] == "worn" {
-			lighterPackItem.Worn = true
-		}
-
-		if record[9] == "consumable" {
-			lighterPackItem.Consumable = true
 		}
 
 		lighterPack = append(lighterPack, lighterPackItem)
@@ -1296,6 +1264,48 @@ func ImportFromLighterPack(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "CSV data imported successfully"})
+}
+
+// Take a record from csv.Newreder and return a LighterPackItem
+func readLineFromCSV(record []string) (dataset.LighterPackItem, error) {
+	var lighterPackItem dataset.LighterPackItem
+
+	lighterPackItem.ItemName = record[0]
+	lighterPackItem.Category = record[1]
+	lighterPackItem.Desc = record[2]
+	lighterPackItem.Unit = record[5]
+	lighterPackItem.URL = record[6]
+
+	qty, err := strconv.Atoi(record[3])
+	if err != nil {
+		return lighterPackItem, errors.New("invalid CSV format - failed to convert qty to number")
+	}
+
+	lighterPackItem.Qty = qty
+
+	weight, err := strconv.Atoi(record[4])
+	if err != nil {
+		return lighterPackItem, errors.New("invalid CSV format - failed to convert weight to number")
+	}
+
+	lighterPackItem.Weight = weight
+
+	price, err := strconv.Atoi(record[7])
+	if err != nil {
+		return lighterPackItem, errors.New("invalid CSV format - failed to convert price to number")
+	}
+
+	lighterPackItem.Price = price
+
+	if record[8] == "worn" {
+		lighterPackItem.Worn = true
+	}
+
+	if record[9] == "consumable" {
+		lighterPackItem.Consumable = true
+	}
+
+	return lighterPackItem, nil
 }
 
 func insertLighterPack(lp *dataset.LighterPack, userID uint) error {
