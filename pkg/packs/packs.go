@@ -17,6 +17,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// ErrPackNotFound is returned when a pack is not found
+var ErrPackNotFound = errors.New("pack not found")
+
+// ErrPackContentNotFound is returned when no item are found in a given pack
+var ErrPackContentNotFound = errors.New("pack content not found")
+
 // Get all packs
 // @Summary [ADMIN] Get all packs
 // @Description Get all packs - for admin use only
@@ -27,7 +33,6 @@ import (
 // @Failure 500 {object} dataset.ErrorResponse
 // @Router /admin/packs [get]
 func GetPacks(c *gin.Context) {
-
 	packs, err := returnPacks()
 
 	if err != nil {
@@ -45,22 +50,27 @@ func GetPacks(c *gin.Context) {
 func returnPacks() (dataset.Packs, error) {
 	var packs dataset.Packs
 
-	rows, err := database.Db().Query("SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at FROM pack;")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
+	rows, err := database.DB().Query(
+		`SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at 
+		FROM pack;`)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
 	}
+	defer rows.Close()
 
 	for rows.Next() {
 		var pack dataset.Pack
-		err := rows.Scan(&pack.ID, &pack.User_id, &pack.Pack_name, &pack.Pack_description, &pack.Sharing_code, &pack.Created_at, &pack.Updated_at)
+		err := rows.Scan(
+			&pack.ID,
+			&pack.UserID,
+			&pack.PackName,
+			&pack.PackDescription,
+			&pack.SharingCode,
+			&pack.CreatedAt,
+			&pack.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +82,6 @@ func returnPacks() (dataset.Packs, error) {
 	}
 
 	return packs, nil
-
 }
 
 // Get pack by ID
@@ -88,16 +97,19 @@ func returnPacks() (dataset.Packs, error) {
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /admin/packs/{id} [get]
 func GetPackByID(c *gin.Context) {
-
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	pack, err := findPackById(id)
+	pack, err := findPackByID(id)
 
 	if err != nil {
+		if errors.Is(err, ErrPackNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -108,7 +120,6 @@ func GetPackByID(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, *pack)
-
 }
 
 // Get My pack by ID
@@ -126,8 +137,7 @@ func GetPackByID(c *gin.Context) {
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id} [get]
 func GetMyPackByID(c *gin.Context) {
-
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -139,40 +149,50 @@ func GetMyPackByID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, user_id)
+	myPack, err := checkPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if myPack {
-		pack, err := findPackById(id)
+		pack, err := findPackByID(id)
 		if err != nil {
+			if errors.Is(err, ErrPackNotFound) {
+				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+				return
+			}
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		if pack != nil {
-			c.IndentedJSON(http.StatusOK, *pack)
-		} else {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-			return
-		}
+		c.IndentedJSON(http.StatusOK, *pack)
 	} else {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
 }
 
-func findPackById(id uint) (*dataset.Pack, error) {
+func findPackByID(id uint) (*dataset.Pack, error) {
 	var pack dataset.Pack
 
-	row := database.Db().QueryRow("SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at FROM pack WHERE id = $1;", id)
-	err := row.Scan(&pack.ID, &pack.User_id, &pack.Pack_name, &pack.Pack_description, &pack.Sharing_code, &pack.Created_at, &pack.Updated_at)
+	row := database.DB().QueryRow(
+		`SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at 
+		FROM pack 
+		WHERE id = $1;`,
+		id)
+	err := row.Scan(
+		&pack.ID,
+		&pack.UserID,
+		&pack.PackName,
+		&pack.PackDescription,
+		&pack.SharingCode,
+		&pack.CreatedAt,
+		&pack.UpdatedAt)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, ErrPackNotFound
 		}
 		return nil, err
 	}
@@ -207,7 +227,6 @@ func PostPack(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusCreated, newPack)
-
 }
 
 // Create a new pack
@@ -226,7 +245,7 @@ func PostPack(c *gin.Context) {
 func PostMyPack(c *gin.Context) {
 	var newPack dataset.Pack
 
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -237,7 +256,7 @@ func PostMyPack(c *gin.Context) {
 		return
 	}
 
-	newPack.User_id = user_id
+	newPack.UserID = userID
 
 	err = insertPack(&newPack)
 	if err != nil {
@@ -246,7 +265,6 @@ func PostMyPack(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusCreated, newPack)
-
 }
 
 func insertPack(p *dataset.Pack) error {
@@ -254,20 +272,29 @@ func insertPack(p *dataset.Pack) error {
 	if p == nil {
 		return errors.New("payload is empty")
 	}
-	p.Created_at = time.Now().Truncate(time.Second)
-	p.Updated_at = time.Now().Truncate(time.Second)
-	p.Sharing_code, err = helper.GenerateRandomCode(30)
+	p.CreatedAt = time.Now().Truncate(time.Second)
+	p.UpdatedAt = time.Now().Truncate(time.Second)
+	p.SharingCode, err = helper.GenerateRandomCode(30)
 	if err != nil {
 		return errors.New("failed to generate a sharing code")
 	}
 
-	err = database.Db().QueryRow("INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id;", p.User_id, p.Pack_name, p.Pack_description, p.Sharing_code, p.Created_at, p.Updated_at).Scan(&p.ID)
+	//nolint:execinquery
+	err = database.DB().QueryRow(
+		`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) 
+		VALUES ($1,$2,$3,$4,$5,$6) 
+		RETURNING id;`,
+		p.UserID,
+		p.PackName,
+		p.PackDescription,
+		p.SharingCode,
+		p.CreatedAt,
+		p.UpdatedAt).Scan(&p.ID)
 	if err != nil {
 		return err
 	}
 
 	return nil
-
 }
 
 // Update a pack by ID
@@ -296,14 +323,13 @@ func PutPackByID(c *gin.Context) {
 		return
 	}
 
-	err = updatePackById(id, &updatedPack)
+	err = updatePackByID(id, &updatedPack)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.IndentedJSON(http.StatusOK, updatedPack)
-
 }
 
 // Update a pack by ID
@@ -336,21 +362,21 @@ func PutMyPackByID(c *gin.Context) {
 		return
 	}
 
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, user_id)
+	myPack, err := checkPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if myPack {
-		updatedPack.User_id = user_id
-		err = updatePackById(id, &updatedPack)
+		updatedPack.UserID = userID
+		err = updatePackByID(id, &updatedPack)
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -362,23 +388,27 @@ func PutMyPackByID(c *gin.Context) {
 	}
 }
 
-func updatePackById(id uint, p *dataset.Pack) error {
+func updatePackByID(id uint, p *dataset.Pack) error {
 	if p == nil {
 		return errors.New("payload is empty")
 	}
-	p.Updated_at = time.Now().Truncate(time.Second)
+	p.UpdatedAt = time.Now().Truncate(time.Second)
 
-	statement, err := database.Db().Prepare("UPDATE pack SET user_id=$1, pack_name=$2, pack_description=$3, updated_at=$4 WHERE id=$5;")
+	statement, err := database.DB().Prepare(
+		`UPDATE pack SET user_id=$1, pack_name=$2, pack_description=$3, updated_at=$4 
+		WHERE id=$5;`)
 	if err != nil {
 		return err
 	}
-	_, err = statement.Exec(p.User_id, p.Pack_name, p.Pack_description, p.Updated_at, id)
+
+	defer statement.Close()
+
+	_, err = statement.Exec(p.UserID, p.PackName, p.PackDescription, p.UpdatedAt, id)
 	if err != nil {
 		return err
 	}
 
 	return nil
-
 }
 
 // Delete a pack by ID
@@ -394,21 +424,19 @@ func updatePackById(id uint, p *dataset.Pack) error {
 // @Router /admin/packs/{id} [delete]
 
 func DeletePackByID(c *gin.Context) {
-
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	err = deletePackById(id)
+	err = deletePackByID(id)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.IndentedJSON(http.StatusOK, gin.H{"message": "Pack deleted"})
-
 }
 
 // Delete a pack by ID
@@ -425,27 +453,26 @@ func DeletePackByID(c *gin.Context) {
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id} [delete]
 func DeleteMyPackByID(c *gin.Context) {
-
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, user_id)
+	myPack, err := checkPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if myPack {
-		err := deletePackById(id)
+		err := deletePackByID(id)
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -457,18 +484,20 @@ func DeleteMyPackByID(c *gin.Context) {
 	}
 }
 
-func deletePackById(id uint) error {
-	statement, err := database.Db().Prepare("DELETE FROM pack WHERE id=$1;")
+func deletePackByID(id uint) error {
+	statement, err := database.DB().Prepare("DELETE FROM pack WHERE id=$1;")
 	if err != nil {
 		return err
 	}
+
+	defer statement.Close()
+
 	_, err = statement.Exec(id)
 	if err != nil {
 		return err
 	}
 
 	return nil
-
 }
 
 // Get all pack contents
@@ -481,7 +510,6 @@ func deletePackById(id uint) error {
 // @Failure 500 {object} dataset.ErrorResponse
 // @Router /admin/packcontents [get]
 func GetPackContents(c *gin.Context) {
-
 	packContents, err := returnPackContents()
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -489,13 +517,14 @@ func GetPackContents(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, packContents)
-
 }
 
 func returnPackContents() (*dataset.PackContents, error) {
 	var packContents dataset.PackContents
 
-	rows, err := database.Db().Query("SELECT id, pack_id, item_id, quantity, worn, consumable, created_at, updated_at FROM pack_content;")
+	rows, err := database.DB().Query(
+		`SELECT id, pack_id, item_id, quantity, worn, consumable, created_at, updated_at 
+		FROM pack_content;`)
 	if err != nil {
 		return nil, err
 	}
@@ -503,7 +532,15 @@ func returnPackContents() (*dataset.PackContents, error) {
 
 	for rows.Next() {
 		var packContent dataset.PackContent
-		err := rows.Scan(&packContent.ID, &packContent.Pack_id, &packContent.Item_id, &packContent.Quantity, &packContent.Worn, &packContent.Consumable, &packContent.Created_at, &packContent.Updated_at)
+		err := rows.Scan(
+			&packContent.ID,
+			&packContent.PackID,
+			&packContent.ItemID,
+			&packContent.Quantity,
+			&packContent.Worn,
+			&packContent.Consumable,
+			&packContent.CreatedAt,
+			&packContent.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -530,15 +567,18 @@ func returnPackContents() (*dataset.PackContents, error) {
 // @Failure 500 {object} dataset.ErrorResponse
 // @Router /admin/packcontents/{id} [get]
 func GetPackContentByID(c *gin.Context) {
-
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	packcontent, err := findPackContentById(id)
+	packcontent, err := findPackContentByID(id)
 	if err != nil {
+		if errors.Is(err, ErrPackContentNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack Item not found"})
+			return
+		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -549,18 +589,29 @@ func GetPackContentByID(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, *packcontent)
-
 }
 
-func findPackContentById(id uint) (*dataset.PackContent, error) {
+func findPackContentByID(id uint) (*dataset.PackContent, error) {
 	var packcontent dataset.PackContent
 
-	row := database.Db().QueryRow("SELECT id, pack_id, item_id, quantity, worn, consumable, created_at, updated_at FROM pack_content WHERE id = $1;", id)
-	err := row.Scan(&packcontent.ID, &packcontent.Pack_id, &packcontent.Item_id, &packcontent.Quantity, &packcontent.Worn, &packcontent.Consumable, &packcontent.Created_at, &packcontent.Updated_at)
+	row := database.DB().QueryRow(
+		`SELECT id, pack_id, item_id, quantity, worn, consumable, created_at, updated_at 
+		FROM pack_content 
+		WHERE id = $1;`,
+		id)
+	err := row.Scan(
+		&packcontent.ID,
+		&packcontent.PackID,
+		&packcontent.ItemID,
+		&packcontent.Quantity,
+		&packcontent.Worn,
+		&packcontent.Consumable,
+		&packcontent.CreatedAt,
+		&packcontent.UpdatedAt)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return nil, ErrPackContentNotFound
 		}
 		return nil, err
 	}
@@ -595,7 +646,6 @@ func PostPackContent(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusCreated, newPackContent)
-
 }
 
 // Create a new pack content
@@ -621,7 +671,7 @@ func PostMyPackContent(c *gin.Context) {
 		return
 	}
 
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -632,14 +682,14 @@ func PostMyPackContent(c *gin.Context) {
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, user_id)
+	myPack, err := checkPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if myPack {
-		newPackContent.Pack_id = id
+		newPackContent.PackID = id
 		err := insertPackContent(&newPackContent)
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -656,10 +706,22 @@ func insertPackContent(pc *dataset.PackContent) error {
 	if pc == nil {
 		return errors.New("payload is empty")
 	}
-	pc.Created_at = time.Now().Truncate(time.Second)
-	pc.Updated_at = time.Now().Truncate(time.Second)
+	pc.CreatedAt = time.Now().Truncate(time.Second)
+	pc.UpdatedAt = time.Now().Truncate(time.Second)
 
-	err := database.Db().QueryRow("INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id;", pc.Pack_id, pc.Item_id, pc.Quantity, pc.Worn, pc.Consumable, pc.Created_at, pc.Updated_at).Scan(&pc.ID)
+	//nolint:execinquery
+	err := database.DB().QueryRow(`
+		INSERT INTO pack_content 
+		(pack_id, item_id, quantity, worn, consumable, created_at, updated_at) 
+		VALUES ($1,$2,$3,$4,$5,$6,$7) 
+		RETURNING id;`,
+		pc.PackID,
+		pc.ItemID,
+		pc.Quantity,
+		pc.Worn,
+		pc.Consumable,
+		pc.CreatedAt,
+		pc.UpdatedAt).Scan(&pc.ID)
 
 	if err != nil {
 		return err
@@ -681,7 +743,6 @@ func insertPackContent(pc *dataset.PackContent) error {
 // @Failure 500 {object} dataset.ErrorResponse
 // @Router /admin/packcontents/{id} [put]
 func PutPackContentByID(c *gin.Context) {
-
 	var updatedPackContent dataset.PackContent
 
 	id, err := helper.StringToUint(c.Param("id"))
@@ -702,7 +763,6 @@ func PutPackContentByID(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, updatedPackContent)
-
 }
 
 // Update My pack content ID by Pack ID
@@ -723,7 +783,6 @@ func PutPackContentByID(c *gin.Context) {
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id}/packcontent/{item_id} [put]
 func PutMyPackContentByID(c *gin.Context) {
-
 	var updatedPackContent dataset.PackContent
 
 	id, err := helper.StringToUint(c.Param("id"))
@@ -732,13 +791,13 @@ func PutMyPackContentByID(c *gin.Context) {
 		return
 	}
 
-	item_id, err := helper.StringToUint(c.Param("item_id"))
+	itemID, err := helper.StringToUint(c.Param("item_id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -749,15 +808,15 @@ func PutMyPackContentByID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, user_id)
+	myPack, err := checkPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if myPack {
-		updatedPackContent.Pack_id = id
-		err := updatePackContentByID(item_id, &updatedPackContent)
+		updatedPackContent.PackID = id
+		err := updatePackContentByID(itemID, &updatedPackContent)
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -773,13 +832,19 @@ func updatePackContentByID(id uint, pc *dataset.PackContent) error {
 	if pc == nil {
 		return errors.New("payload is empty")
 	}
-	pc.Updated_at = time.Now().Truncate(time.Second)
+	pc.UpdatedAt = time.Now().Truncate(time.Second)
 
-	statement, err := database.Db().Prepare("UPDATE pack_content SET pack_id=$1, item_id=$2, quantity=$3, worn=$4, consumable=$5, updated_at=$6 WHERE id=$7;")
+	statement, err := database.DB().Prepare(`
+		UPDATE pack_content 
+		SET pack_id=$1, item_id=$2, quantity=$3, worn=$4, consumable=$5, updated_at=$6 
+		WHERE id=$7;`)
 	if err != nil {
 		return err
 	}
-	_, err = statement.Exec(pc.Pack_id, pc.Item_id, pc.Quantity, pc.Worn, pc.Consumable, pc.Updated_at, id)
+
+	defer statement.Close()
+
+	_, err = statement.Exec(pc.PackID, pc.ItemID, pc.Quantity, pc.Worn, pc.Consumable, pc.UpdatedAt, id)
 	if err != nil {
 		return err
 	}
@@ -798,21 +863,19 @@ func updatePackContentByID(id uint, pc *dataset.PackContent) error {
 // @Failure 500 {object} dataset.ErrorResponse
 // @Router /admin/packcontents/{id} [delete]
 func DeletePackContentByID(c *gin.Context) {
-
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	err = deletePackContentById(id)
+	err = deletePackContentByID(id)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.IndentedJSON(http.StatusOK, gin.H{"message": "Pack Item deleted"})
-
 }
 
 // Delete a pack content ID by Pack ID
@@ -830,33 +893,32 @@ func DeletePackContentByID(c *gin.Context) {
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id}/packcontent/{item_id} [delete]
 func DeleteMyPackContentByID(c *gin.Context) {
-
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Pack ID format"})
 		return
 	}
 
-	item_id, err := helper.StringToUint(c.Param("item_id"))
+	itemID, err := helper.StringToUint(c.Param("item_id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Item ID format"})
 		return
 	}
 
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, user_id)
+	myPack, err := checkPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if myPack {
-		err := deletePackContentById(item_id)
+		err := deletePackContentByID(itemID)
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -868,11 +930,14 @@ func DeleteMyPackContentByID(c *gin.Context) {
 	}
 }
 
-func deletePackContentById(id uint) error {
-	statement, err := database.Db().Prepare("DELETE FROM pack_content WHERE id=$1;")
+func deletePackContentByID(id uint) error {
+	statement, err := database.DB().Prepare("DELETE FROM pack_content WHERE id=$1;")
 	if err != nil {
 		return err
 	}
+
+	defer statement.Close()
+
 	_, err = statement.Exec(id)
 	if err != nil {
 		return err
@@ -892,7 +957,6 @@ func deletePackContentById(id uint) error {
 // @Failure 500 {object} dataset.ErrorResponse
 // @Router /admin/packs/:id/packcontents [get]
 func GetPackContentsByPackID(c *gin.Context) {
-
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
@@ -901,6 +965,10 @@ func GetPackContentsByPackID(c *gin.Context) {
 
 	packContents, err := returnPackContentsByPackID(id)
 	if err != nil {
+		if errors.Is(err, ErrPackContentNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -910,7 +978,6 @@ func GetPackContentsByPackID(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, packContents)
-
 }
 
 // Get pack content by ID
@@ -936,13 +1003,13 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 		return
 	}
 
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, user_id)
+	myPack, err := checkPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -951,13 +1018,14 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 	if myPack {
 		packContents, err = returnPackContentsByPackID(id)
 		if err != nil {
+			if errors.Is(err, ErrPackContentNotFound) {
+				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+				return
+			}
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		if packContents == nil {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-			return
-		}
+
 		c.IndentedJSON(http.StatusOK, packContents)
 	} else {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
@@ -968,7 +1036,24 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) {
 	var packWithItems dataset.PackContentWithItems
 
-	rows, err := database.Db().Query("SELECT pc.id AS pack_content_id, pc.pack_id as pack_id, i.id AS inventory_id, i.item_name, i.category, i.description AS item_description, i.weight, i.weight_unit, i.url AS item_url, i.price, i.currency, pc.quantity, pc.worn, pc.consumable FROM pack_content pc JOIN inventory i ON pc.item_id = i.id WHERE pc.pack_id = $1;", id)
+	rows, err := database.DB().Query(
+		`SELECT pc.id AS pack_content_id, 
+			pc.pack_id as pack_id, 
+			i.id AS inventory_id, 
+			i.item_name, 
+			i.category,
+			i.description AS item_description, 
+			i.weight, 
+			i.weight_unit, 
+			i.url AS item_url, 
+			i.price, 
+			i.currency, 
+			pc.quantity, 
+			pc.worn, 
+			pc.consumable 
+			FROM pack_content pc JOIN inventory i ON pc.item_id = i.id 
+			WHERE pc.pack_id = $1;`,
+		id)
 
 	if err != nil {
 		return nil, err
@@ -977,7 +1062,21 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 
 	for rows.Next() {
 		var item dataset.PackContentWithItem
-		err := rows.Scan(&item.Pack_content_id, &item.Pack_id, &item.Inventory_id, &item.Item_name, &item.Category, &item.Item_description, &item.Weight, &item.Weight_unit, &item.Item_url, &item.Price, &item.Currency, &item.Quantity, &item.Worn, &item.Consumable)
+		err := rows.Scan(
+			&item.PackContentID,
+			&item.PackID,
+			&item.InventoryID,
+			&item.ItemName,
+			&item.Category,
+			&item.ItemDescription,
+			&item.Weight,
+			&item.WeightUnit,
+			&item.ItemURL,
+			&item.Price,
+			&item.Currency,
+			&item.Quantity,
+			&item.Worn,
+			&item.Consumable)
 		if err != nil {
 			return nil, err
 		}
@@ -989,7 +1088,7 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 	}
 
 	if len(packWithItems) == 0 {
-		return nil, nil
+		return nil, ErrPackContentNotFound
 	}
 	return &packWithItems, nil
 }
@@ -1006,16 +1105,20 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /v1/mypacks [get]
 func GetMyPacks(c *gin.Context) {
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
-	packs, err := findPacksByUserId(user_id)
+	packs, err := findPacksByUserID(userID)
 
 	if err != nil {
+		if errors.Is(err, ErrPackContentNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "No pack found"})
+			return
+		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -1026,13 +1129,15 @@ func GetMyPacks(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, *packs)
-
 }
 
-func findPacksByUserId(id uint) (*dataset.Packs, error) {
+func findPacksByUserID(id uint) (*dataset.Packs, error) {
 	var packs dataset.Packs
 
-	rows, err := database.Db().Query("SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at FROM pack WHERE user_id = $1;", id)
+	rows, err := database.DB().Query(`
+		SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at 
+		FROM pack 
+		WHERE user_id = $1;`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -1040,7 +1145,14 @@ func findPacksByUserId(id uint) (*dataset.Packs, error) {
 
 	for rows.Next() {
 		var pack dataset.Pack
-		err := rows.Scan(&pack.ID, &pack.User_id, &pack.Pack_name, &pack.Pack_description, &pack.Sharing_code, &pack.Created_at, &pack.Updated_at)
+		err := rows.Scan(
+			&pack.ID,
+			&pack.UserID,
+			&pack.PackName,
+			&pack.PackDescription,
+			&pack.SharingCode,
+			&pack.CreatedAt,
+			&pack.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -1052,16 +1164,16 @@ func findPacksByUserId(id uint) (*dataset.Packs, error) {
 	}
 
 	if len(packs) == 0 {
-		return nil, nil
+		return nil, ErrPackContentNotFound
 	}
 
 	return &packs, nil
 }
 
-func checkPackOwnership(id uint, user_id uint) (bool, error) {
+func checkPackOwnership(id uint, userID uint) (bool, error) {
 	var rows int
 
-	row := database.Db().QueryRow("SELECT COUNT(id) FROM pack WHERE id = $1 AND user_id = $2;", id, user_id)
+	row := database.DB().QueryRow("SELECT COUNT(id) FROM pack WHERE id = $1 AND user_id = $2;", id, userID)
 	err := row.Scan(&rows)
 	if err != nil {
 		return false, err
@@ -1069,9 +1181,9 @@ func checkPackOwnership(id uint, user_id uint) (bool, error) {
 
 	if rows == 0 {
 		return false, nil
-	} else {
-		return true, nil
 	}
+
+	return true, nil
 }
 
 // Import from lighterpack
@@ -1090,7 +1202,7 @@ func checkPackOwnership(id uint, user_id uint) (bool, error) {
 func ImportFromLighterPack(c *gin.Context) {
 	var lighterPack dataset.LighterPack
 
-	user_id, err := security.ExtractTokenID(c)
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
@@ -1108,12 +1220,12 @@ func ImportFromLighterPack(c *gin.Context) {
 	reader.Comma = ','
 
 	// Read and discard the first line (header) after checking it
-	record, err := reader.Read()
+	firstRecord, err := reader.Read()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read the CSV header"})
 		return
 	}
-	if len(record) < 10 {
+	if len(firstRecord) < 10 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid CSV format - wrong number of columns"})
 		return
 	}
@@ -1136,49 +1248,17 @@ func ImportFromLighterPack(c *gin.Context) {
 			return
 		}
 
-		lighterPackItem.Item_name = record[0]
-		lighterPackItem.Category = record[1]
-		lighterPackItem.Desc = record[2]
-		lighterPackItem.Unit = record[5]
-		lighterPackItem.Url = record[6]
-
-		qty, err := strconv.Atoi(record[3])
+		lighterPackItem, err = readLineFromCSV(record)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid CSV format - failed to convert quantity to number"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
-		} else {
-			lighterPackItem.Qty = qty
-		}
-
-		weight, err := strconv.Atoi(record[4])
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid CSV format - failed to convert weight to number"})
-			return
-		} else {
-			lighterPackItem.Weight = weight
-		}
-
-		price, err := strconv.Atoi(record[7])
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid CSV format - failed to convert price to number"})
-			return
-		} else {
-			lighterPackItem.Price = price
-		}
-
-		if record[8] == "worn" {
-			lighterPackItem.Worn = true
-		}
-
-		if record[9] == "consumable" {
-			lighterPackItem.Consumable = true
 		}
 
 		lighterPack = append(lighterPack, lighterPackItem)
 	}
 
 	// Perform database insertion
-	err = insertLighterPack(&lighterPack, user_id)
+	err = insertLighterPack(&lighterPack, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -1186,16 +1266,58 @@ func ImportFromLighterPack(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "CSV data imported successfully"})
 }
 
-func insertLighterPack(lp *dataset.LighterPack, user_id uint) error {
+// Take a record from csv.Newreder and return a LighterPackItem
+func readLineFromCSV(record []string) (dataset.LighterPackItem, error) {
+	var lighterPackItem dataset.LighterPackItem
+
+	lighterPackItem.ItemName = record[0]
+	lighterPackItem.Category = record[1]
+	lighterPackItem.Desc = record[2]
+	lighterPackItem.Unit = record[5]
+	lighterPackItem.URL = record[6]
+
+	qty, err := strconv.Atoi(record[3])
+	if err != nil {
+		return lighterPackItem, errors.New("invalid CSV format - failed to convert qty to number")
+	}
+
+	lighterPackItem.Qty = qty
+
+	weight, err := strconv.Atoi(record[4])
+	if err != nil {
+		return lighterPackItem, errors.New("invalid CSV format - failed to convert weight to number")
+	}
+
+	lighterPackItem.Weight = weight
+
+	price, err := strconv.Atoi(record[7])
+	if err != nil {
+		return lighterPackItem, errors.New("invalid CSV format - failed to convert price to number")
+	}
+
+	lighterPackItem.Price = price
+
+	if record[8] == "worn" {
+		lighterPackItem.Worn = true
+	}
+
+	if record[9] == "consumable" {
+		lighterPackItem.Consumable = true
+	}
+
+	return lighterPackItem, nil
+}
+
+func insertLighterPack(lp *dataset.LighterPack, userID uint) error {
 	if lp == nil {
 		return errors.New("payload is empty")
 	}
 
 	// Create new pack
 	var newPack dataset.Pack
-	newPack.User_id = user_id
-	newPack.Pack_name = "LighterPack Import"
-	newPack.Pack_description = "LighterPack Import"
+	newPack.UserID = userID
+	newPack.PackName = "LighterPack Import"
+	newPack.PackDescription = "LighterPack Import"
 	err := insertPack(&newPack)
 	if err != nil {
 		return err
@@ -1204,13 +1326,13 @@ func insertLighterPack(lp *dataset.LighterPack, user_id uint) error {
 	// Insert content in new pack with insertPackContent
 	for _, item := range *lp {
 		var i dataset.Inventory
-		i.User_id = user_id
-		i.Item_name = item.Item_name
+		i.UserID = userID
+		i.ItemName = item.ItemName
 		i.Category = item.Category
 		i.Description = item.Desc
 		i.Weight = item.Weight
-		i.Weight_unit = helper.ConvertWeightUnit(item.Unit)
-		i.Url = item.Url
+		i.WeightUnit = helper.ConvertWeightUnit(item.Unit)
+		i.URL = item.URL
 		i.Price = item.Price
 		i.Currency = "USD"
 		err := inventories.InsertInventory(&i)
@@ -1218,8 +1340,8 @@ func insertLighterPack(lp *dataset.LighterPack, user_id uint) error {
 			return err
 		}
 		var pc dataset.PackContent
-		pc.Pack_id = newPack.ID
-		pc.Item_id = i.ID
+		pc.PackID = newPack.ID
+		pc.ItemID = i.ID
 		pc.Quantity = item.Qty
 		pc.Worn = item.Worn
 		pc.Consumable = item.Consumable
@@ -1242,20 +1364,24 @@ func insertLighterPack(lp *dataset.LighterPack, user_id uint) error {
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /public/packs/{sharing_code} [get]
 func SharedList(c *gin.Context) {
-	sharing_code := c.Param("sharing_code")
+	sharingCode := c.Param("sharing_code")
 
-	pack_id, err := findPackIdBySharingCode(sharing_code)
+	packID, err := findPackIDBySharingCode(sharingCode)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	if pack_id == 0 {
+	if packID == 0 {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 		return
 	}
 
-	packContents, err := returnPackContentsByPackID(pack_id)
+	packContents, err := returnPackContentsByPackID(packID)
 	if err != nil {
+		if errors.Is(err, ErrPackContentNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -1267,15 +1393,15 @@ func SharedList(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, packContents)
 }
 
-func findPackIdBySharingCode(sharing_code string) (uint, error) {
-	var pack_id uint
-	row := database.Db().QueryRow("SELECT id FROM pack WHERE sharing_code = $1;", sharing_code)
-	err := row.Scan(&pack_id)
+func findPackIDBySharingCode(sharingCode string) (uint, error) {
+	var packID uint
+	row := database.DB().QueryRow("SELECT id FROM pack WHERE sharing_code = $1;", sharingCode)
+	err := row.Scan(&packID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, nil
 		}
 		return 0, err
 	}
-	return pack_id, nil
+	return packID, nil
 }

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"fmt"
 
 	_ "github.com/Angak0k/pimpmypack/docs"
 	"github.com/Angak0k/pimpmypack/pkg/accounts"
@@ -15,29 +15,31 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func init() {
+const (
+	envDev   = "DEV"
+	envLocal = "LOCAL"
+)
 
+func initApp() error {
 	// init env
 	err := config.EnvInit(".env")
 	if err != nil {
-		log.Fatalf("Error loading .env file or environment variable : %v", err)
+		return fmt.Errorf("error loading .env file or environment variable : %w", err)
 	}
-	println("Environment variables loaded")
 
 	// init DB
-	err = database.DatabaseInit()
+	err = database.Initialization()
 	if err != nil {
-		log.Fatalf("Error connecting database : %v", err)
+		return fmt.Errorf("error connecting database : %w", err)
 	}
-	println("Database connected")
 
 	// init DB migration
-	err = database.DatabaseMigrate()
+	err = database.Migrate()
 	if err != nil {
-		log.Fatalf("Error migrating database : %v", err)
+		return fmt.Errorf("error migrating database : %w", err)
 	}
-	println("Database migrated")
 
+	return nil
 }
 
 // @title PimpMyPack API
@@ -47,8 +49,12 @@ func init() {
 // @Schemes https
 // @BasePath /api
 func main() {
+	err := initApp()
+	if err != nil {
+		panic(err)
+	}
 
-	if config.Stage == "DEV" || config.Stage == "LOCAL" {
+	if config.Stage == envDev || config.Stage == envLocal {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
@@ -56,13 +62,28 @@ func main() {
 
 	router := gin.Default()
 
+	setupRoutes(router)
+
+	startServer(router)
+}
+
+func setupRoutes(router *gin.Engine) {
+	setupPublicRoutes(router)
+	setupProtectedRoutes(router)
+	setupPrivateRoutes(router)
+	setupSwaggerRoutes(router)
+}
+
+func setupPublicRoutes(router *gin.Engine) {
 	public := router.Group("/api")
 	public.POST("/register", accounts.Register)
 	public.POST("/login", accounts.Login)
 	public.GET("/confirmemail", accounts.ConfirmEmail)
 	public.POST("/forgotpassword", accounts.ForgotPassword)
 	public.GET("/sharedlist/:sharing_code", packs.SharedList)
+}
 
+func setupProtectedRoutes(router *gin.Engine) {
 	protected := router.Group("/api/v1")
 	protected.Use(security.JwtAuthProcessor())
 	protected.GET("/myaccount", accounts.GetMyAccount)
@@ -83,7 +104,9 @@ func main() {
 	protected.PUT("/myinventory/:id", inventories.PutMyInventoryByID)
 	protected.DELETE("/myinventory/:id", inventories.DeleteMyInventoryByID)
 	protected.POST("/importfromlighterpack", packs.ImportFromLighterPack)
+}
 
+func setupPrivateRoutes(router *gin.Engine) {
 	private := router.Group("/api/admin")
 	private.Use(security.JwtAuthAdminProcessor())
 	private.GET("/accounts", accounts.GetAccounts)
@@ -107,20 +130,21 @@ func main() {
 	private.PUT("/packcontents/:id", packs.PutPackContentByID)
 	private.DELETE("/packcontents/:id", packs.DeletePackContentByID)
 	private.GET("/packs/:id/packcontents", packs.GetPackContentsByPackID)
+}
 
-	if config.Stage == "DEV" || config.Stage == "LOCAL" {
+func setupSwaggerRoutes(router *gin.Engine) {
+	if config.Stage == envDev || config.Stage == envLocal {
 		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	}
+}
 
-	if config.Stage == "LOCAL" {
-		err := router.Run("localhost:8080")
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		err := router.Run(":8080")
-		if err != nil {
-			panic(err)
-		}
+func startServer(router *gin.Engine) {
+	address := ":8080"
+	if config.Stage == envLocal {
+		address = "localhost:8080"
+	}
+
+	if err := router.Run(address); err != nil {
+		panic(err)
 	}
 }

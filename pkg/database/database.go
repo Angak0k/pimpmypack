@@ -3,21 +3,33 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"net"
+	"strconv"
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database/migration"
+
+	// Import the PostgreSQL driver to register it with database/sql.
+	// This allows us to use PostgreSQL with the standard SQL package.
 	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
 
-func DbUrl() string {
-	return fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", config.DbUser, config.DbPassword, config.DbHost, config.DbPort, config.DbName)
+func DBUrl() string {
+	hostPort := net.JoinHostPort(config.DBHost, strconv.Itoa(config.DBPort))
+	return fmt.Sprintf(
+		"postgresql://%s:%s@%s/%s?sslmode=disable",
+		config.DBUser,
+		config.DBPassword,
+		hostPort,
+		config.DBName,
+	)
 }
 
-func DatabaseInit() error {
+func Initialization() error {
 	var err error
-	db, err = sql.Open("postgres", DbUrl())
+	db, err = sql.Open("postgres", DBUrl())
 	if err != nil {
 		return err
 	}
@@ -30,8 +42,8 @@ func DatabaseInit() error {
 	return nil
 }
 
-func DatabaseMigrate() error {
-	err := migration.Migration(DbUrl())
+func Migrate() error {
+	err := migration.Migration(DBUrl())
 	if err != nil {
 		return err
 	}
@@ -39,6 +51,6 @@ func DatabaseMigrate() error {
 }
 
 // Getter for db var
-func Db() *sql.DB {
+func DB() *sql.DB {
 	return db
 }

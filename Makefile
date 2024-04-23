@@ -10,7 +10,5 @@ build: test
 	go build
 
 lint:
-	@echo "Running staticcheck..."
-	@staticcheck ./...
 	@echo "Running golangci-lint..."
 	@golangci-lint run --timeout=5m --out-format=colored-line-number	

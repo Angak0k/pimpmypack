@@ -45,6 +45,10 @@ jobs:
           API_SECRET: myawsomeapisecret
           TOKEN_HOUR_LIFESPAN: 1
           STAGE: test
+          MAIL_IDENTITY: "test@exemple.com"
+          MAIL_USERNAME: "test_user"
+          MAIL_PASSWORD: "test_password"
+          MAIL_SERVER: "smtp.exemple.com"
         run: make test
 
   linter:
@@ -61,10 +65,6 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
         id: go
-
-      - name: staticcheck
-        uses: dominikh/staticcheck-action@v1.3.1
-
       - name: lint
         uses: golangci/golangci-lint-action@v4.0.0
         with:

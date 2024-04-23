@@ -12,8 +12,8 @@ import (
 
 var users = []dataset.User{
 	{
-		Username:     fmt.Sprintf("user-%s", random.UniqueId()),
-		Email:        fmt.Sprintf("user-%s@exemple.com", random.UniqueId()),
+		Username:     "user-" + random.UniqueId(),
+		Email:        "user-" + random.UniqueId() + "@exemple.com",
 		Firstname:    "John",
 		Lastname:     "Doe",
 		Role:         "admin",
@@ -22,8 +22,8 @@ var users = []dataset.User{
 		LastPassword: "password",
 	},
 	{
-		Username:     fmt.Sprintf("user-%s", random.UniqueId()),
-		Email:        fmt.Sprintf("user-%s@exemple.com", random.UniqueId()),
+		Username:     "user-" + random.UniqueId(),
+		Email:        "user-" + random.UniqueId() + "@exemple.com",
 		Firstname:    "Jane",
 		Lastname:     "Smith",
 		Role:         "standard",
@@ -32,8 +32,8 @@ var users = []dataset.User{
 		LastPassword: "",
 	},
 	{
-		Username:     fmt.Sprintf("user-%s", random.UniqueId()),
-		Email:        fmt.Sprintf("user-%s@exemple.com", random.UniqueId()),
+		Username:     "user-" + random.UniqueId(),
+		Email:        "user-" + random.UniqueId() + "@exemple.com",
 		Firstname:    "Alice",
 		Lastname:     "Johnson",
 		Role:         "standard",
@@ -44,12 +44,23 @@ var users = []dataset.User{
 }
 
 func loadingAccountDataset() error {
-
 	// Load accounts dataset
 	for i := range users {
 		var id uint
-		err := database.Db().QueryRow("INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id;",
-			users[i].Username, users[i].Email, users[i].Firstname, users[i].Lastname, users[i].Role, users[i].Status, time.Now().Truncate(time.Second), time.Now().Truncate(time.Second)).Scan(&users[i].ID)
+
+		//nolint:execinquery
+		err := database.DB().QueryRow(
+			`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
+			RETURNING id;`,
+			users[i].Username,
+			users[i].Email,
+			users[i].Firstname,
+			users[i].Lastname,
+			users[i].Role,
+			users[i].Status,
+			time.Now().Truncate(time.Second),
+			time.Now().Truncate(time.Second)).Scan(&users[i].ID)
 		if err != nil {
 			return err
 		}
@@ -64,7 +75,14 @@ func loadingAccountDataset() error {
 			return fmt.Errorf("failed to hash password: %w", err)
 		}
 
-		err = database.Db().QueryRow("INSERT INTO password (user_id, password, last_password, updated_at) VALUES ($1,$2,$3,$4) RETURNING id;", users[i].ID, hashedPassword, hashedLastPassword, time.Now().Truncate(time.Second)).Scan(&id)
+		//nolint:execinquery
+		err = database.DB().QueryRow(
+			`INSERT INTO password (user_id, password, last_password, updated_at) 
+			VALUES ($1,$2,$3,$4) RETURNING id;`,
+			users[i].ID,
+			hashedPassword,
+			hashedLastPassword,
+			time.Now().Truncate(time.Second)).Scan(&id)
 		if err != nil {
 			return err
 		}

@@ -2,52 +2,64 @@ package security
 
 import (
 	"errors"
-	"reflect"
 	"testing"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
 func TestVerifyPassword(t *testing.T) {
-
-	firsthashedPassword, err := HashPassword("password")
+	firstHashedPassword, err := HashPassword("password")
 	if err != nil {
-		t.Fatalf("failed to hash password: %v", err)
+		t.Fatalf("Failed to hash password: %v", err)
 	}
 
-	secondhashedPassword, err := HashPassword("password1")
+	secondHashedPassword, err := HashPassword("password1")
 	if err != nil {
-		t.Fatalf("failed to hash password: %v", err)
+		t.Fatalf("Failed to hash password: %v", err)
 	}
 
-	type args struct {
-		password       string
-		hashedPassword string
-	}
 	tests := []struct {
 		name string
-		args args
-		want error
+		args struct {
+			password       string
+			hashedPassword string
+		}
+		wantErr     bool
+		wantErrType error
 	}{
 		{
-			name: "TestVerifyPassword",
-			args: args{
+			name: "valid password",
+			args: struct {
+				password       string
+				hashedPassword string
+			}{
 				password:       "password",
-				hashedPassword: firsthashedPassword,
+				hashedPassword: firstHashedPassword,
 			},
-			want: nil,
+			wantErr: false,
 		},
 		{
-			name: "TestVerifyPassword",
-			args: args{
+			name: "invalid password",
+			args: struct {
+				password       string
+				hashedPassword string
+			}{
 				password:       "password",
-				hashedPassword: secondhashedPassword,
+				hashedPassword: secondHashedPassword,
 			},
-			want: errors.New("crypto/bcrypt: hashedPassword is not the hash of the given password"),
+			wantErr:     true,
+			wantErrType: bcrypt.ErrMismatchedHashAndPassword,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := VerifyPassword(tt.args.password, tt.args.hashedPassword); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("VerifyPassword() = %v, want %v", got, tt.want)
+			err := VerifyPassword(tt.args.password, tt.args.hashedPassword)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("VerifyPassword() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr && !errors.Is(err, tt.wantErrType) {
+				t.Errorf("VerifyPassword() error = %v, wantErr type %v", err, tt.wantErrType)
 			}
 		})
 	}

@@ -43,7 +43,7 @@ func FindUserIDByUsername(users []dataset.User, username string) uint {
 func FindPackIDByPackName(packs dataset.Packs, packname string) uint {
 	// Find a pack ID by packname
 	for _, pack := range packs {
-		if pack.Pack_name == packname {
+		if pack.PackName == packname {
 			return pack.ID
 		}
 	}
@@ -53,7 +53,7 @@ func FindPackIDByPackName(packs dataset.Packs, packname string) uint {
 func FindItemIDByItemName(inventories dataset.Inventories, itemname string) uint {
 	// Find an item ID by itemname
 	for _, item := range inventories {
-		if item.Item_name == itemname {
+		if item.ItemName == itemname {
 			return item.ID
 		}
 	}
@@ -97,5 +97,11 @@ func (s *SMTPClient) SendEmail(to, subject, body string) error {
 		"\r\n" +
 		body + "\r\n")
 
-	return smtp.SendMail(s.Server.MailServer+":"+strconv.Itoa(s.Server.MailPort), auth, s.Server.MailIdentity, []string{to}, msg)
+	return smtp.SendMail(
+		s.Server.MailServer+":"+strconv.Itoa(s.Server.MailPort),
+		auth,
+		s.Server.MailIdentity,
+		[]string{to},
+		msg,
+	)
 }

@@ -13,8 +13,8 @@ import (
 
 var users = []dataset.User{
 	{
-		Username:     fmt.Sprintf("user-%s", random.UniqueId()),
-		Email:        fmt.Sprintf("user-%s@exemple.com", random.UniqueId()),
+		Username:     "user-" + random.UniqueId(),
+		Email:        "user-" + random.UniqueId() + "@exemple.com",
 		Firstname:    "John",
 		Lastname:     "Doe",
 		Role:         "standard",
@@ -23,8 +23,8 @@ var users = []dataset.User{
 		LastPassword: "password",
 	},
 	{
-		Username:     fmt.Sprintf("user-%s", random.UniqueId()),
-		Email:        fmt.Sprintf("user-%s@exemple.com", random.UniqueId()),
+		Username:     "user-" + random.UniqueId(),
+		Email:        "user-" + random.UniqueId() + "@exemple.com",
 		Firstname:    "Jane",
 		Lastname:     "Doe",
 		Role:         "standard",
@@ -34,37 +34,37 @@ var users = []dataset.User{
 	},
 }
 
-var inventories_user_pack1 = dataset.Inventories{
+var inventoriesUserPack1 = dataset.Inventories{
 	{
-		User_id:     1,
-		Item_name:   "Backpack",
+		UserID:      1,
+		ItemName:    "Backpack",
 		Category:    "Outdoor Gear",
 		Description: "Spacious backpack for hiking",
 		Weight:      950,
-		Weight_unit: "METRIC",
-		Url:         "https://example.com/backpack",
+		WeightUnit:  "METRIC",
+		URL:         "https://example.com/backpack",
 		Price:       50,
 		Currency:    "USD",
 	},
 	{
-		User_id:     1,
-		Item_name:   "Tent",
+		UserID:      1,
+		ItemName:    "Tent",
 		Category:    "Shelter",
 		Description: "Spacious tent for hiking",
 		Weight:      1200,
-		Weight_unit: "METRIC",
-		Url:         "https://example.com/tent",
+		WeightUnit:  "METRIC",
+		URL:         "https://example.com/tent",
 		Price:       150,
 		Currency:    "USD",
 	},
 	{
-		User_id:     1,
-		Item_name:   "Sleeping Bag",
+		UserID:      1,
+		ItemName:    "Sleeping Bag",
 		Category:    "Sleeping",
 		Description: "Spacious sleeping bag for hiking",
 		Weight:      800,
-		Weight_unit: "METRIC",
-		Url:         "https://example.com/sleeping-bag",
+		WeightUnit:  "METRIC",
+		URL:         "https://example.com/sleeping-bag",
 		Price:       120,
 		Currency:    "EUR",
 	},
@@ -72,70 +72,70 @@ var inventories_user_pack1 = dataset.Inventories{
 
 var packs = dataset.Packs{
 	{
-		User_id:          1,
-		Pack_name:        "First Pack",
-		Pack_description: "Description for the first pack",
-		Sharing_code:     "123456",
+		UserID:          1,
+		PackName:        "First Pack",
+		PackDescription: "Description for the first pack",
+		SharingCode:     "123456",
 	},
 	{
-		User_id:          1,
-		Pack_name:        "Second Pack",
-		Pack_description: "Description for the second pack",
-		Sharing_code:     "654321",
+		UserID:          1,
+		PackName:        "Second Pack",
+		PackDescription: "Description for the second pack",
+		SharingCode:     "654321",
 	},
 	{
-		User_id:          2,
-		Pack_name:        "Third Pack",
-		Pack_description: "Description for the third pack",
-		Sharing_code:     "789456",
+		UserID:          2,
+		PackName:        "Third Pack",
+		PackDescription: "Description for the third pack",
+		SharingCode:     "789456",
 	},
 	{
-		User_id:          1,
-		Pack_name:        "Special Pack",
-		Pack_description: "Description for the second pack",
-		Sharing_code:     "321654",
+		UserID:          1,
+		PackName:        "Special Pack",
+		PackDescription: "Description for the second pack",
+		SharingCode:     "321654",
 	},
 }
 
 var packItems = dataset.PackContents{
 	{
-		Pack_id:    1,
-		Item_id:    1,
+		PackID:     1,
+		ItemID:     1,
 		Quantity:   2,
 		Worn:       true,
 		Consumable: false,
 	},
 	{
-		Pack_id:    1,
-		Item_id:    2,
+		PackID:     1,
+		ItemID:     2,
 		Quantity:   3,
 		Worn:       false,
 		Consumable: true,
 	},
 	{
-		Pack_id:    2,
-		Item_id:    2,
+		PackID:     2,
+		ItemID:     2,
 		Quantity:   1,
 		Worn:       true,
 		Consumable: false,
 	},
 	{
-		Pack_id:    2,
-		Item_id:    1,
+		PackID:     2,
+		ItemID:     1,
 		Quantity:   4,
 		Worn:       true,
 		Consumable: true,
 	},
 	{
-		Pack_id:    3,
-		Item_id:    1,
+		PackID:     3,
+		ItemID:     1,
 		Quantity:   2,
 		Worn:       false,
 		Consumable: false,
 	},
 	{
-		Pack_id:    4,
-		Item_id:    1,
+		PackID:     4,
+		ItemID:     1,
 		Quantity:   2,
 		Worn:       false,
 		Consumable: false,
@@ -144,30 +144,55 @@ var packItems = dataset.PackContents{
 
 var packWithItems = dataset.PackContentWithItems{
 	{
-		Pack_content_id:  1,
-		Pack_id:          4,
-		Item_name:        "Backpack",
-		Category:         "Outdoor Gear",
-		Item_description: "Spacious backpack for hiking",
-		Weight:           950,
-		Weight_unit:      "METRIC",
-		Item_url:         "https://example.com/backpack",
-		Price:            50,
-		Currency:         "USD",
-		Quantity:         2,
-		Worn:             false,
-		Consumable:       false,
+		PackContentID:   1,
+		PackID:          4,
+		ItemName:        "Backpack",
+		Category:        "Outdoor Gear",
+		ItemDescription: "Spacious backpack for hiking",
+		Weight:          950,
+		WeightUnit:      "METRIC",
+		ItemURL:         "https://example.com/backpack",
+		Price:           50,
+		Currency:        "USD",
+		Quantity:        2,
+		Worn:            false,
+		Consumable:      false,
 	},
 }
 
 func loadingPackDataset() error {
+	if err := loadAccounts(); err != nil {
+		return err
+	}
+	if err := transformInventories(); err != nil {
+		return err
+	}
+	if err := loadInventories(); err != nil {
+		return err
+	}
+	if err := transformPackContents(); err != nil {
+		return err
+	}
+	return loadPackContents()
+}
 
-	// Load accounts dataset
+func loadAccounts() error {
 	println("-> Loading accounts and passwords ...")
 	for i := range users {
 		var id uint
-		err := database.Db().QueryRow("INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id;",
-			users[i].Username, users[i].Email, users[i].Firstname, users[i].Lastname, users[i].Role, users[i].Status, time.Now().Truncate(time.Second), time.Now().Truncate(time.Second)).Scan(&users[i].ID)
+		//nolint:execinquery
+		err := database.DB().QueryRow(
+			`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
+			RETURNING id;`,
+			users[i].Username,
+			users[i].Email,
+			users[i].Firstname,
+			users[i].Lastname,
+			users[i].Role,
+			users[i].Status,
+			time.Now().Truncate(time.Second),
+			time.Now().Truncate(time.Second)).Scan(&users[i].ID)
 		if err != nil {
 			return err
 		}
@@ -182,103 +207,148 @@ func loadingPackDataset() error {
 			return fmt.Errorf("failed to hash password: %w", err)
 		}
 
-		err = database.Db().QueryRow("INSERT INTO password (user_id, password, last_password, updated_at) VALUES ($1,$2,$3,$4) RETURNING id;", users[i].ID, hashedPassword, hashedLastPassword, time.Now().Truncate(time.Second)).Scan(&id)
+		//nolint:execinquery
+		err = database.DB().QueryRow(
+			`INSERT INTO password (user_id, password, last_password, updated_at) VALUES ($1,$2,$3,$4) 
+			RETURNING id;`,
+			users[i].ID,
+			hashedPassword,
+			hashedLastPassword,
+			time.Now().Truncate(time.Second)).Scan(&id)
 		if err != nil {
 			return err
 		}
 	}
-
 	println("-> Accounts Loaded...")
+	return nil
+}
 
+func transformInventories() error {
 	// Transform inventories dataset by using the real user_id
-	for i := range inventories_user_pack1 {
-		switch inventories_user_pack1[i].User_id {
+	for i := range inventoriesUserPack1 {
+		switch inventoriesUserPack1[i].UserID {
 		case 1:
-			inventories_user_pack1[i].User_id = helper.FindUserIDByUsername(users, users[0].Username)
+			inventoriesUserPack1[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
 		case 2:
-			inventories_user_pack1[i].User_id = helper.FindUserIDByUsername(users, users[0].Username)
+			inventoriesUserPack1[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
 		}
 	}
 
 	// Transform packs dataset
 	for i := range packs {
-		switch packs[i].User_id {
+		switch packs[i].UserID {
 		case 1:
-			packs[i].User_id = helper.FindUserIDByUsername(users, users[0].Username)
+			packs[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
 		case 2:
-			packs[i].User_id = helper.FindUserIDByUsername(users, users[0].Username)
+			packs[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
 		}
 	}
+	return nil
+}
 
-	// Load inventories dataset
+func loadInventories() error {
 	println("-> Loading Inventories...")
-
-	// Insert inventories dataset
-	for i := range inventories_user_pack1 {
-		err := database.Db().QueryRow("INSERT INTO inventory (user_id, item_name, category, description, weight, weight_unit, url, price, currency, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING id;",
-			inventories_user_pack1[i].User_id, inventories_user_pack1[i].Item_name, inventories_user_pack1[i].Category, inventories_user_pack1[i].Description, inventories_user_pack1[i].Weight, inventories_user_pack1[i].Weight_unit, inventories_user_pack1[i].Url, inventories_user_pack1[i].Price, inventories_user_pack1[i].Currency, time.Now().Truncate(time.Second), time.Now().Truncate(time.Second)).Scan(&inventories_user_pack1[i].ID)
+	for i := range inventoriesUserPack1 {
+		//nolint:execinquery
+		err := database.DB().QueryRow(
+			`INSERT INTO inventory 
+			(user_id, item_name, category, description, weight, weight_unit, url, price, currency, 
+				created_at, updated_at) 
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) 
+			RETURNING id;`,
+			inventoriesUserPack1[i].UserID,
+			inventoriesUserPack1[i].ItemName,
+			inventoriesUserPack1[i].Category,
+			inventoriesUserPack1[i].Description,
+			inventoriesUserPack1[i].Weight,
+			inventoriesUserPack1[i].WeightUnit,
+			inventoriesUserPack1[i].URL,
+			inventoriesUserPack1[i].Price,
+			inventoriesUserPack1[i].Currency,
+			time.Now().Truncate(time.Second),
+			time.Now().Truncate(time.Second)).Scan(&inventoriesUserPack1[i].ID)
 		if err != nil {
 			return err
 		}
 	}
 	println("-> Inventories Loaded...")
-
-	// Load packs dataset
 	println("-> Loading Packs...")
 
 	// Insert packs dataset
 	for i := range packs {
-		err := database.Db().QueryRow("INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id;",
-			packs[i].User_id, packs[i].Pack_name, packs[i].Pack_description, packs[i].Sharing_code, time.Now().Truncate(time.Second), time.Now().Truncate(time.Second)).Scan(&packs[i].ID)
+		//nolint:execinquery
+		err := database.DB().QueryRow(
+			`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) 
+			VALUES ($1,$2,$3,$4,$5,$6) 
+			RETURNING id;`,
+			packs[i].UserID,
+			packs[i].PackName,
+			packs[i].PackDescription,
+			packs[i].SharingCode,
+			time.Now().Truncate(time.Second),
+			time.Now().Truncate(time.Second)).Scan(&packs[i].ID)
 		if err != nil {
 			return err
 		}
 	}
 	println("-> Packs Loaded...")
+	return nil
+}
 
+func transformPackContents() error {
 	// Transform packs_contents dataset
 
 	for i := range packItems {
-		switch packItems[i].Pack_id {
+		switch packItems[i].PackID {
 		case 1:
-			packItems[i].Pack_id = helper.FindPackIDByPackName(packs, "First Pack")
+			packItems[i].PackID = helper.FindPackIDByPackName(packs, "First Pack")
 		case 2:
-			packItems[i].Pack_id = helper.FindPackIDByPackName(packs, "Second Pack")
+			packItems[i].PackID = helper.FindPackIDByPackName(packs, "Second Pack")
 		case 3:
-			packItems[i].Pack_id = helper.FindPackIDByPackName(packs, "Third Pack")
+			packItems[i].PackID = helper.FindPackIDByPackName(packs, "Third Pack")
 		case 4:
-			packItems[i].Pack_id = helper.FindPackIDByPackName(packs, "Special Pack")
+			packItems[i].PackID = helper.FindPackIDByPackName(packs, "Special Pack")
 		}
-		switch packItems[i].Item_id {
+		switch packItems[i].ItemID {
 		case 1:
-			packItems[i].Item_id = helper.FindItemIDByItemName(inventories_user_pack1, "Backpack")
+			packItems[i].ItemID = helper.FindItemIDByItemName(inventoriesUserPack1, "Backpack")
 		case 2:
-			packItems[i].Item_id = helper.FindItemIDByItemName(inventories_user_pack1, "Tent")
+			packItems[i].ItemID = helper.FindItemIDByItemName(inventoriesUserPack1, "Tent")
 		case 3:
-			packItems[i].Item_id = helper.FindItemIDByItemName(inventories_user_pack1, "Sleeping Bag")
+			packItems[i].ItemID = helper.FindItemIDByItemName(inventoriesUserPack1, "Sleeping Bag")
 		}
 	}
 
 	for i := range packWithItems {
-		switch packWithItems[i].Pack_id {
+		switch packWithItems[i].PackID {
 		case 1:
-			packWithItems[i].Pack_id = helper.FindPackIDByPackName(packs, "First Pack")
+			packWithItems[i].PackID = helper.FindPackIDByPackName(packs, "First Pack")
 		case 2:
-			packWithItems[i].Pack_id = helper.FindPackIDByPackName(packs, "Second Pack")
+			packWithItems[i].PackID = helper.FindPackIDByPackName(packs, "Second Pack")
 		case 3:
-			packWithItems[i].Pack_id = helper.FindPackIDByPackName(packs, "Third Pack")
+			packWithItems[i].PackID = helper.FindPackIDByPackName(packs, "Third Pack")
 		case 4:
-			packWithItems[i].Pack_id = helper.FindPackIDByPackName(packs, "Special Pack")
+			packWithItems[i].PackID = helper.FindPackIDByPackName(packs, "Special Pack")
 		}
 	}
+	return nil
+}
 
-	// Load pack_contents dataset
+func loadPackContents() error {
 	println("-> Loading Pack Contents...")
-
-	// Insert pack_contents dataset
 	for i := range packItems {
-		err := database.Db().QueryRow("INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id;",
-			packItems[i].Pack_id, packItems[i].Item_id, packItems[i].Quantity, packItems[i].Worn, packItems[i].Consumable, time.Now().Truncate(time.Second), time.Now().Truncate(time.Second)).Scan(&packItems[i].ID)
+		//nolint:execinquery
+		err := database.DB().QueryRow(
+			`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at) 
+			VALUES ($1,$2,$3,$4,$5,$6,$7) 
+			RETURNING id;`,
+			packItems[i].PackID,
+			packItems[i].ItemID,
+			packItems[i].Quantity,
+			packItems[i].Worn,
+			packItems[i].Consumable,
+			time.Now().Truncate(time.Second),
+			time.Now().Truncate(time.Second)).Scan(&packItems[i].ID)
 		if err != nil {
 			return err
 		}

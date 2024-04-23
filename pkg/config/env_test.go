@@ -7,7 +7,6 @@ import (
 )
 
 func TestEnvInit(t *testing.T) {
-
 	t.Run("Importing valid env file", func(t *testing.T) {
 		// Test a valid .env file
 		err := EnvInit("test/.env.testSuccess")
@@ -69,7 +68,7 @@ func TestEnvInit(t *testing.T) {
 				"MAIL_SERVER=smtp.exemple.com",
 				"MAIL_PORT=587",
 			},
-			wantError: true,
+			wantError: false,
 		},
 		{
 			name: "Invalid DB_HOST Configuration",

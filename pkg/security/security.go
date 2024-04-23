@@ -25,7 +25,6 @@ import (
 //     in: header
 
 func HashPassword(password string) (string, error) {
-
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
 		return "", err
@@ -37,16 +36,14 @@ func VerifyPassword(password, hashedPassword string) error {
 	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
 }
 
-func GenerateToken(user_id uint) (string, error) {
-
+func GenerateToken(userID uint) (string, error) {
 	claims := jwt.MapClaims{}
 	claims["authorized"] = true
-	claims["user_id"] = user_id
+	claims["user_id"] = userID
 	claims["exp"] = time.Now().Add(time.Hour * time.Duration(config.TokenLifespan)).Unix()
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	return token.SignedString([]byte(config.ApiSecret))
-
+	return token.SignedString([]byte(config.APISecret))
 }
 
 func TokenValid(c *gin.Context) error {
@@ -55,7 +52,7 @@ func TokenValid(c *gin.Context) error {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte(config.ApiSecret), nil
+		return []byte(config.APISecret), nil
 	})
 	if err != nil {
 		return err
@@ -76,7 +73,6 @@ func ExtractToken(c *gin.Context) string {
 }
 
 func ExtractTokenID(c *gin.Context) (uint, error) {
-
 	tokenString := ExtractToken(c)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -121,7 +117,7 @@ func JwtAuthAdminProcessor() gin.HandlerFunc {
 		}
 
 		// get user_id from token
-		user_id, err := ExtractTokenID(c)
+		userID, err := ExtractTokenID(c)
 		if err != nil {
 			c.String(http.StatusUnauthorized, "Invalid Token")
 			c.Abort()
@@ -130,7 +126,7 @@ func JwtAuthAdminProcessor() gin.HandlerFunc {
 
 		// check if user is admin
 		var role string
-		row := database.Db().QueryRow("SELECT role FROM account WHERE id = $1;", user_id)
+		row := database.DB().QueryRow("SELECT role FROM account WHERE id = $1;", userID)
 		err = row.Scan(&role)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
