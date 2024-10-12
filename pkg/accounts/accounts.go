@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -95,6 +96,16 @@ func registerUser(u dataset.User) (bool, error) {
 		u.UpdatedAt).Scan(&id)
 	if err != nil {
 		return false, fmt.Errorf("failed to insert user: %w", err)
+	}
+
+	// Validate that 'id' is non-negative
+	if id < 0 {
+		return false, fmt.Errorf("invalid user ID retrieved from database: %d", id)
+	}
+
+	// Optional: Check if 'id' exceeds the maximum value for 'uint'
+	if id > int(math.MaxUint32) {
+		return false, fmt.Errorf("user ID %d exceeds the maximum value for uint", id)
 	}
 
 	u.ID = uint(id)
