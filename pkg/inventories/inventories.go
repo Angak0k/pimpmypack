@@ -146,7 +146,7 @@ func returnInventoriesByUserID(userID uint) (*dataset.Inventories, error) {
 			currency, 
 			created_at, 
 			updated_at 
-		FROM inventory WHERE user_id = $1 ORDER BY id;`,
+		FROM inventory WHERE user_id = $1 ORDER BY category;`,
 		userID)
 	if err != nil {
 		return nil, err

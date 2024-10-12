@@ -97,6 +97,7 @@ func registerUser(u dataset.User) (bool, error) {
 		return false, fmt.Errorf("failed to insert user: %w", err)
 	}
 
+	//nolint:gosec
 	u.ID = uint(id)
 
 	hashedPassword, err := security.HashPassword(u.Password)
