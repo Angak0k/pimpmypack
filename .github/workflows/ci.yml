@@ -66,7 +66,7 @@ jobs:
           cache-dependency-path: go.sum
         id: go
       - name: lint
-        uses: golangci/golangci-lint-action@v6.2.0
+        uses: golangci/golangci-lint-action@v6.3.1
         with:
           version: latest
           args: --timeout=5m --out-format=colored-line-number
