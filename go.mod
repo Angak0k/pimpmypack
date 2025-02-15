@@ -1,6 +1,6 @@
 module github.com/Angak0k/pimpmypack
 
-go 1.22.5
+go 1.23.6
 
 require (
 	github.com/gin-gonic/gin v1.10.0
