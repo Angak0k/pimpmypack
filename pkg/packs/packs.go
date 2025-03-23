@@ -1087,9 +1087,6 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 		return nil, err
 	}
 
-	if len(packWithItems) == 0 {
-		return nil, ErrPackContentNotFound
-	}
 	return &packWithItems, nil
 }
 
