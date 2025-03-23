@@ -1042,6 +1042,16 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 }
 
 func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) {
+	// First, check if the pack exists in the database
+	packExists, err := checkPackExists(id)
+	if err != nil {
+		return nil, err
+	}
+	if !packExists {
+		return nil, ErrPackNotFound
+	}
+
+	// Pack exists, continue with fetching its contents
 	var packWithItems dataset.PackContentWithItems
 
 	rows, err := database.DB().Query(
@@ -1096,6 +1106,16 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 	}
 
 	return &packWithItems, nil
+}
+
+// Helper function to check if a pack exists
+func checkPackExists(id uint) (bool, error) {
+	var count int
+	err := database.DB().QueryRow("SELECT COUNT(*) FROM pack WHERE id = $1", id).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // Get My packs
