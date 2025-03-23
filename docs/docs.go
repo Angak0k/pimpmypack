@@ -130,6 +130,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/mypack/:id/packcontent": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a new pack content",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Packs"
+                ],
+                "summary": "Create a new pack content",
+                "parameters": [
+                    {
+                        "description": "Pack Content",
+                        "name": "packcontent",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dataset.PackContent"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.PackContent"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dataset.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/public/packs/{sharing_code}": {
             "get": {
                 "description": "Get pack content for a given sharing code",
@@ -1034,69 +1097,6 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Pack not found",
-                        "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/v1/mypackcontent": {
-            "post": {
-                "security": [
-                    {
-                        "Bearer": []
-                    }
-                ],
-                "description": "Create a new pack content",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Packs"
-                ],
-                "summary": "Create a new pack content",
-                "parameters": [
-                    {
-                        "description": "Pack Content",
-                        "name": "packcontent",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/dataset.PackContent"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/dataset.PackContent"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/dataset.ErrorResponse"
                         }
