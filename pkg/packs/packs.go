@@ -1026,7 +1026,7 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 	if myPack {
 		packContents, err = returnPackContentsByPackID(id)
 		if err != nil {
-			if errors.Is(err, ErrPackContentNotFound) {
+			if errors.Is(err, ErrPackNotFound) {
 				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 				return
 			}
