@@ -993,7 +993,7 @@ func GetPackContentsByPackID(c *gin.Context) {
 // @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
 // @Failure 404 {object} dataset.ErrorResponse "Pack not found"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /v1/mypackcontent/{id} [get]
+// @Router /v1/mypack/{id}/packcontents [get]
 func GetMyPackContentsByPackID(c *gin.Context) {
 	var packContents *dataset.PackContentWithItems
 
@@ -1198,7 +1198,7 @@ func checkPackOwnership(id uint, userID uint) (bool, error) {
 // @Failure 400 {object} dataset.ErrorResponse "Invalid CSV format"
 // @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /v1/mypack/import [post]
+// @Router /v1/importfromlighterpack [post]
 func ImportFromLighterPack(c *gin.Context) {
 	var lighterPack dataset.LighterPack
 
