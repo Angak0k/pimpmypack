@@ -79,6 +79,13 @@ type PackContentWithItem struct {
 
 type PackContentWithItems []PackContentWithItem
 
+type PackContentRequest struct {
+	InventoryID uint `json:"inventory_id"`
+	Quantity    int  `json:"quantity"`
+	Worn        bool `json:"worn"`
+	Consumable  bool `json:"consumable"`
+}
+
 type LighterPackItem struct {
 	ItemName   string `json:"item_name"`
 	Category   string `json:"category"`

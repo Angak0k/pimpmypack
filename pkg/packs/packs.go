@@ -661,8 +661,9 @@ func PostPackContent(c *gin.Context) {
 // @Failure 401 {object} dataset.ErrorResponse
 // @Failure 403 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /v1/mypackcontent [post]
+// @Router /mypack/:id/packcontent [post]
 func PostMyPackContent(c *gin.Context) {
+	var requestData dataset.PackContentRequest
 	var newPackContent dataset.PackContent
 
 	id, err := helper.StringToUint(c.Param("id"))
@@ -677,10 +678,18 @@ func PostMyPackContent(c *gin.Context) {
 		return
 	}
 
-	if err := c.BindJSON(&newPackContent); err != nil {
+	// Bind the JSON data to our request struct
+	if err := c.BindJSON(&requestData); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Body format"})
 		return
 	}
+
+	// Map the request data to the PackContent struct
+	newPackContent.PackID = id
+	newPackContent.ItemID = requestData.InventoryID
+	newPackContent.Quantity = requestData.Quantity
+	newPackContent.Worn = requestData.Worn
+	newPackContent.Consumable = requestData.Consumable
 
 	myPack, err := checkPackOwnership(id, userID)
 	if err != nil {
@@ -689,7 +698,6 @@ func PostMyPackContent(c *gin.Context) {
 	}
 
 	if myPack {
-		newPackContent.PackID = id
 		err := insertPackContent(&newPackContent)
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -965,7 +973,7 @@ func GetPackContentsByPackID(c *gin.Context) {
 
 	packContents, err := returnPackContentsByPackID(id)
 	if err != nil {
-		if errors.Is(err, ErrPackContentNotFound) {
+		if errors.Is(err, ErrPackNotFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 			return
 		}
@@ -1018,7 +1026,7 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 	if myPack {
 		packContents, err = returnPackContentsByPackID(id)
 		if err != nil {
-			if errors.Is(err, ErrPackContentNotFound) {
+			if errors.Is(err, ErrPackNotFound) {
 				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 				return
 			}
@@ -1034,6 +1042,16 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 }
 
 func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) {
+	// First, check if the pack exists in the database
+	packExists, err := checkPackExists(id)
+	if err != nil {
+		return nil, err
+	}
+	if !packExists {
+		return nil, ErrPackNotFound
+	}
+
+	// Pack exists, continue with fetching its contents
 	var packWithItems dataset.PackContentWithItems
 
 	rows, err := database.DB().Query(
@@ -1087,10 +1105,17 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 		return nil, err
 	}
 
-	if len(packWithItems) == 0 {
-		return nil, ErrPackContentNotFound
-	}
 	return &packWithItems, nil
+}
+
+// Helper function to check if a pack exists
+func checkPackExists(id uint) (bool, error) {
+	var count int
+	err := database.DB().QueryRow("SELECT COUNT(*) FROM pack WHERE id = $1", id).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // Get My packs

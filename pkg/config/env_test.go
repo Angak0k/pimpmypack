@@ -1,7 +1,6 @@
 package config
 
 import (
-	"os"
 	"strings"
 	"testing"
 )
@@ -267,10 +266,7 @@ func TestEnvInit(t *testing.T) {
 			for _, conf := range tc.envSlice {
 				key := strings.Split(conf, "=")[0]
 				value := strings.Split(conf, "=")[1]
-				err := os.Setenv(key, value)
-				if err != nil {
-					t.Errorf("Error setting environment variable: %v", err)
-				}
+				t.Setenv(key, value)
 			}
 
 			// Test EnvInit
