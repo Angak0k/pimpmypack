@@ -280,6 +280,41 @@ paths:
       summary: Register new user
       tags:
       - Public
+  /v1/importfromlighterpack:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Import from lighterpack csv pack file
+      parameters:
+      - description: CSV file
+        in: formData
+        name: file
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: CSV data imported successfully
+          schema:
+            $ref: '#/definitions/dataset.OkResponse'
+        "400":
+          description: Invalid CSV format
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Import from lighterpack csv pack file
+      tags:
+      - Packs
   /v1/myaccount:
     get:
       description: Get information of the currently logged-in user
@@ -739,30 +774,36 @@ paths:
       summary: Update My pack content ID by Pack ID
       tags:
       - Packs
-  /v1/mypack/import:
-    post:
-      consumes:
-      - multipart/form-data
-      description: Import from lighterpack csv pack file
+  /v1/mypack/{id}/packcontents:
+    get:
+      description: Get pack content by ID
       parameters:
-      - description: CSV file
-        in: formData
-        name: file
+      - description: Pack Content ID
+        in: path
+        name: id
         required: true
-        type: file
+        type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: CSV data imported successfully
+          description: Pack Item
           schema:
-            $ref: '#/definitions/dataset.OkResponse'
+            $ref: '#/definitions/dataset.PackContent'
         "400":
-          description: Invalid CSV format
+          description: Invalid ID format
           schema:
             $ref: '#/definitions/dataset.ErrorResponse'
         "401":
           description: Unauthorized
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+        "403":
+          description: This pack does not belong to you
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+        "404":
+          description: Pack not found
           schema:
             $ref: '#/definitions/dataset.ErrorResponse'
         "500":
@@ -771,7 +812,7 @@ paths:
             $ref: '#/definitions/dataset.ErrorResponse'
       security:
       - Bearer: []
-      summary: Import from lighterpack csv pack file
+      summary: Get pack content by ID
       tags:
       - Packs
   /v1/mypackcontent:
@@ -812,47 +853,6 @@ paths:
       security:
       - Bearer: []
       summary: Create a new pack content
-      tags:
-      - Packs
-  /v1/mypackcontent/{id}:
-    get:
-      description: Get pack content by ID
-      parameters:
-      - description: Pack Content ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Pack Item
-          schema:
-            $ref: '#/definitions/dataset.PackContent'
-        "400":
-          description: Invalid ID format
-          schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
-        "403":
-          description: This pack does not belong to you
-          schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
-        "404":
-          description: Pack not found
-          schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
-      security:
-      - Bearer: []
-      summary: Get pack content by ID
       tags:
       - Packs
   /v1/mypacks:
