@@ -663,7 +663,6 @@ func PostPackContent(c *gin.Context) {
 // @Failure 500 {object} dataset.ErrorResponse
 // @Router /mypack/:id/packcontent [post]
 func PostMyPackContent(c *gin.Context) {
-
 	var requestData dataset.PackContentRequest
 	var newPackContent dataset.PackContent
 
