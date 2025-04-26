@@ -3,6 +3,10 @@ name: Generate Swagger Documentation
 on:
   workflow_dispatch:
 
+permissions:
+  contents: write
+  pull-requests: read
+
 jobs:
   generate-and-commit-docs:
     runs-on: ubuntu-latest
