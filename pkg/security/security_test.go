@@ -3,7 +3,6 @@ package security
 import (
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"testing"
 	"time"
 
@@ -20,13 +19,12 @@ const testTokenLifespan = 24 // 24 hours for tests
 
 func setupTestEnv(t *testing.T) {
 	// Set up test environment
-	os.Setenv("API_SECRET", testAPISecret)
+	t.Setenv("API_SECRET", testAPISecret)
 	config.APISecret = testAPISecret
 	config.TokenLifespan = testTokenLifespan
 }
 
-func teardownTestEnv(t *testing.T) {
-	os.Unsetenv("API_SECRET")
+func teardownTestEnv(_ *testing.T) {
 	config.APISecret = ""
 	config.TokenLifespan = 1 // Reset to default
 }
@@ -53,10 +51,10 @@ func TestHashPassword(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := HashPassword(tt.password)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.NotEmpty(t, got)
 		})
 	}
@@ -102,13 +100,13 @@ func TestVerifyPassword(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := VerifyPassword(tt.password, tt.hashedPassword)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				if tt.wantErrType != nil {
-					assert.ErrorIs(t, err, tt.wantErrType)
+					require.ErrorIs(t, err, tt.wantErrType)
 				}
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		})
 	}
 }
@@ -138,22 +136,22 @@ func TestGenerateToken(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			token, err := GenerateToken(tt.userID)
 			if tt.wantErr {
-				assert.Error(t, err)
+				require.Error(t, err)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.NotEmpty(t, token)
 
 			// Verify token structure
-			parsedToken, err := jwt.Parse(token, func(token *jwt.Token) (interface{}, error) {
+			parsedToken, err := jwt.Parse(token, func(_ *jwt.Token) (interface{}, error) {
 				return []byte(testAPISecret), nil
 			})
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.True(t, parsedToken.Valid)
 
 			claims, ok := parsedToken.Claims.(jwt.MapClaims)
 			assert.True(t, ok)
-			assert.Equal(t, float64(tt.userID), claims["user_id"])
+			assert.InEpsilon(t, float64(tt.userID), claims["user_id"], 0.0001)
 			assert.Equal(t, true, claims["authorized"])
 		})
 	}
@@ -168,25 +166,25 @@ func TestExtractToken(t *testing.T) {
 	}{
 		{
 			name: "token in query parameter",
-			setupRequest: func(req *http.Request) {
-				q := req.URL.Query()
+			setupRequest: func(r *http.Request) {
+				q := r.URL.Query()
 				q.Add("token", "test_token")
-				req.URL.RawQuery = q.Encode()
+				r.URL.RawQuery = q.Encode()
 			},
 			expectedToken: "test_token",
 			expectedError: false,
 		},
 		{
 			name: "token in authorization header",
-			setupRequest: func(req *http.Request) {
-				req.Header.Set("Authorization", "Bearer test_token")
+			setupRequest: func(r *http.Request) {
+				r.Header.Set("Authorization", "Bearer test_token")
 			},
 			expectedToken: "test_token",
 			expectedError: false,
 		},
 		{
 			name: "no token",
-			setupRequest: func(req *http.Request) {
+			setupRequest: func(_ *http.Request) {
 				// No setup needed
 			},
 			expectedToken: "",
@@ -194,8 +192,8 @@ func TestExtractToken(t *testing.T) {
 		},
 		{
 			name: "malformed authorization header",
-			setupRequest: func(req *http.Request) {
-				req.Header.Set("Authorization", "test_token")
+			setupRequest: func(r *http.Request) {
+				r.Header.Set("Authorization", "test_token")
 			},
 			expectedToken: "",
 			expectedError: false,
@@ -205,7 +203,7 @@ func TestExtractToken(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a test request
-			req := httptest.NewRequest("GET", "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			tt.setupRequest(req)
 
 			// Create a test context
@@ -265,7 +263,7 @@ func TestExtractTokenID(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a test request with the token
-			req := httptest.NewRequest("GET", "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			req.Header.Set("Authorization", "Bearer "+tt.setupToken())
 
 			// Create a test context
@@ -274,11 +272,11 @@ func TestExtractTokenID(t *testing.T) {
 
 			userID, err := ExtractTokenID(c)
 			if tt.expectedError {
-				assert.Error(t, err)
+				require.Error(t, err)
 				assert.Equal(t, uint(0), userID)
 				return
 			}
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			assert.Equal(t, tt.expectedID, userID)
 		})
 	}
@@ -295,22 +293,22 @@ func TestJwtAuthProcessor(t *testing.T) {
 	}{
 		{
 			name: "valid token",
-			setupRequest: func(req *http.Request) {
+			setupRequest: func(r *http.Request) {
 				token, _ := GenerateToken(123)
-				req.Header.Set("Authorization", "Bearer "+token)
+				r.Header.Set("Authorization", "Bearer "+token)
 			},
 			expectedStatus: http.StatusOK,
 		},
 		{
 			name: "invalid token",
-			setupRequest: func(req *http.Request) {
-				req.Header.Set("Authorization", "Bearer invalid_token")
+			setupRequest: func(r *http.Request) {
+				r.Header.Set("Authorization", "Bearer invalid_token")
 			},
 			expectedStatus: http.StatusUnauthorized,
 		},
 		{
 			name: "no token",
-			setupRequest: func(req *http.Request) {
+			setupRequest: func(_ *http.Request) {
 				// No setup needed
 			},
 			expectedStatus: http.StatusUnauthorized,
@@ -320,7 +318,7 @@ func TestJwtAuthProcessor(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a test request
-			req := httptest.NewRequest("GET", "/", nil)
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
 			tt.setupRequest(req)
 
 			// Create a test recorder

@@ -11,4 +11,4 @@ build: test
 
 lint:
 	@echo "Running golangci-lint..."
-	@golangci-lint run --timeout=5m --out-format=colored-line-number	
+	@golangci-lint run --timeout=5m 
