@@ -22,6 +22,7 @@ func setupTestEnv(t *testing.T) {
 	t.Setenv("API_SECRET", testAPISecret)
 	config.APISecret = testAPISecret
 	config.TokenLifespan = testTokenLifespan
+	gin.SetMode(gin.TestMode)
 }
 
 func teardownTestEnv(_ *testing.T) {
