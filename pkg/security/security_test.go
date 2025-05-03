@@ -151,7 +151,7 @@ func TestGenerateToken(t *testing.T) {
 
 			claims, ok := parsedToken.Claims.(jwt.MapClaims)
 			assert.True(t, ok)
-			assert.InEpsilon(t, float64(tt.userID), claims["user_id"], 0.0001)
+			assert.InDelta(t, float64(tt.userID), claims["user_id"], 0.0001)
 			assert.Equal(t, true, claims["authorized"])
 		})
 	}
