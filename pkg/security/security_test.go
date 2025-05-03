@@ -1,65 +1,353 @@
 package security
 
 import (
-	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/Angak0k/pimpmypack/pkg/config"
+	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 )
 
-func TestVerifyPassword(t *testing.T) {
-	firstHashedPassword, err := HashPassword("password")
-	if err != nil {
-		t.Fatalf("Failed to hash password: %v", err)
-	}
+const testAPISecret = "test_secret"
+const testTokenLifespan = 24 // 24 hours for tests
 
-	secondHashedPassword, err := HashPassword("password1")
-	if err != nil {
-		t.Fatalf("Failed to hash password: %v", err)
-	}
+func setupTestEnv(t *testing.T) {
+	// Set up test environment
+	t.Setenv("API_SECRET", testAPISecret)
+	config.APISecret = testAPISecret
+	config.TokenLifespan = testTokenLifespan
+	gin.SetMode(gin.TestMode)
+}
 
+func teardownTestEnv(_ *testing.T) {
+	config.APISecret = ""
+	config.TokenLifespan = 1 // Reset to default
+}
+
+func TestHashPassword(t *testing.T) {
 	tests := []struct {
-		name string
-		args struct {
-			password       string
-			hashedPassword string
-		}
-		wantErr     bool
-		wantErrType error
+		name     string
+		password string
+		wantErr  bool
 	}{
 		{
-			name: "valid password",
-			args: struct {
-				password       string
-				hashedPassword string
-			}{
-				password:       "password",
-				hashedPassword: firstHashedPassword,
-			},
-			wantErr: false,
+			name:     "valid password",
+			password: "password123",
+			wantErr:  false,
 		},
 		{
-			name: "invalid password",
-			args: struct {
-				password       string
-				hashedPassword string
-			}{
-				password:       "password",
-				hashedPassword: secondHashedPassword,
-			},
-			wantErr:     true,
-			wantErrType: bcrypt.ErrMismatchedHashAndPassword,
+			name:     "empty password",
+			password: "",
+			wantErr:  false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := VerifyPassword(tt.args.password, tt.args.hashedPassword)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("VerifyPassword() error = %v, wantErr %v", err, tt.wantErr)
+			got, err := HashPassword(tt.password)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
 			}
-			if tt.wantErr && !errors.Is(err, tt.wantErrType) {
-				t.Errorf("VerifyPassword() error = %v, wantErr type %v", err, tt.wantErrType)
+			require.NoError(t, err)
+			assert.NotEmpty(t, got)
+		})
+	}
+}
+
+func TestVerifyPassword(t *testing.T) {
+	firstHashedPassword, err := HashPassword("password")
+	require.NoError(t, err)
+
+	secondHashedPassword, err := HashPassword("password1")
+	require.NoError(t, err)
+
+	tests := []struct {
+		name           string
+		password       string
+		hashedPassword string
+		wantErr        bool
+		wantErrType    error
+	}{
+		{
+			name:           "valid password",
+			password:       "password",
+			hashedPassword: firstHashedPassword,
+			wantErr:        false,
+		},
+		{
+			name:           "invalid password",
+			password:       "password",
+			hashedPassword: secondHashedPassword,
+			wantErr:        true,
+			wantErrType:    bcrypt.ErrMismatchedHashAndPassword,
+		},
+		{
+			name:           "empty password",
+			password:       "",
+			hashedPassword: firstHashedPassword,
+			wantErr:        true,
+			wantErrType:    bcrypt.ErrMismatchedHashAndPassword,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := VerifyPassword(tt.password, tt.hashedPassword)
+			if tt.wantErr {
+				require.Error(t, err)
+				if tt.wantErrType != nil {
+					require.ErrorIs(t, err, tt.wantErrType)
+				}
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestGenerateToken(t *testing.T) {
+	setupTestEnv(t)
+	defer teardownTestEnv(t)
+
+	tests := []struct {
+		name    string
+		userID  uint
+		wantErr bool
+	}{
+		{
+			name:    "valid user ID",
+			userID:  123,
+			wantErr: false,
+		},
+		{
+			name:    "zero user ID",
+			userID:  0,
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			token, err := GenerateToken(tt.userID)
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.NotEmpty(t, token)
+
+			// Verify token structure
+			parsedToken, err := jwt.Parse(token, func(_ *jwt.Token) (interface{}, error) {
+				return []byte(testAPISecret), nil
+			})
+			require.NoError(t, err)
+			assert.True(t, parsedToken.Valid)
+
+			claims, ok := parsedToken.Claims.(jwt.MapClaims)
+			assert.True(t, ok)
+			assert.InDelta(t, float64(tt.userID), claims["user_id"], 0.0001)
+			assert.Equal(t, true, claims["authorized"])
+		})
+	}
+}
+
+func TestExtractToken(t *testing.T) {
+	tests := []struct {
+		name          string
+		setupRequest  func(*http.Request)
+		expectedToken string
+		expectedError bool
+	}{
+		{
+			name: "token in query parameter",
+			setupRequest: func(r *http.Request) {
+				q := r.URL.Query()
+				q.Add("token", "test_token")
+				r.URL.RawQuery = q.Encode()
+			},
+			expectedToken: "test_token",
+			expectedError: false,
+		},
+		{
+			name: "token in authorization header",
+			setupRequest: func(r *http.Request) {
+				r.Header.Set("Authorization", "Bearer test_token")
+			},
+			expectedToken: "test_token",
+			expectedError: false,
+		},
+		{
+			name: "no token",
+			setupRequest: func(_ *http.Request) {
+				// No setup needed
+			},
+			expectedToken: "",
+			expectedError: false,
+		},
+		{
+			name: "malformed authorization header",
+			setupRequest: func(r *http.Request) {
+				r.Header.Set("Authorization", "test_token")
+			},
+			expectedToken: "",
+			expectedError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a test request
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			tt.setupRequest(req)
+
+			// Create a test context
+			c, _ := gin.CreateTestContext(httptest.NewRecorder())
+			c.Request = req
+
+			token := ExtractToken(c)
+			assert.Equal(t, tt.expectedToken, token)
+		})
+	}
+}
+
+func TestExtractTokenID(t *testing.T) {
+	setupTestEnv(t)
+	defer teardownTestEnv(t)
+
+	tests := []struct {
+		name          string
+		setupToken    func() string
+		expectedID    uint
+		expectedError bool
+	}{
+		{
+			name: "valid token",
+			setupToken: func() string {
+				token, _ := GenerateToken(123)
+				return token
+			},
+			expectedID:    123,
+			expectedError: false,
+		},
+		{
+			name: "invalid token",
+			setupToken: func() string {
+				return "invalid_token"
+			},
+			expectedID:    0,
+			expectedError: true,
+		},
+		{
+			name: "expired token",
+			setupToken: func() string {
+				claims := jwt.MapClaims{
+					"authorized": true,
+					"user_id":    123,
+					"exp":        time.Now().Add(-1 * time.Hour).Unix(),
+				}
+				token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+				tokenString, _ := token.SignedString([]byte(testAPISecret))
+				return tokenString
+			},
+			expectedID:    0,
+			expectedError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a test request with the token
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.Header.Set("Authorization", "Bearer "+tt.setupToken())
+
+			// Create a test context
+			c, _ := gin.CreateTestContext(httptest.NewRecorder())
+			c.Request = req
+
+			userID, err := ExtractTokenID(c)
+			if tt.expectedError {
+				require.Error(t, err)
+				assert.Equal(t, uint(0), userID)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedID, userID)
+		})
+	}
+}
+
+func TestJwtAuthProcessor(t *testing.T) {
+	setupTestEnv(t)
+	defer teardownTestEnv(t)
+
+	tests := []struct {
+		name           string
+		setupRequest   func(*http.Request)
+		expectedStatus int
+	}{
+		{
+			name: "valid token",
+			setupRequest: func(r *http.Request) {
+				token, _ := GenerateToken(123)
+				r.Header.Set("Authorization", "Bearer "+token)
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name: "invalid token",
+			setupRequest: func(r *http.Request) {
+				r.Header.Set("Authorization", "Bearer invalid_token")
+			},
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name: "no token",
+			setupRequest: func(_ *http.Request) {
+				// No setup needed
+			},
+			expectedStatus: http.StatusUnauthorized,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a test request
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			tt.setupRequest(req)
+
+			// Create a test recorder
+			w := httptest.NewRecorder()
+
+			// Create a test context
+			c, _ := gin.CreateTestContext(w)
+			c.Request = req
+
+			// Create a test handler
+			handler := JwtAuthProcessor()
+
+			// Create a test next handler
+			nextCalled := false
+			next := func(c *gin.Context) {
+				nextCalled = true
+				c.Status(http.StatusOK)
+			}
+
+			// Run the middleware
+			handler(c)
+			if c.IsAborted() {
+				assert.Equal(t, tt.expectedStatus, w.Code)
+				assert.False(t, nextCalled)
+			} else {
+				next(c)
+				assert.Equal(t, http.StatusOK, w.Code)
+				assert.True(t, nextCalled)
 			}
 		})
 	}
