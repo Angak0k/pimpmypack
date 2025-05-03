@@ -13,7 +13,7 @@ import (
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
 	"github.com/gin-gonic/gin"
-	jwt "github.com/golang-jwt/jwt"
+	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -37,10 +37,11 @@ func VerifyPassword(password, hashedPassword string) error {
 }
 
 func GenerateToken(userID uint) (string, error) {
-	claims := jwt.MapClaims{}
-	claims["authorized"] = true
-	claims["user_id"] = userID
-	claims["exp"] = time.Now().Add(time.Hour * time.Duration(config.TokenLifespan)).Unix()
+	claims := jwt.MapClaims{
+		"authorized": true,
+		"user_id":    userID,
+		"exp":        time.Now().Add(time.Hour * time.Duration(config.TokenLifespan)).Unix(),
+	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
 	return token.SignedString([]byte(config.APISecret))
