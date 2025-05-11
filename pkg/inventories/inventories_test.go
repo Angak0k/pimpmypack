@@ -105,17 +105,18 @@ func TestGetInventories(t *testing.T) {
 			return
 		}
 
-		// Find the matching inventory in the response
+		// Find the matching inventory in the response by both UserID and ItemName
 		var foundInventory *dataset.Inventory
 		for _, inv := range getInventories {
-			if inv.ItemName == inventories[0].ItemName {
+			if inv.ItemName == inventories[0].ItemName && inv.UserID == inventories[0].UserID {
 				foundInventory = &inv
 				break
 			}
 		}
 
 		if foundInventory == nil {
-			t.Errorf("Expected inventory with ItemName %s not found in response", inventories[0].ItemName)
+			t.Errorf("Expected inventory with UserID=%d and ItemName=%s not found in response",
+				inventories[0].UserID, inventories[0].ItemName)
 			return
 		}
 
