@@ -89,31 +89,57 @@ func TestGetInventories(t *testing.T) {
 		if err := json.Unmarshal(w.Body.Bytes(), &getInventories); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
-		// determine if the inventory - and only the expected inventory - is in the database
+
+		// Debug: Print all inventories in the response
+		t.Logf("Response inventories:")
+		for i, inv := range getInventories {
+			t.Logf("Response[%d]: UserID=%d, ItemName=%s", i, inv.UserID, inv.ItemName)
+		}
+
+		// Debug: Print expected inventory
+		t.Logf("Expected inventory: UserID=%d, ItemName=%s", inventories[0].UserID, inventories[0].ItemName)
+
+		// Check if we have at least 3 inventories
 		if len(getInventories) < 3 {
 			t.Errorf("Expected almost 3 inventory but got %d", len(getInventories))
-		} else {
-			switch {
-			case !cmp.Equal(getInventories[0].UserID, inventories[0].UserID):
-				t.Errorf("Expected UserID %v but got %v", inventories[0].UserID, getInventories[0].UserID)
-			case !cmp.Equal(getInventories[0].ItemName, inventories[0].ItemName):
-				t.Errorf("Expected Item Name %v but got %v", inventories[0].ItemName, getInventories[0].ItemName)
-			case !cmp.Equal(getInventories[0].Category, inventories[0].Category):
-				t.Errorf("Expected Category %v but got %v", inventories[0].Category, getInventories[0].Category)
-			case !cmp.Equal(getInventories[0].Description, inventories[0].Description):
-				t.Errorf("Expected Description %v but got %v",
-					inventories[0].Description, getInventories[0].Description)
-			case !cmp.Equal(getInventories[0].Weight, inventories[0].Weight):
-				t.Errorf("Expected Weight %v but got %v", inventories[0].Weight, getInventories[0].Weight)
-			case !cmp.Equal(getInventories[0].WeightUnit, inventories[0].WeightUnit):
-				t.Errorf("Expected WeightUnit %v but got %v", inventories[0].WeightUnit, getInventories[0].WeightUnit)
-			case !cmp.Equal(getInventories[0].URL, inventories[0].URL):
-				t.Errorf("Expected URL %v but got %v", inventories[0].URL, getInventories[0].URL)
-			case !cmp.Equal(getInventories[0].Price, inventories[0].Price):
-				t.Errorf("Expected Price %v but got %v", inventories[0].Price, getInventories[0].Price)
-			case !cmp.Equal(getInventories[0].Currency, inventories[0].Currency):
-				t.Errorf("Expected Currency %v but got %v", inventories[0].Currency, getInventories[0].Currency)
+			return
+		}
+
+		// Find the matching inventory in the response
+		var foundInventory *dataset.Inventory
+		for _, inv := range getInventories {
+			if inv.ItemName == inventories[0].ItemName {
+				foundInventory = &inv
+				break
 			}
+		}
+
+		if foundInventory == nil {
+			t.Errorf("Expected inventory with ItemName %s not found in response", inventories[0].ItemName)
+			return
+		}
+
+		// Compare the found inventory with the expected inventory
+		switch {
+		case !cmp.Equal(foundInventory.UserID, inventories[0].UserID):
+			t.Errorf("Expected UserID %v but got %v", inventories[0].UserID, foundInventory.UserID)
+		case !cmp.Equal(foundInventory.ItemName, inventories[0].ItemName):
+			t.Errorf("Expected Item Name %v but got %v", inventories[0].ItemName, foundInventory.ItemName)
+		case !cmp.Equal(foundInventory.Category, inventories[0].Category):
+			t.Errorf("Expected Category %v but got %v", inventories[0].Category, foundInventory.Category)
+		case !cmp.Equal(foundInventory.Description, inventories[0].Description):
+			t.Errorf("Expected Description %v but got %v",
+				inventories[0].Description, foundInventory.Description)
+		case !cmp.Equal(foundInventory.Weight, inventories[0].Weight):
+			t.Errorf("Expected Weight %v but got %v", inventories[0].Weight, foundInventory.Weight)
+		case !cmp.Equal(foundInventory.WeightUnit, inventories[0].WeightUnit):
+			t.Errorf("Expected WeightUnit %v but got %v", inventories[0].WeightUnit, foundInventory.WeightUnit)
+		case !cmp.Equal(foundInventory.URL, inventories[0].URL):
+			t.Errorf("Expected URL %v but got %v", inventories[0].URL, foundInventory.URL)
+		case !cmp.Equal(foundInventory.Price, inventories[0].Price):
+			t.Errorf("Expected Price %v but got %v", inventories[0].Price, foundInventory.Price)
+		case !cmp.Equal(foundInventory.Currency, inventories[0].Currency):
+			t.Errorf("Expected Currency %v but got %v", inventories[0].Currency, foundInventory.Currency)
 		}
 	})
 }

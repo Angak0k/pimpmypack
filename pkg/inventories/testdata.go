@@ -128,7 +128,7 @@ func loadingInventoryDataset() error {
 		case 1:
 			inventories[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
 		case 2:
-			inventories[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
+			inventories[i].UserID = helper.FindUserIDByUsername(users, users[1].Username)
 		}
 	}
 
