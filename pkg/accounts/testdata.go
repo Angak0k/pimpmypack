@@ -56,7 +56,8 @@ func loadingAccountDataset() error {
 
 		//nolint:execinquery
 		err := database.DB().QueryRow(
-			`INSERT INTO account (username, email, firstname, lastname, role, status, preferred_currency, preferred_unit_system, created_at, updated_at) 
+			`INSERT INTO account (username, email, firstname, lastname, role, status, preferred_currency, 
+				preferred_unit_system, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) 
 			RETURNING id;`,
 			users[i].Username,
