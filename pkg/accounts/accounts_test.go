@@ -147,9 +147,11 @@ func TestGetAccountByID(t *testing.T) {
 		case receivedAccount.Status != users[0].Status:
 			t.Errorf("Expected Status %v but got %v", users[0].Status, receivedAccount.Status)
 		case receivedAccount.PreferredCurrency != users[0].PreferredCurrency:
-			t.Errorf("Expected PreferredCurrency %v but got %v", users[0].PreferredCurrency, receivedAccount.PreferredCurrency)
+			t.Errorf("Expected PreferredCurrency %v but got %v", users[0].PreferredCurrency,
+				receivedAccount.PreferredCurrency)
 		case receivedAccount.PreferredUnitSystem != users[0].PreferredUnitSystem:
-			t.Errorf("Expected PreferredUnitSystem %v but got %v", users[0].PreferredUnitSystem, receivedAccount.PreferredUnitSystem)
+			t.Errorf("Expected PreferredUnitSystem %v but got %v", users[0].PreferredUnitSystem,
+				receivedAccount.PreferredUnitSystem)
 		}
 	})
 
