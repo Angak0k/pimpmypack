@@ -498,7 +498,7 @@ func returnAccounts() (*dataset.Accounts, error) {
 	var accounts dataset.Accounts
 
 	rows, err := database.DB().Query(
-		`SELECT id, username, email, firstname, lastname, role, status, created_at, updated_at 
+		`SELECT id, username, email, firstname, lastname, role, status, preferred_currency, preferred_unit_system, created_at, updated_at 
 		FROM account;`)
 	if err != nil {
 		return nil, err
@@ -515,6 +515,8 @@ func returnAccounts() (*dataset.Accounts, error) {
 			&account.Lastname,
 			&account.Role,
 			&account.Status,
+			&account.PreferredCurrency,
+			&account.PreferredUnitSystem,
 			&account.CreatedAt,
 			&account.UpdatedAt)
 		if err != nil {
@@ -574,7 +576,7 @@ func findAccountByID(id uint) (*dataset.Account, error) {
 	var account dataset.Account
 
 	row := database.DB().QueryRow(
-		`SELECT id, username, email, firstname, lastname, role, status, created_at, updated_at 
+		`SELECT id, username, email, firstname, lastname, role, status, preferred_currency, preferred_unit_system, created_at, updated_at 
 		FROM account 
 		WHERE id = $1;`,
 		id)
@@ -586,6 +588,8 @@ func findAccountByID(id uint) (*dataset.Account, error) {
 		&account.Lastname,
 		&account.Role,
 		&account.Status,
+		&account.PreferredCurrency,
+		&account.PreferredUnitSystem,
 		&account.CreatedAt,
 		&account.UpdatedAt)
 
@@ -645,10 +649,10 @@ func insertAccount(a *dataset.Account) error {
 
 	//nolint:execinquery
 	err := database.DB().QueryRow(
-		`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+		`INSERT INTO account (username, email, firstname, lastname, role, status, preferred_currency, preferred_unit_system, created_at, updated_at) 
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 		RETURNING id;`,
-		a.Username, a.Email, a.Firstname, a.Lastname, a.Role, a.Status, a.CreatedAt, a.UpdatedAt).Scan(&a.ID)
+		a.Username, a.Email, a.Firstname, a.Lastname, a.Role, a.Status, "EUR", "METRIC", a.CreatedAt, a.UpdatedAt).Scan(&a.ID)
 
 	if err != nil {
 		return err
@@ -701,15 +705,15 @@ func updateAccountByID(id uint, a *dataset.Account) error {
 	a.ID = id
 	a.UpdatedAt = time.Now().Truncate(time.Second)
 	statement, err := database.DB().Prepare(
-		`UPDATE account SET email=$1, firstname=$2, lastname=$3, status=$4, role=$5, updated_at=$6 
-		WHERE id=$7 RETURNING username;`)
+		`UPDATE account SET email=$1, firstname=$2, lastname=$3, status=$4, role=$5, preferred_currency=$6, preferred_unit_system=$7, updated_at=$8 
+		WHERE id=$9 RETURNING username;`)
 	if err != nil {
 		return err
 	}
 
 	defer statement.Close()
 
-	err = statement.QueryRow(a.Email, a.Firstname, a.Lastname, a.Status, a.Role, a.UpdatedAt, a.ID).Scan(&a.Username)
+	err = statement.QueryRow(a.Email, a.Firstname, a.Lastname, a.Status, a.Role, a.PreferredCurrency, a.PreferredUnitSystem, a.UpdatedAt, a.ID).Scan(&a.Username)
 	if err != nil {
 		return err
 	}

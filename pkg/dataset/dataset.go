@@ -5,15 +5,17 @@ import (
 )
 
 type Account struct {
-	ID        uint      `json:"id"`
-	Username  string    `json:"username"`
-	Email     string    `json:"email"`
-	Firstname string    `json:"firstname"`
-	Lastname  string    `json:"lastname"`
-	Role      string    `json:"role"`
-	Status    string    `json:"status"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                  uint      `json:"id"`
+	Username            string    `json:"username"`
+	Email               string    `json:"email"`
+	Firstname           string    `json:"firstname"`
+	Lastname            string    `json:"lastname"`
+	Role                string    `json:"role"`
+	Status              string    `json:"status"`
+	PreferredCurrency   string    `json:"preferred_currency"`
+	PreferredUnitSystem string    `json:"preferred_unit_system"`
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
 }
 
 type Accounts []Account
