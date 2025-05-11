@@ -55,7 +55,7 @@ jobs:
           MAIL_USERNAME: "test_user"
           MAIL_PASSWORD: "test_password"
           MAIL_SERVER: "smtp.exemple.com"
-        run: make test
+        run: go test -covermode=atomic -coverprofile=coverage.out -race ./...
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
