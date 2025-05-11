@@ -1233,6 +1233,12 @@ const docTemplate = `{
                 "lastname": {
                     "type": "string"
                 },
+                "preferred_currency": {
+                    "type": "string"
+                },
+                "preferred_unit_system": {
+                    "type": "string"
+                },
                 "role": {
                     "type": "string"
                 },
