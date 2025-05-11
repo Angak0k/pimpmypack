@@ -4,7 +4,7 @@ POSTGRES_PORT=5432
 POSTGRES_USER=pmp_user
 POSTGRES_PASSWORD=pmp1234
 POSTGRES_DB=pmp_db
-POSTGRES_VERSION=16
+POSTGRES_VERSION=17
 
 .PHONY: test api-doc build lint start-db stop-db clean-db
 

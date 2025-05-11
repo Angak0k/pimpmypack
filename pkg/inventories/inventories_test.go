@@ -50,7 +50,6 @@ func TestMain(m *testing.M) {
 }
 
 func TestGetInventories(t *testing.T) {
-	var getInventories dataset.Inventories
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -86,6 +85,7 @@ func TestGetInventories(t *testing.T) {
 		}
 
 		// Unmarshal the response body into a slice of inventories struct
+		var getInventories dataset.Inventories
 		if err := json.Unmarshal(w.Body.Bytes(), &getInventories); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
@@ -105,44 +105,54 @@ func TestGetInventories(t *testing.T) {
 			return
 		}
 
-		// Find the matching inventory in the response by both UserID and ItemName
-		var foundInventory *dataset.Inventory
-		for _, inv := range getInventories {
-			if inv.ItemName == inventories[0].ItemName && inv.UserID == inventories[0].UserID {
-				foundInventory = &inv
-				break
-			}
-		}
-
-		if foundInventory == nil {
-			t.Errorf("Expected inventory with UserID=%d and ItemName=%s not found in response",
-				inventories[0].UserID, inventories[0].ItemName)
-			return
-		}
-
-		// Compare the found inventory with the expected inventory
-		switch {
-		case !cmp.Equal(foundInventory.UserID, inventories[0].UserID):
-			t.Errorf("Expected UserID %v but got %v", inventories[0].UserID, foundInventory.UserID)
-		case !cmp.Equal(foundInventory.ItemName, inventories[0].ItemName):
-			t.Errorf("Expected Item Name %v but got %v", inventories[0].ItemName, foundInventory.ItemName)
-		case !cmp.Equal(foundInventory.Category, inventories[0].Category):
-			t.Errorf("Expected Category %v but got %v", inventories[0].Category, foundInventory.Category)
-		case !cmp.Equal(foundInventory.Description, inventories[0].Description):
-			t.Errorf("Expected Description %v but got %v",
-				inventories[0].Description, foundInventory.Description)
-		case !cmp.Equal(foundInventory.Weight, inventories[0].Weight):
-			t.Errorf("Expected Weight %v but got %v", inventories[0].Weight, foundInventory.Weight)
-		case !cmp.Equal(foundInventory.WeightUnit, inventories[0].WeightUnit):
-			t.Errorf("Expected WeightUnit %v but got %v", inventories[0].WeightUnit, foundInventory.WeightUnit)
-		case !cmp.Equal(foundInventory.URL, inventories[0].URL):
-			t.Errorf("Expected URL %v but got %v", inventories[0].URL, foundInventory.URL)
-		case !cmp.Equal(foundInventory.Price, inventories[0].Price):
-			t.Errorf("Expected Price %v but got %v", inventories[0].Price, foundInventory.Price)
-		case !cmp.Equal(foundInventory.Currency, inventories[0].Currency):
-			t.Errorf("Expected Currency %v but got %v", inventories[0].Currency, foundInventory.Currency)
-		}
+		// Find and validate the expected inventory
+		validateInventory(t, getInventories, inventories[0])
 	})
+}
+
+// validateInventory checks if the expected inventory exists in the response and validates its fields
+func validateInventory(t *testing.T, responseInventories dataset.Inventories, expectedInventory dataset.Inventory) {
+	// Find the matching inventory in the response by both UserID and ItemName
+	var foundInventory *dataset.Inventory
+	for _, inv := range responseInventories {
+		if inv.ItemName == expectedInventory.ItemName && inv.UserID == expectedInventory.UserID {
+			foundInventory = &inv
+			break
+		}
+	}
+
+	if foundInventory == nil {
+		t.Errorf("Expected inventory with UserID=%d and ItemName=%s not found in response",
+			expectedInventory.UserID, expectedInventory.ItemName)
+		return
+	}
+
+	// Compare the found inventory with the expected inventory
+	compareInventoryFields(t, foundInventory, &expectedInventory)
+}
+
+// compareInventoryFields compares all fields between the found and expected inventory
+func compareInventoryFields(t *testing.T, found, expected *dataset.Inventory) {
+	switch {
+	case !cmp.Equal(found.UserID, expected.UserID):
+		t.Errorf("Expected UserID %v but got %v", expected.UserID, found.UserID)
+	case !cmp.Equal(found.ItemName, expected.ItemName):
+		t.Errorf("Expected Item Name %v but got %v", expected.ItemName, found.ItemName)
+	case !cmp.Equal(found.Category, expected.Category):
+		t.Errorf("Expected Category %v but got %v", expected.Category, found.Category)
+	case !cmp.Equal(found.Description, expected.Description):
+		t.Errorf("Expected Description %v but got %v", expected.Description, found.Description)
+	case !cmp.Equal(found.Weight, expected.Weight):
+		t.Errorf("Expected Weight %v but got %v", expected.Weight, found.Weight)
+	case !cmp.Equal(found.WeightUnit, expected.WeightUnit):
+		t.Errorf("Expected WeightUnit %v but got %v", expected.WeightUnit, found.WeightUnit)
+	case !cmp.Equal(found.URL, expected.URL):
+		t.Errorf("Expected URL %v but got %v", expected.URL, found.URL)
+	case !cmp.Equal(found.Price, expected.Price):
+		t.Errorf("Expected Price %v but got %v", expected.Price, found.Price)
+	case !cmp.Equal(found.Currency, expected.Currency):
+		t.Errorf("Expected Currency %v but got %v", expected.Currency, found.Currency)
+	}
 }
 
 func TestGetMyInventory(t *testing.T) {
