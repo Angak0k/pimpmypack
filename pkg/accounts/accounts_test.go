@@ -146,6 +146,12 @@ func TestGetAccountByID(t *testing.T) {
 			t.Errorf("Expected Role %v but got %v", users[0].Role, receivedAccount.Role)
 		case receivedAccount.Status != users[0].Status:
 			t.Errorf("Expected Status %v but got %v", users[0].Status, receivedAccount.Status)
+		case receivedAccount.PreferredCurrency != users[0].PreferredCurrency:
+			t.Errorf("Expected PreferredCurrency %v but got %v", users[0].PreferredCurrency,
+				receivedAccount.PreferredCurrency)
+		case receivedAccount.PreferredUnitSystem != users[0].PreferredUnitSystem:
+			t.Errorf("Expected PreferredUnitSystem %v but got %v", users[0].PreferredUnitSystem,
+				receivedAccount.PreferredUnitSystem)
 		}
 	})
 
@@ -398,8 +404,8 @@ func TestRegisterOK(t *testing.T) {
 		// Query the database to get the inserted account
 		var insertedUser dataset.User
 		row := database.DB().QueryRow(
-			`SELECT a.username, a.email, a.firstname, a.lastname, a.role, a.status, p.password, 
-				a.created_at, a.updated_at 
+			`SELECT a.username, a.email, a.firstname, a.lastname, a.role, a.status, p.password, a.preferred_currency, 
+			    a.preferred_unit_system, a.created_at, a.updated_at 
 			FROM account a INNER JOIN password p ON a.id = p.user_id 
 			WHERE a.username = $1;`,
 			newAccount.Username)
@@ -411,6 +417,8 @@ func TestRegisterOK(t *testing.T) {
 			&insertedUser.Role,
 			&insertedUser.Status,
 			&insertedUser.Password,
+			&insertedUser.PreferredCurrency,
+			&insertedUser.PreferredUnitSystem,
 			&insertedUser.CreatedAt,
 			&insertedUser.UpdatedAt)
 		if err != nil {
@@ -438,6 +446,10 @@ func TestRegisterOK(t *testing.T) {
 			t.Errorf("Expected Role %v but got %v", "standard", insertedUser.Role)
 		case insertedUser.Status != "pending":
 			t.Errorf("Expected Status %v but got %v", "pending", insertedUser.Status)
+		case insertedUser.PreferredCurrency != "EUR":
+			t.Errorf("Expected PreferredCurrency %v but got %v", "EUR", insertedUser.PreferredCurrency)
+		case insertedUser.PreferredUnitSystem != "METRIC":
+			t.Errorf("Expected PreferredUnitSystem %v but got %v", "METRIC", insertedUser.PreferredUnitSystem)
 		}
 	})
 }

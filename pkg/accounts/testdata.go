@@ -12,34 +12,40 @@ import (
 
 var users = []dataset.User{
 	{
-		Username:     "user-" + random.UniqueId(),
-		Email:        "user-" + random.UniqueId() + "@exemple.com",
-		Firstname:    "John",
-		Lastname:     "Doe",
-		Role:         "admin",
-		Status:       "active",
-		Password:     "password",
-		LastPassword: "password",
+		Username:            "user-" + random.UniqueId(),
+		Email:               "user-" + random.UniqueId() + "@exemple.com",
+		Firstname:           "John",
+		Lastname:            "Doe",
+		Role:                "admin",
+		Status:              "active",
+		Password:            "password",
+		LastPassword:        "password",
+		PreferredCurrency:   "EUR",
+		PreferredUnitSystem: "METRIC",
 	},
 	{
-		Username:     "user-" + random.UniqueId(),
-		Email:        "user-" + random.UniqueId() + "@exemple.com",
-		Firstname:    "Jane",
-		Lastname:     "Smith",
-		Role:         "standard",
-		Status:       "pending",
-		Password:     "password",
-		LastPassword: "",
+		Username:            "user-" + random.UniqueId(),
+		Email:               "user-" + random.UniqueId() + "@exemple.com",
+		Firstname:           "Jane",
+		Lastname:            "Smith",
+		Role:                "standard",
+		Status:              "pending",
+		Password:            "password",
+		LastPassword:        "",
+		PreferredCurrency:   "EUR",
+		PreferredUnitSystem: "METRIC",
 	},
 	{
-		Username:     "user-" + random.UniqueId(),
-		Email:        "user-" + random.UniqueId() + "@exemple.com",
-		Firstname:    "Alice",
-		Lastname:     "Johnson",
-		Role:         "standard",
-		Status:       "inactive",
-		Password:     "password",
-		LastPassword: "old_password",
+		Username:            "user-" + random.UniqueId(),
+		Email:               "user-" + random.UniqueId() + "@exemple.com",
+		Firstname:           "Alice",
+		Lastname:            "Johnson",
+		Role:                "standard",
+		Status:              "inactive",
+		Password:            "password",
+		LastPassword:        "old_password",
+		PreferredCurrency:   "USD",
+		PreferredUnitSystem: "IMPERIAL",
 	},
 }
 
@@ -50,8 +56,9 @@ func loadingAccountDataset() error {
 
 		//nolint:execinquery
 		err := database.DB().QueryRow(
-			`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
+			`INSERT INTO account (username, email, firstname, lastname, role, status, preferred_currency, 
+				preferred_unit_system, created_at, updated_at) 
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) 
 			RETURNING id;`,
 			users[i].Username,
 			users[i].Email,
@@ -59,6 +66,8 @@ func loadingAccountDataset() error {
 			users[i].Lastname,
 			users[i].Role,
 			users[i].Status,
+			users[i].PreferredCurrency,
+			users[i].PreferredUnitSystem,
 			time.Now().Truncate(time.Second),
 			time.Now().Truncate(time.Second)).Scan(&users[i].ID)
 		if err != nil {
