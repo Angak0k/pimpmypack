@@ -145,7 +145,8 @@ type ForgotPasswordInput struct {
 }
 
 type PasswordUpdateInput struct {
-	Password string `json:"password" binding:"required"`
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required"`
 }
 
 type Token struct {
