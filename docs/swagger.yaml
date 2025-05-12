@@ -117,10 +117,13 @@ definitions:
     type: object
   dataset.PasswordUpdateInput:
     properties:
-      password:
+      current_password:
+        type: string
+      new_password:
         type: string
     required:
-    - password
+    - current_password
+    - new_password
     type: object
   dataset.RegisterInput:
     properties:
@@ -894,7 +897,7 @@ paths:
       - application/json
       description: Update the password of the current logged-in user
       parameters:
-      - description: New Password
+      - description: Current and New Password
         in: body
         name: password
         required: true

@@ -1176,7 +1176,7 @@ const docTemplate = `{
                 "summary": "Update password",
                 "parameters": [
                     {
-                        "description": "New Password",
+                        "description": "Current and New Password",
                         "name": "password",
                         "in": "body",
                         "required": true,
@@ -1394,10 +1394,14 @@ const docTemplate = `{
         "dataset.PasswordUpdateInput": {
             "type": "object",
             "required": [
-                "password"
+                "current_password",
+                "new_password"
             ],
             "properties": {
-                "password": {
+                "current_password": {
+                    "type": "string"
+                },
+                "new_password": {
                     "type": "string"
                 }
             }
