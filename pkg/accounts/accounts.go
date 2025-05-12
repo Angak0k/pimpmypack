@@ -371,14 +371,14 @@ func GetMyAccount(c *gin.Context) {
 // @Tags Accounts
 // @Accept  json
 // @Produce  json
-// @Param   password  body dataset.PasswordUpdateInput  true  "New Password"
+// @Param   password  body dataset.PasswordUpdateInput  true  "Current and New Password"
 // @Success 200 {object} dataset.OkResponse "Password updated"
 // @Failure 400 {object} dataset.ErrorResponse "Bad Request"
 // @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
 // @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
 // @Router /v1/mypassword [put]
 func PutMyPassword(c *gin.Context) {
-	var updatedPassword string
+	var input dataset.PasswordUpdateInput
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -386,21 +386,33 @@ func PutMyPassword(c *gin.Context) {
 		return
 	}
 
-	// Call BindJSON to bind the received JSON to updatedPassword.
-	err = c.BindJSON(&updatedPassword)
-	if err != nil {
+	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Update the DB
-	err = updatePassword(userID, updatedPassword)
+	// Get the current hashed password from DB
+	var storedPassword string
+	row := database.DB().QueryRow("SELECT password FROM password WHERE user_id = $1;", userID)
+	err = row.Scan(&storedPassword)
 	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current password"})
+		return
+	}
+
+	// Verify the current password
+	if err := security.VerifyPassword(input.CurrentPassword, storedPassword); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Current password is incorrect"})
+		return
+	}
+
+	// Update the password
+	if err := updatePassword(userID, input.NewPassword); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, updatedPassword)
+	c.JSON(http.StatusOK, gin.H{"message": "Password updated"})
 }
 
 func updatePassword(userID uint, updatedPassword string) error {

@@ -54,7 +54,6 @@ func loadingAccountDataset() error {
 	for i := range users {
 		var id uint
 
-		//nolint:execinquery
 		err := database.DB().QueryRow(
 			`INSERT INTO account (username, email, firstname, lastname, role, status, preferred_currency, 
 				preferred_unit_system, created_at, updated_at) 
@@ -84,7 +83,6 @@ func loadingAccountDataset() error {
 			return fmt.Errorf("failed to hash password: %w", err)
 		}
 
-		//nolint:execinquery
 		err = database.DB().QueryRow(
 			`INSERT INTO password (user_id, password, last_password, updated_at) 
 			VALUES ($1,$2,$3,$4) RETURNING id;`,

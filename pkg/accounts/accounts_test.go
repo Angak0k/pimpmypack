@@ -621,3 +621,57 @@ func TestLogin(t *testing.T) {
 		}
 	})
 }
+
+func TestPutMyPassword(t *testing.T) {
+	// Set Gin to test mode
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.PUT("/v1/mypassword", PutMyPassword)
+
+	// Use the first user from the loaded dataset
+	testUser := users[0]
+
+	// Generate a token for the user
+	token, err := security.GenerateToken(testUser.ID)
+	if err != nil {
+		t.Fatalf("failed to generate token: %v", err)
+	}
+
+	// Test: Incorrect current password
+	t.Run("Incorrect current password", func(t *testing.T) {
+		input := dataset.PasswordUpdateInput{
+			CurrentPassword: "wrongpassword",
+			NewPassword:     "newpassword",
+		}
+		jsonData, _ := json.Marshal(input)
+		req, _ := http.NewRequest(http.MethodPut, "/v1/mypassword", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code %d but got %d", http.StatusBadRequest, w.Code)
+		}
+	})
+
+	// Test: Correct current password
+	t.Run("Correct current password", func(t *testing.T) {
+		input := dataset.PasswordUpdateInput{
+			CurrentPassword: testUser.Password,
+			NewPassword:     "newpassword",
+		}
+		jsonData, _ := json.Marshal(input)
+		req, _ := http.NewRequest(http.MethodPut, "/v1/mypassword", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
+		}
+	})
+}
