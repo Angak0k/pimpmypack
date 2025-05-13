@@ -20,8 +20,9 @@ pimpmypack
 # Dependency directories (remove the comment below to include it)
 # vendor/
 
-# Go workspace file
+# Go workspace files
 go.work
+go.work.sum
 
 # Environment file
 .env 

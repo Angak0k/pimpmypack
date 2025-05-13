@@ -78,7 +78,6 @@ func registerUser(u dataset.User) (bool, error) {
 		return false, fmt.Errorf("failed to generate confirmation code: %w", err)
 	}
 
-	//nolint:execinquery
 	err = database.DB().QueryRow(
 		`INSERT INTO account 
 		(username, email, firstname, lastname, role, status, confirmation_code, created_at, updated_at) 
@@ -105,7 +104,6 @@ func registerUser(u dataset.User) (bool, error) {
 		return false, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	//nolint:execinquery
 	err = database.DB().QueryRow(
 		`INSERT INTO password (user_id, password, updated_at) 
 		VALUES ($1,$2,$3) 
@@ -402,7 +400,13 @@ func PutMyPassword(c *gin.Context) {
 
 	// Verify the current password
 	if err := security.VerifyPassword(input.CurrentPassword, storedPassword); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Current password is incorrect"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "current password is incorrect"})
+		return
+	}
+
+	// Check if new password is the same as current password
+	if input.CurrentPassword == input.NewPassword {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "new password must be different from current password"})
 		return
 	}
 
@@ -661,7 +665,6 @@ func insertAccount(a *dataset.Account) error {
 	a.CreatedAt = time.Now().Truncate(time.Second)
 	a.UpdatedAt = time.Now().Truncate(time.Second)
 
-	//nolint:execinquery
 	err := database.DB().QueryRow(
 		`INSERT INTO account (username, email, firstname, lastname, role, status, preferred_currency, 
 		    preferred_unit_system, created_at, updated_at) 
