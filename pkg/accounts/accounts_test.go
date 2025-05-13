@@ -526,7 +526,6 @@ func TestLogin(t *testing.T) {
 	// insert account in database
 	var id int
 
-	//nolint:execinquery
 	err := database.DB().QueryRow(
 		`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
@@ -548,7 +547,6 @@ func TestLogin(t *testing.T) {
 		t.Fatalf("failed to hash password: %v", err)
 	}
 
-	//nolint:execinquery
 	err = database.DB().QueryRow(
 		`INSERT INTO password (user_id, password, updated_at) 
 		VALUES ($1,$2,$3) 
@@ -653,6 +651,36 @@ func TestPutMyPassword(t *testing.T) {
 
 		if w.Code != http.StatusBadRequest {
 			t.Errorf("Expected status code %d but got %d", http.StatusBadRequest, w.Code)
+		}
+	})
+
+	// Test: Same password
+	t.Run("Same password", func(t *testing.T) {
+		input := dataset.PasswordUpdateInput{
+			CurrentPassword: testUser.Password,
+			NewPassword:     testUser.Password,
+		}
+		jsonData, _ := json.Marshal(input)
+		req, _ := http.NewRequest(http.MethodPut, "/v1/mypassword", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code %d but got %d", http.StatusBadRequest, w.Code)
+		}
+
+		var response map[string]string
+		err := json.Unmarshal(w.Body.Bytes(), &response)
+		if err != nil {
+			t.Fatalf("Failed to parse response: %v", err)
+		}
+
+		expectedError := "new password must be different from current password"
+		if response["error"] != expectedError {
+			t.Errorf("Expected error message '%s' but got '%s'", expectedError, response["error"])
 		}
 	})
 
