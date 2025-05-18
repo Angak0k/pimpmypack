@@ -173,15 +173,11 @@ func loadingPackDataset() error {
 	if err := loadAccounts(tx); err != nil {
 		return err
 	}
-	if err := transformInventories(); err != nil {
-		return err
-	}
+	transformInventories()
 	if err := loadInventories(tx); err != nil {
 		return err
 	}
-	if err := transformPackContents(); err != nil {
-		return err
-	}
+	transformPackContents()
 	if err := loadPackContents(tx); err != nil {
 		return err
 	}
@@ -240,7 +236,7 @@ func loadAccounts(tx *sql.Tx) error {
 	return nil
 }
 
-func transformInventories() error {
+func transformInventories() {
 	// Transform inventories dataset by using the real user_id
 	for i := range inventoriesUserPack1 {
 		switch inventoriesUserPack1[i].UserID {
@@ -260,7 +256,6 @@ func transformInventories() error {
 			packs[i].UserID = helper.FindUserIDByUsername(users, users[1].Username)
 		}
 	}
-	return nil
 }
 
 func loadInventories(tx *sql.Tx) error {
@@ -311,7 +306,7 @@ func loadInventories(tx *sql.Tx) error {
 	return nil
 }
 
-func transformPackContents() error {
+func transformPackContents() {
 	// Transform packs_contents dataset
 
 	for i := range packItems {
@@ -347,7 +342,6 @@ func transformPackContents() error {
 			packWithItems[i].PackID = helper.FindPackIDByPackName(packs, "Special Pack")
 		}
 	}
-	return nil
 }
 
 func loadPackContents(tx *sql.Tx) error {
