@@ -55,7 +55,6 @@ func returnInventories() (*dataset.Inventories, error) {
 			category, 
 			description, 
 			weight, 
-			weight_unit, 
 			url, 
 			price, 
 			currency, 
@@ -79,7 +78,6 @@ func returnInventories() (*dataset.Inventories, error) {
 			&inventory.Category,
 			&inventory.Description,
 			&inventory.Weight,
-			&inventory.WeightUnit,
 			&inventory.URL,
 			&inventory.Price,
 			&inventory.Currency,
@@ -141,8 +139,8 @@ func returnInventoriesByUserID(userID uint) (*dataset.Inventories, error) {
 			category, 
 			description, 
 			weight, 
-			weight_unit, 
-			url, price, 
+			url, 
+			price, 
 			currency, 
 			created_at, 
 			updated_at 
@@ -162,7 +160,6 @@ func returnInventoriesByUserID(userID uint) (*dataset.Inventories, error) {
 			&inventory.Category,
 			&inventory.Description,
 			&inventory.Weight,
-			&inventory.WeightUnit,
 			&inventory.URL,
 			&inventory.Price,
 			&inventory.Currency,
@@ -277,7 +274,6 @@ func findInventoryByID(id uint) (*dataset.Inventory, error) {
 			category, 
 			description, 
 			weight, 
-			weight_unit, 
 			url, 
 			price, 
 			currency, 
@@ -292,7 +288,6 @@ func findInventoryByID(id uint) (*dataset.Inventory, error) {
 		&inventory.Category,
 		&inventory.Description,
 		&inventory.Weight,
-		&inventory.WeightUnit,
 		&inventory.URL,
 		&inventory.Price,
 		&inventory.Currency,
@@ -387,16 +382,16 @@ func InsertInventory(i *dataset.Inventory) error {
 	//nolint:execinquery
 	err := database.DB().QueryRow(
 		`INSERT INTO inventory 
-		(user_id, item_name, category, description, weight, weight_unit, url, price, currency, created_at, updated_at) 
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) 
+		(user_id, item_name, category, description, weight, url, price, currency, created_at, updated_at) 
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) 
 		RETURNING id;`,
 		i.UserID,
 		i.ItemName,
 		i.Category,
 		i.Description,
 		i.Weight,
-		i.WeightUnit,
-		i.URL, i.Price,
+		i.URL,
+		i.Price,
 		i.Currency,
 		i.CreatedAt,
 		i.UpdatedAt).Scan(&i.ID)
@@ -514,12 +509,11 @@ func updateInventoryByID(id uint, i *dataset.Inventory) error {
 			category=$3, 
 			description=$4, 
 			weight=$5, 
-			weight_unit=$6, 
-			url=$7, 
-			price=$8, 
-			currency=$9, 
-			updated_at=$10 
-		WHERE id=$11;`)
+			url=$6, 
+			price=$7, 
+			currency=$8, 
+			updated_at=$9 
+		WHERE id=$10;`)
 	if err != nil {
 		return err
 	}
@@ -532,7 +526,6 @@ func updateInventoryByID(id uint, i *dataset.Inventory) error {
 		i.Category,
 		i.Description,
 		i.Weight,
-		i.WeightUnit,
 		i.URL,
 		i.Price,
 		i.Currency,

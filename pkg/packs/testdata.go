@@ -41,7 +41,6 @@ var inventoriesUserPack1 = dataset.Inventories{
 		Category:    "Outdoor Gear",
 		Description: "Spacious backpack for hiking",
 		Weight:      950,
-		WeightUnit:  "METRIC",
 		URL:         "https://example.com/backpack",
 		Price:       50,
 		Currency:    "USD",
@@ -52,7 +51,6 @@ var inventoriesUserPack1 = dataset.Inventories{
 		Category:    "Shelter",
 		Description: "Spacious tent for hiking",
 		Weight:      1200,
-		WeightUnit:  "METRIC",
 		URL:         "https://example.com/tent",
 		Price:       150,
 		Currency:    "USD",
@@ -63,7 +61,6 @@ var inventoriesUserPack1 = dataset.Inventories{
 		Category:    "Sleeping",
 		Description: "Spacious sleeping bag for hiking",
 		Weight:      800,
-		WeightUnit:  "METRIC",
 		URL:         "https://example.com/sleeping-bag",
 		Price:       120,
 		Currency:    "EUR",
@@ -92,7 +89,7 @@ var packs = dataset.Packs{
 	{
 		UserID:          1,
 		PackName:        "Special Pack",
-		PackDescription: "Description for the second pack",
+		PackDescription: "Description for the special pack",
 		SharingCode:     "321654",
 	},
 }
@@ -150,7 +147,6 @@ var packWithItems = dataset.PackContentWithItems{
 		Category:        "Outdoor Gear",
 		ItemDescription: "Spacious backpack for hiking",
 		Weight:          950,
-		WeightUnit:      "METRIC",
 		ItemURL:         "https://example.com/backpack",
 		Price:           50,
 		Currency:        "USD",
@@ -179,7 +175,6 @@ func loadingPackDataset() error {
 func loadAccounts() error {
 	println("-> Loading accounts and passwords ...")
 	for i := range users {
-		var id uint
 		//nolint:execinquery
 		err := database.DB().QueryRow(
 			`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
@@ -194,7 +189,7 @@ func loadAccounts() error {
 			time.Now().Truncate(time.Second),
 			time.Now().Truncate(time.Second)).Scan(&users[i].ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert user: %w", err)
 		}
 
 		hashedPassword, err := security.HashPassword(users[i].Password)
@@ -214,9 +209,9 @@ func loadAccounts() error {
 			users[i].ID,
 			hashedPassword,
 			hashedLastPassword,
-			time.Now().Truncate(time.Second)).Scan(&id)
+			time.Now().Truncate(time.Second)).Scan(&users[i].ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert password: %w", err)
 		}
 	}
 	println("-> Accounts Loaded...")
@@ -230,7 +225,7 @@ func transformInventories() error {
 		case 1:
 			inventoriesUserPack1[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
 		case 2:
-			inventoriesUserPack1[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
+			inventoriesUserPack1[i].UserID = helper.FindUserIDByUsername(users, users[1].Username)
 		}
 	}
 
@@ -240,7 +235,7 @@ func transformInventories() error {
 		case 1:
 			packs[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
 		case 2:
-			packs[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
+			packs[i].UserID = helper.FindUserIDByUsername(users, users[1].Username)
 		}
 	}
 	return nil
@@ -252,16 +247,15 @@ func loadInventories() error {
 		//nolint:execinquery
 		err := database.DB().QueryRow(
 			`INSERT INTO inventory 
-			(user_id, item_name, category, description, weight, weight_unit, url, price, currency, 
+			(user_id, item_name, category, description, weight, url, price, currency, 
 				created_at, updated_at) 
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) 
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) 
 			RETURNING id;`,
 			inventoriesUserPack1[i].UserID,
 			inventoriesUserPack1[i].ItemName,
 			inventoriesUserPack1[i].Category,
 			inventoriesUserPack1[i].Description,
 			inventoriesUserPack1[i].Weight,
-			inventoriesUserPack1[i].WeightUnit,
 			inventoriesUserPack1[i].URL,
 			inventoriesUserPack1[i].Price,
 			inventoriesUserPack1[i].Currency,
@@ -336,6 +330,42 @@ func transformPackContents() error {
 
 func loadPackContents() error {
 	println("-> Loading Pack Contents...")
+	// Clear existing pack contents first
+	_, err := database.DB().Exec("DELETE FROM pack_content;")
+	if err != nil {
+		return err
+	}
+
+	// Clear existing packs
+	_, err = database.DB().Exec("DELETE FROM pack;")
+	if err != nil {
+		return err
+	}
+
+	// Load packs first to ensure they exist
+	for i := range packs {
+		//nolint:execinquery
+		err := database.DB().QueryRow(
+			`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) 
+			VALUES ($1,$2,$3,$4,$5,$6) 
+			RETURNING id;`,
+			packs[i].UserID,
+			packs[i].PackName,
+			packs[i].PackDescription,
+			packs[i].SharingCode,
+			time.Now().Truncate(time.Second),
+			time.Now().Truncate(time.Second)).Scan(&packs[i].ID)
+		if err != nil {
+			return fmt.Errorf("failed to insert pack: %w", err)
+		}
+	}
+
+	// Update pack IDs in packItems after packs are created
+	if err := transformPackContents(); err != nil {
+		return fmt.Errorf("failed to transform pack contents: %w", err)
+	}
+
+	// Then load pack contents
 	for i := range packItems {
 		//nolint:execinquery
 		err := database.DB().QueryRow(
@@ -350,7 +380,7 @@ func loadPackContents() error {
 			time.Now().Truncate(time.Second),
 			time.Now().Truncate(time.Second)).Scan(&packItems[i].ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert pack content: %w", err)
 		}
 	}
 	println("-> Pack Contents Loaded...")

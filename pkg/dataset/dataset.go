@@ -27,7 +27,6 @@ type Inventory struct {
 	Category    string    `json:"category"`
 	Description string    `json:"description"`
 	Weight      int       `json:"weight"`
-	WeightUnit  string    `json:"weight_unit"`
 	URL         string    `json:"url"`
 	Price       int       `json:"price"`
 	Currency    string    `json:"currency"`
@@ -42,6 +41,8 @@ type Pack struct {
 	UserID          uint      `json:"user_id"`
 	PackName        string    `json:"pack_name"`
 	PackDescription string    `json:"pack_description"`
+	PackWeight      int       `json:"pack_weight"`
+	PackItemsCount  int       `json:"pack_items_count"`
 	SharingCode     string    `json:"sharing_code"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
@@ -70,7 +71,6 @@ type PackContentWithItem struct {
 	Category        string `json:"category"`
 	ItemDescription string `json:"item_description"`
 	Weight          int    `json:"weight"`
-	WeightUnit      string `json:"weight_unit"`
 	ItemURL         string `json:"item_url"`
 	Price           int    `json:"price"`
 	Currency        string `json:"currency"`

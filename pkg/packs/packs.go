@@ -51,8 +51,14 @@ func returnPacks() (dataset.Packs, error) {
 	var packs dataset.Packs
 
 	rows, err := database.DB().Query(
-		`SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at 
-		FROM pack;`)
+		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
+		COALESCE(SUM(pc.quantity), 0) as items_count,
+		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight
+		FROM pack p
+		LEFT JOIN pack_content pc ON p.id = pc.pack_id
+		LEFT JOIN inventory i ON pc.item_id = i.id
+		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at
+		ORDER BY p.id;`)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -70,7 +76,10 @@ func returnPacks() (dataset.Packs, error) {
 			&pack.PackDescription,
 			&pack.SharingCode,
 			&pack.CreatedAt,
-			&pack.UpdatedAt)
+			&pack.UpdatedAt,
+			&pack.PackItemsCount,
+			&pack.PackWeight,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -1062,7 +1071,6 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 			i.category,
 			i.description AS item_description, 
 			i.weight, 
-			i.weight_unit, 
 			i.url AS item_url, 
 			i.price, 
 			i.currency, 
@@ -1088,7 +1096,6 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 			&item.Category,
 			&item.ItemDescription,
 			&item.Weight,
-			&item.WeightUnit,
 			&item.ItemURL,
 			&item.Price,
 			&item.Currency,
@@ -1356,7 +1363,6 @@ func insertLighterPack(lp *dataset.LighterPack, userID uint) error {
 		i.Category = item.Category
 		i.Description = item.Desc
 		i.Weight = item.Weight
-		i.WeightUnit = helper.ConvertWeightUnit(item.Unit)
 		i.URL = item.URL
 		i.Price = item.Price
 		i.Currency = "USD"

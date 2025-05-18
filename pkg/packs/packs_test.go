@@ -787,9 +787,6 @@ func TestGetPackContentsByPackID(t *testing.T) {
 				packContentWithItems[0].ItemDescription)
 		case packContentWithItems[0].Weight != packWithItems[0].Weight:
 			t.Errorf("Expected Weight %v but got %v", packWithItems[0].Weight, packContentWithItems[0].Weight)
-		case packContentWithItems[0].WeightUnit != packWithItems[0].WeightUnit:
-			t.Errorf("Expected Weight Unit %v but got %v", packWithItems[0].WeightUnit,
-				packContentWithItems[0].WeightUnit)
 		case packContentWithItems[0].ItemURL != packWithItems[0].ItemURL:
 			t.Errorf("Expected Item URL %v but got %v", packWithItems[0].ItemURL, packContentWithItems[0].ItemURL)
 		case packContentWithItems[0].Price != packWithItems[0].Price:
