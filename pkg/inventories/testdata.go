@@ -74,11 +74,22 @@ var inventories = dataset.Inventories{
 }
 
 func loadingInventoryDataset() error {
+	// Start a transaction
+	tx, err := database.DB().Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
 	// Load accounts dataset
 	for i := range users {
 		var id uint
 		//nolint:execinquery
-		err := database.DB().QueryRow(
+		err := tx.QueryRow(
 			`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
 			RETURNING id;`,
@@ -91,7 +102,7 @@ func loadingInventoryDataset() error {
 			time.Now().Truncate(time.Second),
 			time.Now().Truncate(time.Second)).Scan(&users[i].ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert user: %w", err)
 		}
 
 		hashedPassword, err := security.HashPassword(users[i].Password)
@@ -105,7 +116,7 @@ func loadingInventoryDataset() error {
 		}
 
 		//nolint:execinquery
-		err = database.DB().QueryRow(
+		err = tx.QueryRow(
 			`INSERT INTO password (user_id, password, last_password, updated_at) 
 			VALUES ($1,$2,$3,$4) 
 			RETURNING id;`,
@@ -114,7 +125,7 @@ func loadingInventoryDataset() error {
 			hashedLastPassword,
 			time.Now().Truncate(time.Second)).Scan(&id)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert password: %w", err)
 		}
 	}
 
@@ -131,7 +142,7 @@ func loadingInventoryDataset() error {
 	// Insert inventories dataset
 	for i := range inventories {
 		//nolint:execinquery
-		err := database.DB().QueryRow(
+		err := tx.QueryRow(
 			`INSERT INTO inventory 
 			(user_id, item_name, category, description, weight, url, price, currency, 
 				created_at, updated_at) 
@@ -148,8 +159,14 @@ func loadingInventoryDataset() error {
 			time.Now().Truncate(time.Second),
 			time.Now().Truncate(time.Second)).Scan(&inventories[i].ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert inventory: %w", err)
 		}
 	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
 	return nil
 }

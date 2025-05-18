@@ -50,11 +50,22 @@ var users = []dataset.User{
 }
 
 func loadingAccountDataset() error {
+	// Start a transaction
+	tx, err := database.DB().Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
 	// Load accounts dataset
 	for i := range users {
 		var id uint
 
-		err := database.DB().QueryRow(
+		err := tx.QueryRow(
 			`INSERT INTO account (username, email, firstname, lastname, role, status, preferred_currency, 
 				preferred_unit_system, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) 
@@ -70,7 +81,7 @@ func loadingAccountDataset() error {
 			time.Now().Truncate(time.Second),
 			time.Now().Truncate(time.Second)).Scan(&users[i].ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert user: %w", err)
 		}
 
 		hashedPassword, err := security.HashPassword(users[i].Password)
@@ -83,7 +94,7 @@ func loadingAccountDataset() error {
 			return fmt.Errorf("failed to hash password: %w", err)
 		}
 
-		err = database.DB().QueryRow(
+		err = tx.QueryRow(
 			`INSERT INTO password (user_id, password, last_password, updated_at) 
 			VALUES ($1,$2,$3,$4) RETURNING id;`,
 			users[i].ID,
@@ -91,8 +102,14 @@ func loadingAccountDataset() error {
 			hashedLastPassword,
 			time.Now().Truncate(time.Second)).Scan(&id)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert password: %w", err)
 		}
 	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
 	return nil
 }

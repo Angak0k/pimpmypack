@@ -1,6 +1,7 @@
 package packs
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -157,26 +158,43 @@ var packWithItems = dataset.PackContentWithItems{
 }
 
 func loadingPackDataset() error {
-	if err := loadAccounts(); err != nil {
+	// Start a transaction
+	tx, err := database.DB().Begin()
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	// Load data in the correct order
+	if err := loadAccounts(tx); err != nil {
 		return err
 	}
-	if err := transformInventories(); err != nil {
+	transformInventories()
+	if err := loadInventories(tx); err != nil {
 		return err
 	}
-	if err := loadInventories(); err != nil {
+	transformPackContents()
+	if err := loadPackContents(tx); err != nil {
 		return err
 	}
-	if err := transformPackContents(); err != nil {
-		return err
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
-	return loadPackContents()
+
+	return nil
 }
 
-func loadAccounts() error {
+func loadAccounts(tx *sql.Tx) error {
 	println("-> Loading accounts and passwords ...")
 	for i := range users {
 		//nolint:execinquery
-		err := database.DB().QueryRow(
+		err := tx.QueryRow(
 			`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
 			RETURNING id;`,
@@ -203,7 +221,7 @@ func loadAccounts() error {
 		}
 
 		//nolint:execinquery
-		err = database.DB().QueryRow(
+		err = tx.QueryRow(
 			`INSERT INTO password (user_id, password, last_password, updated_at) VALUES ($1,$2,$3,$4) 
 			RETURNING id;`,
 			users[i].ID,
@@ -218,7 +236,7 @@ func loadAccounts() error {
 	return nil
 }
 
-func transformInventories() error {
+func transformInventories() {
 	// Transform inventories dataset by using the real user_id
 	for i := range inventoriesUserPack1 {
 		switch inventoriesUserPack1[i].UserID {
@@ -238,14 +256,13 @@ func transformInventories() error {
 			packs[i].UserID = helper.FindUserIDByUsername(users, users[1].Username)
 		}
 	}
-	return nil
 }
 
-func loadInventories() error {
+func loadInventories(tx *sql.Tx) error {
 	println("-> Loading Inventories...")
 	for i := range inventoriesUserPack1 {
 		//nolint:execinquery
-		err := database.DB().QueryRow(
+		err := tx.QueryRow(
 			`INSERT INTO inventory 
 			(user_id, item_name, category, description, weight, url, price, currency, 
 				created_at, updated_at) 
@@ -271,7 +288,7 @@ func loadInventories() error {
 	// Insert packs dataset
 	for i := range packs {
 		//nolint:execinquery
-		err := database.DB().QueryRow(
+		err := tx.QueryRow(
 			`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6) 
 			RETURNING id;`,
@@ -289,7 +306,7 @@ func loadInventories() error {
 	return nil
 }
 
-func transformPackContents() error {
+func transformPackContents() {
 	// Transform packs_contents dataset
 
 	for i := range packItems {
@@ -325,50 +342,14 @@ func transformPackContents() error {
 			packWithItems[i].PackID = helper.FindPackIDByPackName(packs, "Special Pack")
 		}
 	}
-	return nil
 }
 
-func loadPackContents() error {
+func loadPackContents(tx *sql.Tx) error {
 	println("-> Loading Pack Contents...")
-	// Clear existing pack contents first
-	_, err := database.DB().Exec("DELETE FROM pack_content;")
-	if err != nil {
-		return err
-	}
-
-	// Clear existing packs
-	_, err = database.DB().Exec("DELETE FROM pack;")
-	if err != nil {
-		return err
-	}
-
-	// Load packs first to ensure they exist
-	for i := range packs {
-		//nolint:execinquery
-		err := database.DB().QueryRow(
-			`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) 
-			VALUES ($1,$2,$3,$4,$5,$6) 
-			RETURNING id;`,
-			packs[i].UserID,
-			packs[i].PackName,
-			packs[i].PackDescription,
-			packs[i].SharingCode,
-			time.Now().Truncate(time.Second),
-			time.Now().Truncate(time.Second)).Scan(&packs[i].ID)
-		if err != nil {
-			return fmt.Errorf("failed to insert pack: %w", err)
-		}
-	}
-
-	// Update pack IDs in packItems after packs are created
-	if err := transformPackContents(); err != nil {
-		return fmt.Errorf("failed to transform pack contents: %w", err)
-	}
-
 	// Then load pack contents
 	for i := range packItems {
 		//nolint:execinquery
-		err := database.DB().QueryRow(
+		err := tx.QueryRow(
 			`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6,$7) 
 			RETURNING id;`,
