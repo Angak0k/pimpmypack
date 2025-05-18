@@ -1307,9 +1307,6 @@ const docTemplate = `{
                 },
                 "weight": {
                     "type": "integer"
-                },
-                "weight_unit": {
-                    "type": "string"
                 }
             }
         },
@@ -1348,8 +1345,14 @@ const docTemplate = `{
                 "pack_description": {
                     "type": "string"
                 },
+                "pack_items_count": {
+                    "type": "integer"
+                },
                 "pack_name": {
                     "type": "string"
+                },
+                "pack_weight": {
+                    "type": "integer"
                 },
                 "sharing_code": {
                     "type": "string"

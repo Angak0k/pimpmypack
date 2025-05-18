@@ -61,8 +61,6 @@ definitions:
         type: integer
       weight:
         type: integer
-      weight_unit:
-        type: string
     type: object
   dataset.LoginInput:
     properties:
@@ -87,8 +85,12 @@ definitions:
         type: integer
       pack_description:
         type: string
+      pack_items_count:
+        type: integer
       pack_name:
         type: string
+      pack_weight:
+        type: integer
       sharing_code:
         type: string
       updated_at:
