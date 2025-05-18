@@ -847,7 +847,8 @@ item2,category2,description2,2,150,g,http://example2.com,20,,consumable`
 		},
 	}
 
-	token, err := security.GenerateToken(1)
+	// Generate token for the first test user
+	token, err := security.GenerateToken(users[0].ID)
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
@@ -858,7 +859,7 @@ item2,category2,description2,2,150,g,http://example2.com,20,,consumable`
 	// Create a Gin router instance
 	router := gin.Default()
 
-	// Define the endpoint for DeletePackByID handler
+	// Define the endpoint for ImportFromLighterPack handler
 	router.POST("/importfromlighterpack", ImportFromLighterPack)
 
 	for _, tt := range tests {
@@ -892,6 +893,8 @@ item2,category2,description2,2,150,g,http://example2.com,20,,consumable`
 
 			if w.Code != tt.expectedCode {
 				t.Errorf("expected status code %d, got %d", tt.expectedCode, w.Code)
+				// Print response body for debugging
+				t.Logf("Response body: %s", w.Body.String())
 			}
 		})
 	}
