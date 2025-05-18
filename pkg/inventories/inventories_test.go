@@ -144,8 +144,6 @@ func compareInventoryFields(t *testing.T, found, expected *dataset.Inventory) {
 		t.Errorf("Expected Description %v but got %v", expected.Description, found.Description)
 	case !cmp.Equal(found.Weight, expected.Weight):
 		t.Errorf("Expected Weight %v but got %v", expected.Weight, found.Weight)
-	case !cmp.Equal(found.WeightUnit, expected.WeightUnit):
-		t.Errorf("Expected WeightUnit %v but got %v", expected.WeightUnit, found.WeightUnit)
 	case !cmp.Equal(found.URL, expected.URL):
 		t.Errorf("Expected URL %v but got %v", expected.URL, found.URL)
 	case !cmp.Equal(found.Price, expected.Price):
@@ -219,8 +217,6 @@ func TestGetMyInventory(t *testing.T) {
 				t.Errorf("Expected Description %v but got %v", inventories[0].Description, myInventories[0].Description)
 			case !cmp.Equal(myInventories[0].Weight, inventories[0].Weight):
 				t.Errorf("Expected Weight %v but got %v", inventories[0].Weight, myInventories[0].Weight)
-			case !cmp.Equal(myInventories[0].WeightUnit, inventories[0].WeightUnit):
-				t.Errorf("Expected WeightUnit %v but got %v", inventories[0].WeightUnit, myInventories[0].WeightUnit)
 			case !cmp.Equal(myInventories[0].URL, inventories[0].URL):
 				t.Errorf("Expected URL %v but got %v", inventories[0].URL, myInventories[0].URL)
 			case !cmp.Equal(myInventories[0].Price, inventories[0].Price):
@@ -282,8 +278,6 @@ func TestGetInventoryByID(t *testing.T) {
 			t.Errorf("Expected Description %v but got %v", inventories[0].Description, receivedInventory.Description)
 		case receivedInventory.Weight != inventories[0].Weight:
 			t.Errorf("Expected Weight %v but got %v", inventories[0].Weight, receivedInventory.Weight)
-		case receivedInventory.WeightUnit != inventories[0].WeightUnit:
-			t.Errorf("Expected WeightUnit %v but got %v", inventories[0].WeightUnit, receivedInventory.WeightUnit)
 		case receivedInventory.URL != inventories[0].URL:
 			t.Errorf("Expected URL %v but got %v", inventories[0].URL, receivedInventory.URL)
 		case receivedInventory.Price != inventories[0].Price:
@@ -325,8 +319,7 @@ func TestPostInventory(t *testing.T) {
 		ItemName:    "Light",
 		Category:    "Outdoor Gear",
 		Description: "Headed Light",
-		Weight:      29,
-		WeightUnit:  "METRIC",
+		Weight:      29, // Weight in grams
 		URL:         "https://example.com/light",
 		Price:       30,
 		Currency:    "USD",
@@ -364,7 +357,6 @@ func TestPostInventory(t *testing.T) {
 			&insertedInventory.Category,
 			&insertedInventory.Description,
 			&insertedInventory.Weight,
-			&insertedInventory.WeightUnit,
 			&insertedInventory.URL,
 			&insertedInventory.Price,
 			&insertedInventory.Currency,
@@ -397,8 +389,6 @@ func TestPostInventory(t *testing.T) {
 			t.Errorf("Expected Description %v but got %v", insertedInventory.Description, receivedInventory.Description)
 		case receivedInventory.Weight != insertedInventory.Weight:
 			t.Errorf("Expected Weight %v but got %v", insertedInventory.Weight, receivedInventory.Weight)
-		case receivedInventory.WeightUnit != insertedInventory.WeightUnit:
-			t.Errorf("Expected WeightUnit %v but got %v", insertedInventory.WeightUnit, receivedInventory.WeightUnit)
 		case receivedInventory.URL != insertedInventory.URL:
 			t.Errorf("Expected URL %v but got %v", insertedInventory.URL, receivedInventory.URL)
 		case receivedInventory.Price != insertedInventory.Price:
@@ -426,8 +416,7 @@ func TestPutInventoryByID(t *testing.T) {
 		ItemName:    "Tent",
 		Category:    "Outdoor Gear",
 		Description: "Lightweight tent for camping",
-		Weight:      1200,
-		WeightUnit:  "METRIC",
+		Weight:      1200, // Weight in grams
 		URL:         "https://example.com/tent",
 		Price:       200,
 		Currency:    "USD",
@@ -466,7 +455,6 @@ func TestPutInventoryByID(t *testing.T) {
 			&updatedInventory.Category,
 			&updatedInventory.Description,
 			&updatedInventory.Weight,
-			&updatedInventory.WeightUnit,
 			&updatedInventory.URL,
 			&updatedInventory.Price,
 			&updatedInventory.Currency,
@@ -490,8 +478,6 @@ func TestPutInventoryByID(t *testing.T) {
 				testUpdatedInventory.Description, updatedInventory.Description)
 		case updatedInventory.Weight != testUpdatedInventory.Weight:
 			t.Errorf("Expected Weight %v but got %v", testUpdatedInventory.Weight, updatedInventory.Weight)
-		case updatedInventory.WeightUnit != testUpdatedInventory.WeightUnit:
-			t.Errorf("Expected WeightUnit %v but got %v", testUpdatedInventory.WeightUnit, updatedInventory.WeightUnit)
 		case updatedInventory.URL != testUpdatedInventory.URL:
 			t.Errorf("Expected URL %v but got %v", testUpdatedInventory.URL, updatedInventory.URL)
 		case updatedInventory.Price != testUpdatedInventory.Price:
@@ -617,8 +603,6 @@ func TestGetMyInventoryByID(t *testing.T) {
 			t.Errorf("Expected Description %v but got %v", inventories[0].Description, receivedInventory.Description)
 		case receivedInventory.Weight != inventories[0].Weight:
 			t.Errorf("Expected Weight %v but got %v", inventories[0].Weight, receivedInventory.Weight)
-		case receivedInventory.WeightUnit != inventories[0].WeightUnit:
-			t.Errorf("Expected WeightUnit %v but got %v", inventories[0].WeightUnit, receivedInventory.WeightUnit)
 		case receivedInventory.URL != inventories[0].URL:
 			t.Errorf("Expected URL %v but got %v", inventories[0].URL, receivedInventory.URL)
 		case receivedInventory.Price != inventories[0].Price:
