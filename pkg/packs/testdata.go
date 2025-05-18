@@ -157,44 +157,18 @@ var packWithItems = dataset.PackContentWithItems{
 }
 
 func loadingPackDataset() error {
-	// First, clear existing data
-	_, err := database.DB().Exec("DELETE FROM pack_content;")
-	if err != nil {
-		return fmt.Errorf("failed to clear pack_content: %w", err)
-	}
-
-	_, err = database.DB().Exec("DELETE FROM pack;")
-	if err != nil {
-		return fmt.Errorf("failed to clear pack: %w", err)
-	}
-
-	_, err = database.DB().Exec("DELETE FROM password;")
-	if err != nil {
-		return fmt.Errorf("failed to clear password: %w", err)
-	}
-
-	_, err = database.DB().Exec("DELETE FROM account;")
-	if err != nil {
-		return fmt.Errorf("failed to clear account: %w", err)
-	}
-
-	// Then load data in the correct order
 	if err := loadAccounts(); err != nil {
-		return fmt.Errorf("failed to load accounts: %w", err)
+		return err
 	}
-
 	if err := transformInventories(); err != nil {
-		return fmt.Errorf("failed to transform inventories: %w", err)
+		return err
 	}
-
 	if err := loadInventories(); err != nil {
-		return fmt.Errorf("failed to load inventories: %w", err)
+		return err
 	}
-
 	if err := transformPackContents(); err != nil {
-		return fmt.Errorf("failed to transform pack contents: %w", err)
+		return err
 	}
-
 	return loadPackContents()
 }
 
