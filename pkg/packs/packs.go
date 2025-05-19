@@ -186,9 +186,14 @@ func findPackByID(id uint) (*dataset.Pack, error) {
 	var pack dataset.Pack
 
 	row := database.DB().QueryRow(
-		`SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at 
-		FROM pack 
-		WHERE id = $1;`,
+		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
+		COALESCE(SUM(pc.quantity), 0) as items_count,
+		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight
+		FROM pack p
+		LEFT JOIN pack_content pc ON p.id = pc.pack_id
+		LEFT JOIN inventory i ON pc.item_id = i.id
+		WHERE p.id = $1
+		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at;`,
 		id)
 	err := row.Scan(
 		&pack.ID,
@@ -197,7 +202,9 @@ func findPackByID(id uint) (*dataset.Pack, error) {
 		&pack.PackDescription,
 		&pack.SharingCode,
 		&pack.CreatedAt,
-		&pack.UpdatedAt)
+		&pack.UpdatedAt,
+		&pack.PackItemsCount,
+		&pack.PackWeight)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

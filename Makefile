@@ -32,7 +32,7 @@ clean-db: stop-db
 test: start-db
 	@echo "Running tests..."
 	@go test -covermode=atomic -coverprofile=coverage.out -race ./...
-	@$(MAKE) stop-db
+	@$(MAKE) clean-db
 
 api-doc:
 	swag init --tags \!Internal
