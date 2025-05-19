@@ -109,6 +109,10 @@ func TestGetPacks(t *testing.T) {
 					getPacks[0].PackDescription)
 			case !cmp.Equal(getPacks[0].SharingCode, packs[0].SharingCode):
 				t.Errorf("Expected Sharing Code %v but got %v", packs[0].SharingCode, getPacks[0].SharingCode)
+			case getPacks[0].PackItemsCount != 5:
+				t.Errorf("Expected Pack Items Count %v but got %v", 5, getPacks[0].PackItemsCount)
+			case getPacks[0].PackWeight != 5500:
+				t.Errorf("Expected Pack Weight %v but got %v", 5500, getPacks[0].PackWeight)
 			case !cmp.Equal(getPacks[1].UserID, packs[1].UserID):
 				t.Errorf("Expected User ID %v but got %v", packs[1].UserID, getPacks[1].UserID)
 			case !cmp.Equal(getPacks[1].PackName, packs[1].PackName):
@@ -118,6 +122,10 @@ func TestGetPacks(t *testing.T) {
 					getPacks[1].PackDescription)
 			case !cmp.Equal(getPacks[1].SharingCode, packs[1].SharingCode):
 				t.Errorf("Expected Sharing Code %v but got %v", packs[1].SharingCode, getPacks[1].SharingCode)
+			case getPacks[1].PackItemsCount != 5:
+				t.Errorf("Expected Pack Items Count %v but got %v", 5, getPacks[1].PackItemsCount)
+			case getPacks[1].PackWeight != 5000:
+				t.Errorf("Expected Pack Weight %v but got %v", 5000, getPacks[1].PackWeight)
 			case !cmp.Equal(getPacks[2].UserID, packs[2].UserID):
 				t.Errorf("Expected User ID %v but got %v", packs[2].UserID, getPacks[2].UserID)
 			case !cmp.Equal(getPacks[2].PackName, packs[2].PackName):
@@ -127,6 +135,10 @@ func TestGetPacks(t *testing.T) {
 					getPacks[2].PackDescription)
 			case !cmp.Equal(getPacks[2].SharingCode, packs[2].SharingCode):
 				t.Errorf("Expected Sharing Code %v but got %v", packs[2].SharingCode, getPacks[2].SharingCode)
+			case getPacks[2].PackItemsCount != 2:
+				t.Errorf("Expected Pack Items Count %v but got %v", 2, getPacks[2].PackItemsCount)
+			case getPacks[2].PackWeight != 1900:
+				t.Errorf("Expected Pack Weight %v but got %v", 1900, getPacks[2].PackWeight)
 			}
 		}
 	})
@@ -173,6 +185,10 @@ func TestGetPackByID(t *testing.T) {
 			t.Errorf("Expected Pack Description %v but got %v", packs[0].PackDescription, receivedPack.PackDescription)
 		case receivedPack.SharingCode != packs[0].SharingCode:
 			t.Errorf("Expected Sharing Code %v but got %v", packs[0].SharingCode, receivedPack.SharingCode)
+		case receivedPack.PackItemsCount != 5:
+			t.Errorf("Expected Pack Items Count %v but got %v", 5, receivedPack.PackItemsCount)
+		case receivedPack.PackWeight != 5500:
+			t.Errorf("Expected Pack Weight %v but got %v", 5500, receivedPack.PackWeight)
 		}
 	})
 
