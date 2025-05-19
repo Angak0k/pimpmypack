@@ -172,17 +172,17 @@ func loadingPackDataset() error {
 
 	// Always load our test accounts
 	if err := loadAccounts(tx); err != nil {
-		return err
+		return fmt.Errorf("failed to load accounts: %w", err)
 	}
 
 	// Now load the rest of the data
 	transformInventories()
 	if err := loadInventories(tx); err != nil {
-		return err
+		return fmt.Errorf("failed to load inventories: %w", err)
 	}
 	transformPackContents()
 	if err := loadPackContents(tx); err != nil {
-		return err
+		return fmt.Errorf("failed to load pack contents: %w", err)
 	}
 
 	// Commit the transaction
@@ -202,12 +202,12 @@ func loadAccounts(tx *sql.Tx) error {
 		if err == nil {
 			// User exists, update their ID
 			if existingID < 0 {
-				return errors.New("invalid user ID: negative value")
+				return fmt.Errorf("invalid user ID: negative value %d for user %s", existingID, users[i].Username)
 			}
 			users[i].ID = uint(existingID)
 			continue
 		} else if !errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("failed to check existing user: %w", err)
+			return fmt.Errorf("failed to check existing user %s: %w", users[i].Username, err)
 		}
 
 		// User doesn't exist, create them
@@ -225,17 +225,17 @@ func loadAccounts(tx *sql.Tx) error {
 			time.Now().Truncate(time.Second),
 			time.Now().Truncate(time.Second)).Scan(&users[i].ID)
 		if err != nil {
-			return fmt.Errorf("failed to insert user: %w", err)
+			return fmt.Errorf("failed to insert user %s: %w", users[i].Username, err)
 		}
 
 		hashedPassword, err := security.HashPassword(users[i].Password)
 		if err != nil {
-			return fmt.Errorf("failed to hash password: %w", err)
+			return fmt.Errorf("failed to hash password for user %s: %w", users[i].Username, err)
 		}
 
 		hashedLastPassword, err := security.HashPassword(users[i].LastPassword)
 		if err != nil {
-			return fmt.Errorf("failed to hash password: %w", err)
+			return fmt.Errorf("failed to hash last password for user %s: %w", users[i].Username, err)
 		}
 
 		//nolint:execinquery
@@ -247,7 +247,7 @@ func loadAccounts(tx *sql.Tx) error {
 			hashedLastPassword,
 			time.Now().Truncate(time.Second)).Scan(&users[i].ID)
 		if err != nil {
-			return fmt.Errorf("failed to insert password: %w", err)
+			return fmt.Errorf("failed to insert password for user %s (ID: %d): %w", users[i].Username, users[i].ID, err)
 		}
 	}
 	println("-> Accounts Loaded...")
@@ -279,8 +279,20 @@ func transformInventories() {
 func loadInventories(tx *sql.Tx) error {
 	println("-> Loading Inventories...")
 	for i := range inventoriesUserPack1 {
+		// Check if user exists before inserting inventory
+		var userExists bool
+		err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM account WHERE id = $1)",
+			inventoriesUserPack1[i].UserID).Scan(&userExists)
+		if err != nil {
+			return fmt.Errorf("failed to check if user %d exists: %w", inventoriesUserPack1[i].UserID, err)
+		}
+		if !userExists {
+			return fmt.Errorf("foreign key violation: user_id %d does not exist in account table",
+				inventoriesUserPack1[i].UserID)
+		}
+
 		//nolint:execinquery
-		err := tx.QueryRow(
+		err = tx.QueryRow(
 			`INSERT INTO inventory 
 			(user_id, item_name, category, description, weight, url, price, currency, 
 				created_at, updated_at) 
@@ -297,7 +309,10 @@ func loadInventories(tx *sql.Tx) error {
 			time.Now().Truncate(time.Second),
 			time.Now().Truncate(time.Second)).Scan(&inventoriesUserPack1[i].ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert inventory item %s for user %d: %w",
+				inventoriesUserPack1[i].ItemName,
+				inventoriesUserPack1[i].UserID,
+				err)
 		}
 	}
 	println("-> Inventories Loaded...")
@@ -305,8 +320,18 @@ func loadInventories(tx *sql.Tx) error {
 
 	// Insert packs dataset
 	for i := range packs {
+		// Check if user exists before inserting pack
+		var userExists bool
+		err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM account WHERE id = $1)", packs[i].UserID).Scan(&userExists)
+		if err != nil {
+			return fmt.Errorf("failed to check if user %d exists: %w", packs[i].UserID, err)
+		}
+		if !userExists {
+			return fmt.Errorf("foreign key violation: user_id %d does not exist in account table", packs[i].UserID)
+		}
+
 		//nolint:execinquery
-		err := tx.QueryRow(
+		err = tx.QueryRow(
 			`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6) 
 			RETURNING id;`,
@@ -317,7 +342,10 @@ func loadInventories(tx *sql.Tx) error {
 			time.Now().Truncate(time.Second),
 			time.Now().Truncate(time.Second)).Scan(&packs[i].ID)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to insert pack %s for user %d: %w",
+				packs[i].PackName,
+				packs[i].UserID,
+				err)
 		}
 	}
 	println("-> Packs Loaded...")
@@ -366,8 +394,28 @@ func loadPackContents(tx *sql.Tx) error {
 	println("-> Loading Pack Contents...")
 	// Then load pack contents
 	for i := range packItems {
+		// Check if pack exists
+		var packExists bool
+		err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM pack WHERE id = $1)", packItems[i].PackID).Scan(&packExists)
+		if err != nil {
+			return fmt.Errorf("failed to check if pack %d exists: %w", packItems[i].PackID, err)
+		}
+		if !packExists {
+			return fmt.Errorf("foreign key violation: pack_id %d does not exist in pack table", packItems[i].PackID)
+		}
+
+		// Check if item exists
+		var itemExists bool
+		err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM inventory WHERE id = $1)", packItems[i].ItemID).Scan(&itemExists)
+		if err != nil {
+			return fmt.Errorf("failed to check if item %d exists: %w", packItems[i].ItemID, err)
+		}
+		if !itemExists {
+			return fmt.Errorf("foreign key violation: item_id %d does not exist in inventory table", packItems[i].ItemID)
+		}
+
 		//nolint:execinquery
-		err := tx.QueryRow(
+		err = tx.QueryRow(
 			`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6,$7) 
 			RETURNING id;`,
@@ -379,7 +427,10 @@ func loadPackContents(tx *sql.Tx) error {
 			time.Now().Truncate(time.Second),
 			time.Now().Truncate(time.Second)).Scan(&packItems[i].ID)
 		if err != nil {
-			return fmt.Errorf("failed to insert pack content: %w", err)
+			return fmt.Errorf("failed to insert pack content for pack %d and item %d: %w",
+				packItems[i].PackID,
+				packItems[i].ItemID,
+				err)
 		}
 	}
 	println("-> Pack Contents Loaded...")

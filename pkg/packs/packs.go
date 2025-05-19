@@ -1174,9 +1174,14 @@ func findPacksByUserID(id uint) (*dataset.Packs, error) {
 	var packs dataset.Packs
 
 	rows, err := database.DB().Query(`
-		SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at 
-		FROM pack 
-		WHERE user_id = $1;`, id)
+		SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
+		COALESCE(SUM(pc.quantity), 0) as items_count,
+		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight
+		FROM pack p
+		LEFT JOIN pack_content pc ON p.id = pc.pack_id
+		LEFT JOIN inventory i ON pc.item_id = i.id
+		WHERE p.user_id = $1
+		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at;`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -1191,7 +1196,9 @@ func findPacksByUserID(id uint) (*dataset.Packs, error) {
 			&pack.PackDescription,
 			&pack.SharingCode,
 			&pack.CreatedAt,
-			&pack.UpdatedAt)
+			&pack.UpdatedAt,
+			&pack.PackItemsCount,
+			&pack.PackWeight)
 		if err != nil {
 			return nil, err
 		}
