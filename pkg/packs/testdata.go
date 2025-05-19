@@ -2,6 +2,7 @@ package packs
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -169,10 +170,12 @@ func loadingPackDataset() error {
 		}
 	}()
 
-	// Load data in the correct order
+	// Always load our test accounts
 	if err := loadAccounts(tx); err != nil {
 		return err
 	}
+
+	// Now load the rest of the data
 	transformInventories()
 	if err := loadInventories(tx); err != nil {
 		return err
@@ -193,8 +196,23 @@ func loadingPackDataset() error {
 func loadAccounts(tx *sql.Tx) error {
 	println("-> Loading accounts and passwords ...")
 	for i := range users {
+		// First, check if the user already exists
+		var existingID int
+		err := tx.QueryRow("SELECT id FROM account WHERE username = $1", users[i].Username).Scan(&existingID)
+		if err == nil {
+			// User exists, update their ID
+			if existingID < 0 {
+				return errors.New("invalid user ID: negative value")
+			}
+			users[i].ID = uint(existingID)
+			continue
+		} else if !errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("failed to check existing user: %w", err)
+		}
+
+		// User doesn't exist, create them
 		//nolint:execinquery
-		err := tx.QueryRow(
+		err = tx.QueryRow(
 			`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
 			RETURNING id;`,
