@@ -3,7 +3,7 @@ module github.com/Angak0k/pimpmypack
 go 1.23.6
 
 require (
-	github.com/gin-gonic/gin v1.10.0
+	github.com/gin-gonic/gin v1.10.1
 	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/google/go-cmp v0.7.0
 	github.com/gruntwork-io/terratest v0.49.0
