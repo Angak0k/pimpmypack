@@ -199,7 +199,8 @@ func loadAccounts(tx *sql.Tx) error {
 	for i := range users {
 		// First, check if the user already exists
 		var existingID int
-		err := tx.QueryRowContext(context.Background(), "SELECT id FROM account WHERE username = $1", users[i].Username).Scan(&existingID)
+		err := tx.QueryRowContext(context.Background(),
+			"SELECT id FROM account WHERE username = $1", users[i].Username).Scan(&existingID)
 		if err == nil {
 			// User exists, update their ID
 			if existingID < 0 {
@@ -323,7 +324,8 @@ func loadInventories(tx *sql.Tx) error {
 	for i := range packs {
 		// Check if user exists before inserting pack
 		var userExists bool
-		err := tx.QueryRowContext(context.Background(), "SELECT EXISTS(SELECT 1 FROM account WHERE id = $1)", packs[i].UserID).Scan(&userExists)
+		err := tx.QueryRowContext(context.Background(),
+			"SELECT EXISTS(SELECT 1 FROM account WHERE id = $1)", packs[i].UserID).Scan(&userExists)
 		if err != nil {
 			return fmt.Errorf("failed to check if user %d exists: %w", packs[i].UserID, err)
 		}
@@ -397,7 +399,8 @@ func loadPackContents(tx *sql.Tx) error {
 	for i := range packItems {
 		// Check if pack exists
 		var packExists bool
-		err := tx.QueryRowContext(context.Background(), "SELECT EXISTS(SELECT 1 FROM pack WHERE id = $1)", packItems[i].PackID).Scan(&packExists)
+		err := tx.QueryRowContext(context.Background(),
+			"SELECT EXISTS(SELECT 1 FROM pack WHERE id = $1)", packItems[i].PackID).Scan(&packExists)
 		if err != nil {
 			return fmt.Errorf("failed to check if pack %d exists: %w", packItems[i].PackID, err)
 		}
@@ -407,7 +410,8 @@ func loadPackContents(tx *sql.Tx) error {
 
 		// Check if item exists
 		var itemExists bool
-		err = tx.QueryRowContext(context.Background(), "SELECT EXISTS(SELECT 1 FROM inventory WHERE id = $1)", packItems[i].ItemID).Scan(&itemExists)
+		err = tx.QueryRowContext(context.Background(),
+			"SELECT EXISTS(SELECT 1 FROM inventory WHERE id = $1)", packItems[i].ItemID).Scan(&itemExists)
 		if err != nil {
 			return fmt.Errorf("failed to check if item %d exists: %w", packItems[i].ItemID, err)
 		}

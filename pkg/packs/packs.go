@@ -869,7 +869,8 @@ func updatePackContentByID(id uint, pc *dataset.PackContent) error {
 
 	defer statement.Close()
 
-	_, err = statement.ExecContext(context.Background(), pc.PackID, pc.ItemID, pc.Quantity, pc.Worn, pc.Consumable, pc.UpdatedAt, id)
+	_, err = statement.ExecContext(context.Background(),
+		pc.PackID, pc.ItemID, pc.Quantity, pc.Worn, pc.Consumable, pc.UpdatedAt, id)
 	if err != nil {
 		return err
 	}
@@ -1220,7 +1221,8 @@ func findPacksByUserID(id uint) (*dataset.Packs, error) {
 func checkPackOwnership(id uint, userID uint) (bool, error) {
 	var rows int
 
-	row := database.DB().QueryRowContext(context.Background(), "SELECT COUNT(id) FROM pack WHERE id = $1 AND user_id = $2;", id, userID)
+	row := database.DB().QueryRowContext(context.Background(),
+		"SELECT COUNT(id) FROM pack WHERE id = $1 AND user_id = $2;", id, userID)
 	err := row.Scan(&rows)
 	if err != nil {
 		return false, err

@@ -616,7 +616,8 @@ func deleteInventoryByID(ctx context.Context, id uint) error {
 func checkInventoryOwnership(ctx context.Context, id uint, userID uint) (bool, error) {
 	var rows int
 
-	row := database.DB().QueryRowContext(ctx, "SELECT COUNT(id) FROM inventory WHERE id = $1 AND user_id = $2;", id, userID)
+	row := database.DB().QueryRowContext(ctx,
+		"SELECT COUNT(id) FROM inventory WHERE id = $1 AND user_id = $2;", id, userID)
 	err := row.Scan(&rows)
 	if err != nil {
 		return false, err
