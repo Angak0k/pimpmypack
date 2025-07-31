@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -51,7 +52,7 @@ var users = []dataset.User{
 
 func loadingAccountDataset() error {
 	// Start a transaction
-	tx, err := database.DB().Begin()
+	tx, err := database.DB().BeginTx(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -65,7 +66,7 @@ func loadingAccountDataset() error {
 	for i := range users {
 		var id uint
 
-		err := tx.QueryRow(
+		err := tx.QueryRowContext(context.Background(),
 			`INSERT INTO account (username, email, firstname, lastname, role, status, preferred_currency, 
 				preferred_unit_system, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) 
@@ -94,7 +95,7 @@ func loadingAccountDataset() error {
 			return fmt.Errorf("failed to hash password: %w", err)
 		}
 
-		err = tx.QueryRow(
+		err = tx.QueryRowContext(context.Background(),
 			`INSERT INTO password (user_id, password, last_password, updated_at) 
 			VALUES ($1,$2,$3,$4) RETURNING id;`,
 			users[i].ID,

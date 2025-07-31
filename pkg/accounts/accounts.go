@@ -1,6 +1,7 @@
 package accounts
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -51,7 +52,7 @@ func Register(c *gin.Context) {
 		user.CreatedAt = time.Now().Truncate(time.Second)
 		user.UpdatedAt = time.Now().Truncate(time.Second)
 
-		emailSended, err := registerUser(user)
+		emailSended, err := registerUser(c.Request.Context(), user)
 
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -70,7 +71,7 @@ func Register(c *gin.Context) {
 	}
 }
 
-func registerUser(u dataset.User) (bool, error) {
+func registerUser(ctx context.Context, u dataset.User) (bool, error) {
 	var id int
 
 	confirmationCode, err := helper.GenerateRandomCode(30)
@@ -78,7 +79,7 @@ func registerUser(u dataset.User) (bool, error) {
 		return false, fmt.Errorf("failed to generate confirmation code: %w", err)
 	}
 
-	err = database.DB().QueryRow(
+	err = database.DB().QueryRowContext(ctx,
 		`INSERT INTO account 
 		(username, email, firstname, lastname, role, status, confirmation_code, created_at, updated_at) 
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8, $9) 
@@ -104,7 +105,7 @@ func registerUser(u dataset.User) (bool, error) {
 		return false, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	err = database.DB().QueryRow(
+	err = database.DB().QueryRowContext(ctx,
 		`INSERT INTO password (user_id, password, updated_at) 
 		VALUES ($1,$2,$3) 
 		RETURNING id;`,
@@ -160,7 +161,7 @@ func ConfirmEmail(c *gin.Context) {
 		return
 	}
 
-	err := confirmEmail(userID, confirmationCode)
+	err := confirmEmail(c.Request.Context(), userID, confirmationCode)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -170,9 +171,9 @@ func ConfirmEmail(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "email confirmed"})
 }
 
-func confirmEmail(id string, code string) error {
+func confirmEmail(ctx context.Context, id string, code string) error {
 	// Check if the confirmation code is valid
-	row := database.DB().QueryRow("SELECT id FROM account WHERE id = $1 AND confirmation_code = $2;", id, code)
+	row := database.DB().QueryRowContext(ctx, "SELECT id FROM account WHERE id = $1 AND confirmation_code = $2;", id, code)
 	err := row.Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -181,13 +182,13 @@ func confirmEmail(id string, code string) error {
 		return err
 	}
 	// Update the DB
-	statement, err := database.DB().Prepare("UPDATE account SET status = 'active' WHERE id = $1;")
+	statement, err := database.DB().PrepareContext(ctx, "UPDATE account SET status = 'active' WHERE id = $1;")
 	if err != nil {
 		return fmt.Errorf("failed to prepare update statement: %w", err)
 	}
 	defer statement.Close()
 
-	_, err = statement.Exec(id)
+	_, err = statement.ExecContext(ctx, id)
 	if err != nil {
 		return fmt.Errorf("failed to execute update query: %w", err)
 	}
@@ -214,7 +215,7 @@ func ForgotPassword(c *gin.Context) {
 		return
 	}
 
-	err := forgotPassword(email.Email)
+	err := forgotPassword(c.Request.Context(), email.Email)
 
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -224,19 +225,19 @@ func ForgotPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "new password sent"})
 }
 
-func forgotPassword(email string) error {
+func forgotPassword(ctx context.Context, email string) error {
 	newPassword, err := helper.GenerateRandomCode(10)
 	if err != nil {
 		return fmt.Errorf("failed to generate new password: %w", err)
 	}
 
-	userID, err := getUserIDByEmail(email)
+	userID, err := getUserIDByEmail(ctx, email)
 	if err != nil {
 		// email not found but we don't want to leak this information
 		return fmt.Errorf("failed to process the request %w", err)
 	}
 
-	err = updatePassword(userID, newPassword)
+	err = updatePassword(context.Background(), userID, newPassword)
 	if err != nil {
 		return fmt.Errorf("failed to generate new password: %w", err)
 	}
@@ -272,7 +273,7 @@ func Login(c *gin.Context) {
 		return
 	}
 
-	token, pending, err := loginCheck(input.Username, input.Password)
+	token, pending, err := loginCheck(c.Request.Context(), input.Username, input.Password)
 
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "credentials are incorrect or token generation failed. "})
@@ -287,13 +288,13 @@ func Login(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"token": token})
 }
 
-func loginCheck(username string, password string) (string, bool, error) {
+func loginCheck(ctx context.Context, username string, password string) (string, bool, error) {
 	var err error
 	var status string
 	var storedPassword string
 	var id uint
 
-	row := database.DB().QueryRow(
+	row := database.DB().QueryRowContext(ctx,
 		`SELECT p.password, p.user_id, a.status 
 		FROM password AS p JOIN account AS a ON p.user_id = a.id 
 		WHERE a.username = $1;`,
@@ -345,7 +346,7 @@ func GetMyAccount(c *gin.Context) {
 		return
 	}
 
-	account, err := findAccountByID(userID)
+	account, err := findAccountByID(c.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, ErrNoAccountFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
@@ -391,7 +392,7 @@ func PutMyPassword(c *gin.Context) {
 
 	// Get the current hashed password from DB
 	var storedPassword string
-	row := database.DB().QueryRow("SELECT password FROM password WHERE user_id = $1;", userID)
+	row := database.DB().QueryRowContext(c.Request.Context(), "SELECT password FROM password WHERE user_id = $1;", userID)
 	err = row.Scan(&storedPassword)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to get current password"})
@@ -411,7 +412,7 @@ func PutMyPassword(c *gin.Context) {
 	}
 
 	// Update the password
-	if err := updatePassword(userID, input.NewPassword); err != nil {
+	if err := updatePassword(c.Request.Context(), userID, input.NewPassword); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
@@ -419,17 +420,17 @@ func PutMyPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Password updated"})
 }
 
-func updatePassword(userID uint, updatedPassword string) error {
+func updatePassword(ctx context.Context, userID uint, updatedPassword string) error {
 	var lastPassword string
 	// Get old password
-	row := database.DB().QueryRow("SELECT password FROM password WHERE user_id = $1;", userID)
+	row := database.DB().QueryRowContext(ctx, "SELECT password FROM password WHERE user_id = $1;", userID)
 	err := row.Scan(&lastPassword)
 	if err != nil {
 		return fmt.Errorf("failed to get old password: %w", err)
 	}
 
 	// Update DB
-	statement, err := database.DB().Prepare(
+	statement, err := database.DB().PrepareContext(ctx,
 		`UPDATE password 
 		SET password = $1, last_password = $2, updated_at = $3 
 		WHERE user_id = $4;`)
@@ -443,7 +444,7 @@ func updatePassword(userID uint, updatedPassword string) error {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	_, err = statement.Exec(hashedPassword, lastPassword, time.Now().Truncate(time.Second), userID)
+	_, err = statement.ExecContext(ctx, hashedPassword, lastPassword, time.Now().Truncate(time.Second), userID)
 	if err != nil {
 		return fmt.Errorf("failed to execute update query: %w", err)
 	}
@@ -482,7 +483,7 @@ func PutMyAccount(c *gin.Context) {
 	updatedAccount.ID = userID
 
 	// Update the DB
-	err = updateAccountByID(userID, &updatedAccount)
+	err = updateAccountByID(c.Request.Context(), userID, &updatedAccount)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -501,7 +502,7 @@ func PutMyAccount(c *gin.Context) {
 // @Failure 500 {object} dataset.ErrorResponse
 // @Router /admin/accounts [get]
 func GetAccounts(c *gin.Context) {
-	accounts, err := returnAccounts()
+	accounts, err := returnAccounts(c.Request.Context())
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -510,10 +511,10 @@ func GetAccounts(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, *accounts)
 }
 
-func returnAccounts() (*dataset.Accounts, error) {
+func returnAccounts(ctx context.Context) (*dataset.Accounts, error) {
 	var accounts dataset.Accounts
 
-	rows, err := database.DB().Query(
+	rows, err := database.DB().QueryContext(ctx,
 		`SELECT id, username, email, firstname, lastname, role, status, preferred_currency, 
 		    preferred_unit_system, created_at, updated_at 
 		FROM account;`)
@@ -571,7 +572,7 @@ func GetAccountByID(c *gin.Context) {
 	id := uint(id64)
 
 	// Call findAccountById function to lookup in database
-	account, err := findAccountByID(id)
+	account, err := findAccountByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrNoAccountFound) {
 			// Handle the "not found" case specifically
@@ -589,10 +590,10 @@ func GetAccountByID(c *gin.Context) {
 	}
 }
 
-func findAccountByID(id uint) (*dataset.Account, error) {
+func findAccountByID(ctx context.Context, id uint) (*dataset.Account, error) {
 	var account dataset.Account
 
-	row := database.DB().QueryRow(
+	row := database.DB().QueryRowContext(ctx,
 		`SELECT id, username, email, firstname, lastname, role, status, preferred_currency, 
 		    preferred_unit_system, created_at, updated_at 
 		FROM account 
@@ -645,7 +646,7 @@ func PostAccount(c *gin.Context) {
 
 	if helper.IsValidEmail(newAccount.Email) {
 		// Insert the new account into the database.
-		err := insertAccount(&newAccount)
+		err := insertAccount(c.Request.Context(), &newAccount)
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -658,14 +659,14 @@ func PostAccount(c *gin.Context) {
 	}
 }
 
-func insertAccount(a *dataset.Account) error {
+func insertAccount(ctx context.Context, a *dataset.Account) error {
 	if a == nil {
 		return errors.New("payload is empty")
 	}
 	a.CreatedAt = time.Now().Truncate(time.Second)
 	a.UpdatedAt = time.Now().Truncate(time.Second)
 
-	err := database.DB().QueryRow(
+	err := database.DB().QueryRowContext(ctx,
 		`INSERT INTO account (username, email, firstname, lastname, role, status, preferred_currency, 
 		    preferred_unit_system, created_at, updated_at) 
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
@@ -708,7 +709,7 @@ func PutAccountByID(c *gin.Context) {
 		return
 	}
 	// Update the DB
-	err = updateAccountByID(id, &updatedAccount)
+	err = updateAccountByID(c.Request.Context(), id, &updatedAccount)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -716,14 +717,14 @@ func PutAccountByID(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, updatedAccount)
 }
 
-func updateAccountByID(id uint, a *dataset.Account) error {
+func updateAccountByID(ctx context.Context, id uint, a *dataset.Account) error {
 	if a == nil {
 		return errors.New("payload is empty")
 	}
 
 	a.ID = id
 	a.UpdatedAt = time.Now().Truncate(time.Second)
-	statement, err := database.DB().Prepare(
+	statement, err := database.DB().PrepareContext(ctx,
 		`UPDATE account SET email=$1, firstname=$2, lastname=$3, status=$4, role=$5, preferred_currency=$6, 
 		    preferred_unit_system=$7, updated_at=$8 
 		WHERE id=$9 RETURNING username;`)
@@ -733,7 +734,7 @@ func updateAccountByID(id uint, a *dataset.Account) error {
 
 	defer statement.Close()
 
-	err = statement.QueryRow(a.Email, a.Firstname, a.Lastname, a.Status, a.Role, a.PreferredCurrency,
+	err = statement.QueryRowContext(ctx, a.Email, a.Firstname, a.Lastname, a.Status, a.Role, a.PreferredCurrency,
 		a.PreferredUnitSystem, a.UpdatedAt, a.ID).Scan(&a.Username)
 	if err != nil {
 		return err
@@ -754,7 +755,7 @@ func updateAccountByID(id uint, a *dataset.Account) error {
 // @Router /admin/accounts/{id} [delete]
 func DeleteAccountByID(c *gin.Context) {
 	id := c.Param("id")
-	err := deleteAccountByID(id)
+	err := deleteAccountByID(c.Request.Context(), id)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -762,15 +763,15 @@ func DeleteAccountByID(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, gin.H{"message": "Account deleted"})
 }
 
-func deleteAccountByID(id string) error {
-	statement, err := database.DB().Prepare("DELETE FROM account WHERE id=$1;")
+func deleteAccountByID(ctx context.Context, id string) error {
+	statement, err := database.DB().PrepareContext(ctx, "DELETE FROM account WHERE id=$1;")
 	if err != nil {
 		return err
 	}
 
 	defer statement.Close()
 
-	_, err = statement.Exec(id)
+	_, err = statement.ExecContext(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -778,9 +779,9 @@ func deleteAccountByID(id string) error {
 	return nil
 }
 
-func getUserIDByEmail(email string) (uint, error) {
+func getUserIDByEmail(ctx context.Context, email string) (uint, error) {
 	var id uint
-	row := database.DB().QueryRow("SELECT id FROM account WHERE email = $1;", email)
+	row := database.DB().QueryRowContext(ctx, "SELECT id FROM account WHERE email = $1;", email)
 	err := row.Scan(&id)
 	if err != nil {
 		return 0, err

@@ -1,6 +1,7 @@
 package inventories
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -75,7 +76,7 @@ var inventories = dataset.Inventories{
 
 func loadingInventoryDataset() error {
 	// Start a transaction
-	tx, err := database.DB().Begin()
+	tx, err := database.DB().BeginTx(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -89,7 +90,7 @@ func loadingInventoryDataset() error {
 	for i := range users {
 		var id uint
 		//nolint:execinquery
-		err := tx.QueryRow(
+		err := tx.QueryRowContext(context.Background(),
 			`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
 			RETURNING id;`,
@@ -116,7 +117,7 @@ func loadingInventoryDataset() error {
 		}
 
 		//nolint:execinquery
-		err = tx.QueryRow(
+		err = tx.QueryRowContext(context.Background(),
 			`INSERT INTO password (user_id, password, last_password, updated_at) 
 			VALUES ($1,$2,$3,$4) 
 			RETURNING id;`,
@@ -142,7 +143,7 @@ func loadingInventoryDataset() error {
 	// Insert inventories dataset
 	for i := range inventories {
 		//nolint:execinquery
-		err := tx.QueryRow(
+		err := tx.QueryRowContext(context.Background(),
 			`INSERT INTO inventory 
 			(user_id, item_name, category, description, weight, url, price, currency, 
 				created_at, updated_at) 
