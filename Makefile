@@ -31,7 +31,7 @@ clean-db: stop-db
 
 test: start-db
 	@echo "Running tests..."
-	@go test -covermode=atomic -coverprofile=coverage.out -race ./...
+	@go test -covermode=atomic -coverprofile=coverage.out -race -p=1 ./...
 	@$(MAKE) clean-db
 
 api-doc:
