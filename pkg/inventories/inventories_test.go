@@ -2,6 +2,7 @@ package inventories
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -531,7 +532,7 @@ func TestCheckInventoryOwnership(t *testing.T) {
 		userID := users[0].ID
 		wrongUserID := users[1].ID
 
-		myInventory, err := checkInventoryOwnership(inventoryID, userID)
+		myInventory, err := checkInventoryOwnership(context.Background(), inventoryID, userID)
 		if err != nil {
 			t.Fatalf("Failed to check inventory ownership: %v", err)
 		}
@@ -539,7 +540,7 @@ func TestCheckInventoryOwnership(t *testing.T) {
 			t.Errorf("Expected true but got false")
 		}
 
-		notmyInventory, err := checkInventoryOwnership(inventoryID, wrongUserID)
+		notmyInventory, err := checkInventoryOwnership(context.Background(), inventoryID, wrongUserID)
 		if err != nil {
 			t.Fatalf("Failed to check inventory ownership: %v", err)
 		}

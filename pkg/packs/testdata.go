@@ -1,6 +1,7 @@
 package packs
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -160,7 +161,7 @@ var packWithItems = dataset.PackContentWithItems{
 
 func loadingPackDataset() error {
 	// Start a transaction
-	tx, err := database.DB().Begin()
+	tx, err := database.DB().BeginTx(context.Background(), nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin transaction: %w", err)
 	}
@@ -198,7 +199,8 @@ func loadAccounts(tx *sql.Tx) error {
 	for i := range users {
 		// First, check if the user already exists
 		var existingID int
-		err := tx.QueryRow("SELECT id FROM account WHERE username = $1", users[i].Username).Scan(&existingID)
+		err := tx.QueryRowContext(context.Background(),
+			"SELECT id FROM account WHERE username = $1", users[i].Username).Scan(&existingID)
 		if err == nil {
 			// User exists, update their ID
 			if existingID < 0 {
@@ -212,7 +214,7 @@ func loadAccounts(tx *sql.Tx) error {
 
 		// User doesn't exist, create them
 		//nolint:execinquery
-		err = tx.QueryRow(
+		err = tx.QueryRowContext(context.Background(),
 			`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
 			RETURNING id;`,
@@ -239,7 +241,7 @@ func loadAccounts(tx *sql.Tx) error {
 		}
 
 		//nolint:execinquery
-		err = tx.QueryRow(
+		err = tx.QueryRowContext(context.Background(),
 			`INSERT INTO password (user_id, password, last_password, updated_at) VALUES ($1,$2,$3,$4) 
 			RETURNING id;`,
 			users[i].ID,
@@ -281,7 +283,7 @@ func loadInventories(tx *sql.Tx) error {
 	for i := range inventoriesUserPack1 {
 		// Check if user exists before inserting inventory
 		var userExists bool
-		err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM account WHERE id = $1)",
+		err := tx.QueryRowContext(context.Background(), "SELECT EXISTS(SELECT 1 FROM account WHERE id = $1)",
 			inventoriesUserPack1[i].UserID).Scan(&userExists)
 		if err != nil {
 			return fmt.Errorf("failed to check if user %d exists: %w", inventoriesUserPack1[i].UserID, err)
@@ -292,7 +294,7 @@ func loadInventories(tx *sql.Tx) error {
 		}
 
 		//nolint:execinquery
-		err = tx.QueryRow(
+		err = tx.QueryRowContext(context.Background(),
 			`INSERT INTO inventory 
 			(user_id, item_name, category, description, weight, url, price, currency, 
 				created_at, updated_at) 
@@ -322,7 +324,8 @@ func loadInventories(tx *sql.Tx) error {
 	for i := range packs {
 		// Check if user exists before inserting pack
 		var userExists bool
-		err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM account WHERE id = $1)", packs[i].UserID).Scan(&userExists)
+		err := tx.QueryRowContext(context.Background(),
+			"SELECT EXISTS(SELECT 1 FROM account WHERE id = $1)", packs[i].UserID).Scan(&userExists)
 		if err != nil {
 			return fmt.Errorf("failed to check if user %d exists: %w", packs[i].UserID, err)
 		}
@@ -331,7 +334,7 @@ func loadInventories(tx *sql.Tx) error {
 		}
 
 		//nolint:execinquery
-		err = tx.QueryRow(
+		err = tx.QueryRowContext(context.Background(),
 			`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6) 
 			RETURNING id;`,
@@ -396,7 +399,8 @@ func loadPackContents(tx *sql.Tx) error {
 	for i := range packItems {
 		// Check if pack exists
 		var packExists bool
-		err := tx.QueryRow("SELECT EXISTS(SELECT 1 FROM pack WHERE id = $1)", packItems[i].PackID).Scan(&packExists)
+		err := tx.QueryRowContext(context.Background(),
+			"SELECT EXISTS(SELECT 1 FROM pack WHERE id = $1)", packItems[i].PackID).Scan(&packExists)
 		if err != nil {
 			return fmt.Errorf("failed to check if pack %d exists: %w", packItems[i].PackID, err)
 		}
@@ -406,7 +410,8 @@ func loadPackContents(tx *sql.Tx) error {
 
 		// Check if item exists
 		var itemExists bool
-		err = tx.QueryRow("SELECT EXISTS(SELECT 1 FROM inventory WHERE id = $1)", packItems[i].ItemID).Scan(&itemExists)
+		err = tx.QueryRowContext(context.Background(),
+			"SELECT EXISTS(SELECT 1 FROM inventory WHERE id = $1)", packItems[i].ItemID).Scan(&itemExists)
 		if err != nil {
 			return fmt.Errorf("failed to check if item %d exists: %w", packItems[i].ItemID, err)
 		}
@@ -415,7 +420,7 @@ func loadPackContents(tx *sql.Tx) error {
 		}
 
 		//nolint:execinquery
-		err = tx.QueryRow(
+		err = tx.QueryRowContext(context.Background(),
 			`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at) 
 			VALUES ($1,$2,$3,$4,$5,$6,$7) 
 			RETURNING id;`,

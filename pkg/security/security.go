@@ -1,6 +1,7 @@
 package security
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -127,7 +128,7 @@ func JwtAuthAdminProcessor() gin.HandlerFunc {
 
 		// check if user is admin
 		var role string
-		row := database.DB().QueryRow("SELECT role FROM account WHERE id = $1;", userID)
+		row := database.DB().QueryRowContext(context.Background(), "SELECT role FROM account WHERE id = $1;", userID)
 		err = row.Scan(&role)
 		if err != nil {
 			if errors.Is(err, sql.ErrNoRows) {

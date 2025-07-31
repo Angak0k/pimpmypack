@@ -1,6 +1,7 @@
 package packs
 
 import (
+	"context"
 	"database/sql"
 	"encoding/csv"
 	"errors"
@@ -50,7 +51,7 @@ func GetPacks(c *gin.Context) {
 func returnPacks() (dataset.Packs, error) {
 	var packs dataset.Packs
 
-	rows, err := database.DB().Query(
+	rows, err := database.DB().QueryContext(context.Background(),
 		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
 		COALESCE(SUM(pc.quantity), 0) as items_count,
 		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight
@@ -185,7 +186,7 @@ func GetMyPackByID(c *gin.Context) {
 func findPackByID(id uint) (*dataset.Pack, error) {
 	var pack dataset.Pack
 
-	row := database.DB().QueryRow(
+	row := database.DB().QueryRowContext(context.Background(),
 		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
 		COALESCE(SUM(pc.quantity), 0) as items_count,
 		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight
@@ -296,7 +297,7 @@ func insertPack(p *dataset.Pack) error {
 	}
 
 	//nolint:execinquery
-	err = database.DB().QueryRow(
+	err = database.DB().QueryRowContext(context.Background(),
 		`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) 
 		VALUES ($1,$2,$3,$4,$5,$6) 
 		RETURNING id;`,
@@ -410,7 +411,7 @@ func updatePackByID(id uint, p *dataset.Pack) error {
 	}
 	p.UpdatedAt = time.Now().Truncate(time.Second)
 
-	statement, err := database.DB().Prepare(
+	statement, err := database.DB().PrepareContext(context.Background(),
 		`UPDATE pack SET user_id=$1, pack_name=$2, pack_description=$3, updated_at=$4 
 		WHERE id=$5;`)
 	if err != nil {
@@ -419,7 +420,7 @@ func updatePackByID(id uint, p *dataset.Pack) error {
 
 	defer statement.Close()
 
-	_, err = statement.Exec(p.UserID, p.PackName, p.PackDescription, p.UpdatedAt, id)
+	_, err = statement.ExecContext(context.Background(), p.UserID, p.PackName, p.PackDescription, p.UpdatedAt, id)
 	if err != nil {
 		return err
 	}
@@ -501,14 +502,14 @@ func DeleteMyPackByID(c *gin.Context) {
 }
 
 func deletePackByID(id uint) error {
-	statement, err := database.DB().Prepare("DELETE FROM pack WHERE id=$1;")
+	statement, err := database.DB().PrepareContext(context.Background(), "DELETE FROM pack WHERE id=$1;")
 	if err != nil {
 		return err
 	}
 
 	defer statement.Close()
 
-	_, err = statement.Exec(id)
+	_, err = statement.ExecContext(context.Background(), id)
 	if err != nil {
 		return err
 	}
@@ -538,7 +539,7 @@ func GetPackContents(c *gin.Context) {
 func returnPackContents() (*dataset.PackContents, error) {
 	var packContents dataset.PackContents
 
-	rows, err := database.DB().Query(
+	rows, err := database.DB().QueryContext(context.Background(),
 		`SELECT id, pack_id, item_id, quantity, worn, consumable, created_at, updated_at 
 		FROM pack_content;`)
 	if err != nil {
@@ -610,7 +611,7 @@ func GetPackContentByID(c *gin.Context) {
 func findPackContentByID(id uint) (*dataset.PackContent, error) {
 	var packcontent dataset.PackContent
 
-	row := database.DB().QueryRow(
+	row := database.DB().QueryRowContext(context.Background(),
 		`SELECT id, pack_id, item_id, quantity, worn, consumable, created_at, updated_at 
 		FROM pack_content 
 		WHERE id = $1;`,
@@ -734,7 +735,7 @@ func insertPackContent(pc *dataset.PackContent) error {
 	pc.UpdatedAt = time.Now().Truncate(time.Second)
 
 	//nolint:execinquery
-	err := database.DB().QueryRow(`
+	err := database.DB().QueryRowContext(context.Background(), `
 		INSERT INTO pack_content 
 		(pack_id, item_id, quantity, worn, consumable, created_at, updated_at) 
 		VALUES ($1,$2,$3,$4,$5,$6,$7) 
@@ -858,7 +859,7 @@ func updatePackContentByID(id uint, pc *dataset.PackContent) error {
 	}
 	pc.UpdatedAt = time.Now().Truncate(time.Second)
 
-	statement, err := database.DB().Prepare(`
+	statement, err := database.DB().PrepareContext(context.Background(), `
 		UPDATE pack_content 
 		SET pack_id=$1, item_id=$2, quantity=$3, worn=$4, consumable=$5, updated_at=$6 
 		WHERE id=$7;`)
@@ -868,7 +869,8 @@ func updatePackContentByID(id uint, pc *dataset.PackContent) error {
 
 	defer statement.Close()
 
-	_, err = statement.Exec(pc.PackID, pc.ItemID, pc.Quantity, pc.Worn, pc.Consumable, pc.UpdatedAt, id)
+	_, err = statement.ExecContext(context.Background(),
+		pc.PackID, pc.ItemID, pc.Quantity, pc.Worn, pc.Consumable, pc.UpdatedAt, id)
 	if err != nil {
 		return err
 	}
@@ -955,14 +957,14 @@ func DeleteMyPackContentByID(c *gin.Context) {
 }
 
 func deletePackContentByID(id uint) error {
-	statement, err := database.DB().Prepare("DELETE FROM pack_content WHERE id=$1;")
+	statement, err := database.DB().PrepareContext(context.Background(), "DELETE FROM pack_content WHERE id=$1;")
 	if err != nil {
 		return err
 	}
 
 	defer statement.Close()
 
-	_, err = statement.Exec(id)
+	_, err = statement.ExecContext(context.Background(), id)
 	if err != nil {
 		return err
 	}
@@ -1070,7 +1072,7 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 	// Pack exists, continue with fetching its contents
 	var packWithItems dataset.PackContentWithItems
 
-	rows, err := database.DB().Query(
+	rows, err := database.DB().QueryContext(context.Background(),
 		`SELECT pc.id AS pack_content_id, 
 			pc.pack_id as pack_id, 
 			i.id AS inventory_id, 
@@ -1125,7 +1127,7 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 // Helper function to check if a pack exists
 func checkPackExists(id uint) (bool, error) {
 	var count int
-	err := database.DB().QueryRow("SELECT COUNT(*) FROM pack WHERE id = $1", id).Scan(&count)
+	err := database.DB().QueryRowContext(context.Background(), "SELECT COUNT(*) FROM pack WHERE id = $1", id).Scan(&count)
 	if err != nil {
 		return false, err
 	}
@@ -1173,7 +1175,7 @@ func GetMyPacks(c *gin.Context) {
 func findPacksByUserID(id uint) (*dataset.Packs, error) {
 	var packs dataset.Packs
 
-	rows, err := database.DB().Query(`
+	rows, err := database.DB().QueryContext(context.Background(), `
 		SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
 		COALESCE(SUM(pc.quantity), 0) as items_count,
 		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight
@@ -1219,7 +1221,8 @@ func findPacksByUserID(id uint) (*dataset.Packs, error) {
 func checkPackOwnership(id uint, userID uint) (bool, error) {
 	var rows int
 
-	row := database.DB().QueryRow("SELECT COUNT(id) FROM pack WHERE id = $1 AND user_id = $2;", id, userID)
+	row := database.DB().QueryRowContext(context.Background(),
+		"SELECT COUNT(id) FROM pack WHERE id = $1 AND user_id = $2;", id, userID)
 	err := row.Scan(&rows)
 	if err != nil {
 		return false, err
@@ -1380,7 +1383,7 @@ func insertLighterPack(lp *dataset.LighterPack, userID uint) error {
 		i.URL = item.URL
 		i.Price = item.Price
 		i.Currency = "USD"
-		err := inventories.InsertInventory(&i)
+		err := inventories.InsertInventory(context.Background(), &i)
 		if err != nil {
 			return err
 		}
@@ -1440,7 +1443,7 @@ func SharedList(c *gin.Context) {
 
 func findPackIDBySharingCode(sharingCode string) (uint, error) {
 	var packID uint
-	row := database.DB().QueryRow("SELECT id FROM pack WHERE sharing_code = $1;", sharingCode)
+	row := database.DB().QueryRowContext(context.Background(), "SELECT id FROM pack WHERE sharing_code = $1;", sharingCode)
 	err := row.Scan(&packID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
