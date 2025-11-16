@@ -6,6 +6,7 @@ import (
 	"net/smtp"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/Angak0k/pimpmypack/pkg/dataset"
 )
@@ -62,15 +63,15 @@ func FindItemIDByItemName(inventories dataset.Inventories, itemname string) uint
 
 func GenerateRandomCode(length int) (string, error) {
 	const charset = "pimpMyPackIsBetterThanLighterPack"
-	var code string
+	var builder strings.Builder
 	for i := 0; i < length; i++ {
 		charIndex, err := rand.Int(rand.Reader, big.NewInt(int64(len(charset))))
 		if err != nil {
 			return "", err
 		}
-		code += string(charset[charIndex.Int64()])
+		builder.WriteByte(charset[charIndex.Int64()])
 	}
-	return code, nil
+	return builder.String(), nil
 }
 
 func IsValidEmail(email string) bool {
