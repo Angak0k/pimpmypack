@@ -6,6 +6,7 @@ import (
 	"net/smtp"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/Angak0k/pimpmypack/pkg/dataset"
 )
