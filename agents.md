@@ -1,15 +1,34 @@
 # Design and Architecture Principles - PimpMyPack
 
-This document outlines the main design and architecture principles observed in the PimpMyPack project.
+This document outlines the main design and architecture principles to contribute in the PimpMyPack project.
+
+## 🎯 Purpose of the project
+
+The PimpMyPack project is a backend service for managing user accounts, inventories, and packs. It provides a RESTful API built with Go and Gin, using PostgreSQL as the database. The project emphasizes clean architecture, code quality, security, and maintainability.
+
+In a first iteration that projects handles only user created items, future versions may include editor curated public items shared between users and collaborative packs.
+
+## 🧑‍💻 Contribution principles
+
+If you are an agent willing to contribute to this project, please follow these steps:
+
+- **write specs**: write  clear specifications in a md file in the specs/ folder
+- **discuss**: discuss the specs with the project owner to validate them
+- **design**: design the solution following the guidelines in this document and orchestrate a plan of work through structured tasks. Amend the specs file with your design decisions and the plan of work (with checkboxes to follow-it easily)
+- **validate**: validate the design with the project owner before starting the implementation.
+- **all-in mode**: ask to the project owner if you could run all tasks in a single go or if you should ask for a validation for each task.
+- **implement**: implement the feature following the guidelines in this document, write tests and document the code.
 
 ## 🏗️ General Architecture
 
 ### Project Structure
+
 - **Functional package organization**: Code is organized by business domain (`accounts`, `inventories`, `packs`, `security`, `config`, `database`, `helper`)
 - **Separation of concerns**: Each package has a clear and delimited responsibility
 - **Repository Pattern**: Gin handler functions are separated from business functions that interact with the database
 
 ### Naming Conventions
+
 - **Files**: snake_case names for SQL files (`000001_account.up.sql`)
 - **Packages**: Plural names for business domains (`accounts`, `inventories`, `packs`)
 - **Public functions**: Start with an uppercase letter (e.g., `GetAccounts`, `PostMyInventory`)
@@ -18,6 +37,7 @@ This document outlines the main design and architecture principles observed in t
 ## 📦 Code Organization
 
 ### HTTP Handlers (Gin)
+
 1. **RESTful Naming**:
    - GET: `GetXxx`, `GetMyXxx` (for user resources)
    - POST: `PostXxx`, `PostMyXxx`
@@ -25,6 +45,7 @@ This document outlines the main design and architecture principles observed in t
    - DELETE: `DeleteXxx`, `DeleteMyXxx`
 
 2. **Typical handler structure**:
+
 ```go
 func HandlerName(c *gin.Context) {
     // 1. Bind input data
@@ -53,6 +74,7 @@ func HandlerName(c *gin.Context) {
 ```
 
 3. **Swagger Documentation**: Each public handler must be documented with Swagger annotations:
+
 ```go
 // @Summary Short description
 // @Description Detailed description
@@ -72,6 +94,7 @@ func HandlerName(c *gin.Context) {
 2. **Context propagation**: All business functions accept a `context.Context` as the first parameter
 3. **Error handling**: Use `fmt.Errorf` with wrapping (`%w`) to preserve the error chain
 4. **Sentinel errors**: Define named errors for important business cases:
+
 ```go
 var ErrNoAccountFound = errors.New("no account found")
 ```
@@ -87,7 +110,7 @@ var ErrNoAccountFound = errors.New("no account found")
 
 ### Security
 
-1. **JWT**: 
+1. **JWT**:
    - Generation with configurable lifetime
    - Extraction from `Authorization` header or `token` query param
    - Validation via Gin middleware
@@ -332,6 +355,7 @@ func TestFunctionName(t *testing.T) {
 ## 🔄 Recurring Patterns
 
 ### Handler Pattern
+
 ```go
 func Handler(c *gin.Context) {
     // Bind → Validate → Execute → Respond
@@ -339,6 +363,7 @@ func Handler(c *gin.Context) {
 ```
 
 ### Repository Pattern
+
 ```go
 // Public handler
 func GetXxx(c *gin.Context) { }
@@ -348,6 +373,7 @@ func returnXxx(ctx context.Context) (*Type, error) { }
 ```
 
 ### Context Pattern
+
 ```go
 // Always pass context as first parameter
 func businessFunction(ctx context.Context, params ...) error {
@@ -356,6 +382,7 @@ func businessFunction(ctx context.Context, params ...) error {
 ```
 
 ### Error Handling Pattern
+
 ```go
 if err != nil {
     if errors.Is(err, SpecificError) {
@@ -370,10 +397,12 @@ if err != nil {
 ## 📊 Database Migrations
 
 ### Naming Convention
+
 - Format: `NNNNNN_description.up.sql` / `NNNNNN_description.down.sql`
 - Example: `000001_account.up.sql`
 
 ### Principles
+
 1. **Idempotence**: Migrations must be replayable
 2. **Rollback**: Always provide a `.down.sql` migration
 3. **Sequential versioning**: 6-digit numbers
