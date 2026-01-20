@@ -117,6 +117,35 @@ definitions:
       worn:
         type: boolean
     type: object
+  dataset.PackContentWithItem:
+    properties:
+      category:
+        type: string
+      consumable:
+        type: boolean
+      currency:
+        type: string
+      inventory_id:
+        type: integer
+      item_description:
+        type: string
+      item_name:
+        type: string
+      item_url:
+        type: string
+      pack_content_id:
+        type: integer
+      pack_id:
+        type: integer
+      price:
+        type: integer
+      quantity:
+        type: integer
+      weight:
+        type: integer
+      worn:
+        type: boolean
+    type: object
   dataset.PasswordUpdateInput:
     properties:
       current_password:
@@ -145,6 +174,26 @@ definitions:
     - lastname
     - password
     - username
+    type: object
+  dataset.SharedPackInfo:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      pack_description:
+        type: string
+      pack_name:
+        type: string
+    type: object
+  dataset.SharedPackResponse:
+    properties:
+      contents:
+        items:
+          $ref: '#/definitions/dataset.PackContentWithItem'
+        type: array
+      pack:
+        $ref: '#/definitions/dataset.SharedPackInfo'
     type: object
   dataset.Token:
     properties:
@@ -233,75 +282,6 @@ paths:
       summary: User login
       tags:
       - Public
-  /mypack/:id/packcontent:
-    post:
-      consumes:
-      - application/json
-      description: Create a new pack content
-      parameters:
-      - description: Pack Content
-        in: body
-        name: packcontent
-        required: true
-        schema:
-          $ref: '#/definitions/dataset.PackContent'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            $ref: '#/definitions/dataset.PackContent'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
-        "401":
-          description: Unauthorized
-          schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
-      security:
-      - Bearer: []
-      summary: Create a new pack content
-      tags:
-      - Packs
-  /public/packs/{sharing_code}:
-    get:
-      description: Get pack content for a given sharing code
-      parameters:
-      - description: Sharing Code
-        in: path
-        name: sharing_code
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Pack Contents
-          schema:
-            items:
-              $ref: '#/definitions/dataset.PackContent'
-            type: array
-        "404":
-          description: Pack not found
-          schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
-      summary: Get pack content for a given sharing code
-      tags:
-      - Public
   /register:
     post:
       consumes:
@@ -327,6 +307,35 @@ paths:
           schema:
             $ref: '#/definitions/dataset.ErrorResponse'
       summary: Register new user
+      tags:
+      - Public
+  /sharedlist/{sharing_code}:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves pack metadata and contents using a sharing code
+      parameters:
+      - description: Pack sharing code
+        in: path
+        name: sharing_code
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Shared pack with metadata and contents
+          schema:
+            $ref: '#/definitions/dataset.SharedPackResponse'
+        "404":
+          description: Pack not found or not shared
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+      summary: Get shared pack with metadata
       tags:
       - Public
   /v1/importfromlighterpack:
@@ -609,6 +618,46 @@ paths:
       security:
       - Bearer: []
       summary: Create a new pack
+      tags:
+      - Packs
+  /v1/mypack/:id/packcontent:
+    post:
+      consumes:
+      - application/json
+      description: Create a new pack content
+      parameters:
+      - description: Pack Content
+        in: body
+        name: packcontent
+        required: true
+        schema:
+          $ref: '#/definitions/dataset.PackContent'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dataset.PackContent'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dataset.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new pack content
       tags:
       - Packs
   /v1/mypack/{id}:

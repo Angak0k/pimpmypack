@@ -153,6 +153,23 @@ type Token struct {
 	Token string `json:"token"`
 }
 
+// SharedPackResponse represents the response structure for shared pack endpoint
+type SharedPackResponse struct {
+	Pack     SharedPackInfo       `json:"pack"`
+	Contents PackContentWithItems `json:"contents"`
+}
+
+// SharedPackInfo contains public metadata about a shared pack
+// UserID and SharingCode are intentionally not included for security
+// Note: pack_items_count is not included as it doesn't exist in DB schema
+// Clients can count items from the contents array
+type SharedPackInfo struct {
+	ID              uint      `json:"id"`
+	PackName        string    `json:"pack_name"`
+	PackDescription string    `json:"pack_description"`
+	CreatedAt       time.Time `json:"created_at"`
+}
+
 type OkResponse struct {
 	Response string `json:"message"`
 }

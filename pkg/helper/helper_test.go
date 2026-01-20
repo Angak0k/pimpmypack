@@ -13,7 +13,7 @@ func TestMain(m *testing.M) {
 	// init env
 	err := config.EnvInit("../../.env")
 	if err != nil {
-		log.Fatalf("Error loading .env file or environement variable : %v", err)
+		log.Fatalf("Error loading .env file or environment variable : %v", err)
 	}
 
 	ret := m.Run()

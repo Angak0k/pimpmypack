@@ -1,0 +1,12 @@
+-- Rollback migration: DESCRIPTION
+-- This file reverses changes from the corresponding .up.sql file
+
+-- Drop table (if created in up migration)
+DROP TABLE IF EXISTS table_name;
+
+-- OR: Reverse alterations
+-- ALTER TABLE existing_table DROP COLUMN new_field;
+-- ALTER TABLE existing_table ALTER COLUMN existing_field SET NOT NULL;
+
+-- Restore data (if modified in up migration)
+-- UPDATE table_name SET field = 'old_value' WHERE condition;

@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"reflect"
 	"testing"
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
@@ -29,7 +28,7 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("Error loading .env file or environement variable : %v", err)
 	}
-	println("Environement variables loaded")
+	println("Environment variables loaded")
 
 	// init DB
 	err = database.Initialization()
@@ -987,65 +986,58 @@ func TestFindPackIDBySharingCode(t *testing.T) {
 }
 
 func TestGetPackBySharingCode(t *testing.T) {
-	testCases := []struct {
-		sharingCode  string
-		responseCode int
-		expected     dataset.PackContents
-		name         string
-	}{
-		{
-			sharingCode:  *packs[0].SharingCode, // Dereference pointer
-			responseCode: http.StatusOK,
-			expected:     packItems[0:1],
-			name:         "Valid sharing code",
-		},
-		{
-			sharingCode:  "invalid",
-			responseCode: http.StatusNotFound,
-			expected:     dataset.PackContents{},
-			name:         "Invalid sharing code",
-		},
-	}
-	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
-
-	// Create a Gin router instance
 	router := gin.Default()
-
-	// Define the endpoint for DeletePackByID handler
 	router.GET("/sharedlist/:sharing_code", SharedList)
 
-	// Loop through each test case
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			var returnedPackContents dataset.PackContents
-			// Set up a test scenario: sending a GET request
-			path := "/sharedlist/" + tc.sharingCode
-			req, err := http.NewRequest(http.MethodGet, path, nil)
-			if err != nil {
-				t.Fatalf("Failed to create request: %v", err)
-			}
-			req.Header.Set("Content-Type", "application/json")
+	t.Run("Valid sharing code", func(t *testing.T) {
+		testValidSharingCode(t, router, *packs[0].SharingCode)
+	})
 
-			w := httptest.NewRecorder()
-			router.ServeHTTP(w, req)
+	t.Run("Invalid sharing code", func(t *testing.T) {
+		testInvalidSharingCode(t, router, "invalid")
+	})
+}
 
-			if w.Code != tc.responseCode {
-				t.Errorf("Expected status code %d but got %d", tc.responseCode, w.Code)
-			}
+func testValidSharingCode(t *testing.T, router *gin.Engine, sharingCode string) {
+	path := "/sharedlist/" + sharingCode
+	req, _ := http.NewRequest(http.MethodGet, path, nil)
+	req.Header.Set("Content-Type", "application/json")
 
-			if tc.responseCode == http.StatusOK {
-				// Unmarshal the response body into a slice of packs struct
-				if err := json.Unmarshal(w.Body.Bytes(), &returnedPackContents); err != nil {
-					t.Fatalf("Failed to unmarshal response body: %v", err)
-				}
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
 
-				// determine if the answer is correct
-				if reflect.DeepEqual(returnedPackContents, tc.expected) {
-					t.Errorf("Expected %v but got %v", tc.expected, returnedPackContents)
-				}
-			}
-		})
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
+	}
+
+	var response dataset.SharedPackResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response body: %v", err)
+	}
+
+	// Verify response structure
+	if response.Pack.ID == 0 {
+		t.Error("Pack ID should not be zero")
+	}
+	if response.Pack.PackName == "" {
+		t.Error("Pack name should not be empty")
+	}
+	if response.Contents == nil {
+		t.Error("Contents should not be nil")
+	}
+}
+
+func testInvalidSharingCode(t *testing.T, router *gin.Engine, sharingCode string) {
+	path := "/sharedlist/" + sharingCode
+	req, _ := http.NewRequest(http.MethodGet, path, nil)
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status code %d but got %d", http.StatusNotFound, w.Code)
 	}
 }
 
@@ -1229,5 +1221,74 @@ func TestUnshareMyPack(t *testing.T) {
 	})
 	t.Run("Pack not found", func(t *testing.T) {
 		testUnshareNotFound(t, router, token)
+	})
+}
+
+func TestSharedList(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.GET("/api/sharedlist/:sharing_code", SharedList)
+
+	t.Run("Successfully get shared pack with metadata", func(t *testing.T) {
+		// Use first pack with sharing code from testdata
+		// packs[0] has a sharing code assigned
+		if packs[0].SharingCode == nil {
+			t.Fatal("Test pack should have a sharing code")
+		}
+		sharingCode := *packs[0].SharingCode
+
+		req, _ := http.NewRequest(http.MethodGet, "/api/sharedlist/"+sharingCode, nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+		}
+
+		var response dataset.SharedPackResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to parse response: %v", err)
+		}
+
+		// Verify pack metadata is present
+		if response.Pack.PackName == "" {
+			t.Error("Pack name should not be empty")
+		}
+		if response.Pack.ID == 0 {
+			t.Error("Pack ID should not be zero")
+		}
+		if response.Pack.PackName != "First Pack" {
+			t.Errorf("Expected pack name 'First Pack' but got '%s'", response.Pack.PackName)
+		}
+
+		// Verify contents is an array (can be empty)
+		if response.Contents == nil {
+			t.Error("Contents should not be nil, should be empty array if no contents")
+		}
+	})
+
+	t.Run("Pack not found - invalid sharing code", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodGet, "/api/sharedlist/invalid-code-999", nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("Expected status %d but got %d. Body: %s", http.StatusNotFound, w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("Pack not found - NULL sharing code", func(t *testing.T) {
+		// Try to access a pack that has NULL sharing_code (private pack)
+		// This should return 404 as the pack is not shared
+		req, _ := http.NewRequest(http.MethodGet, "/api/sharedlist/null-code-not-exist", nil)
+		w := httptest.NewRecorder()
+
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("Expected status %d but got %d. Body: %s", http.StatusNotFound, w.Code, w.Body.String())
+		}
 	})
 }

@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -781,7 +782,7 @@ func PostPackContent(c *gin.Context) {
 // @Failure 401 {object} dataset.ErrorResponse
 // @Failure 403 {object} dataset.ErrorResponse
 // @Failure 500 {object} dataset.ErrorResponse
-// @Router /mypack/:id/packcontent [post]
+// @Router /v1/mypack/:id/packcontent [post]
 func PostMyPackContent(c *gin.Context) {
 	var requestData dataset.PackContentRequest
 	var newPackContent dataset.PackContent
@@ -1577,44 +1578,32 @@ func insertLighterPack(lp *dataset.LighterPack, userID uint) error {
 	return nil
 }
 
-// Get pack content for a given sharing code
-// @Summary Get pack content for a given sharing code
-// @Description Get pack content for a given sharing code
+// SharedList gets pack metadata and contents for a shared pack
+// @Summary Get shared pack with metadata
+// @Description Retrieves pack metadata and contents using a sharing code
 // @Tags Public
-// @Produce  json
-// @Param sharing_code path string true "Sharing Code"
-// @Success 200 {object} dataset.PackContents "Pack Contents"
-// @Failure 404 {object} dataset.ErrorResponse "Pack not found"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
-// @Router /public/packs/{sharing_code} [get]
+// @Accept json
+// @Produce json
+// @Param sharing_code path string true "Pack sharing code"
+// @Success 200 {object} dataset.SharedPackResponse "Shared pack with metadata and contents"
+// @Failure 404 {object} dataset.ErrorResponse "Pack not found or not shared"
+// @Failure 500 {object} dataset.ErrorResponse "Internal server error"
+// @Router /sharedlist/{sharing_code} [get]
 func SharedList(c *gin.Context) {
 	sharingCode := c.Param("sharing_code")
 
-	packID, err := findPackIDBySharingCode(sharingCode)
+	// Get shared pack with metadata and contents
+	sharedPack, err := returnSharedPack(c.Request.Context(), sharingCode)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	if packID == 0 {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-		return
-	}
-
-	packContents, err := returnPackContentsByPackID(packID)
-	if err != nil {
-		if errors.Is(err, ErrPackContentNotFound) {
+		if errors.Is(err, ErrPackNotFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 			return
 		}
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	if packContents == nil {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-		return
-	}
 
-	c.IndentedJSON(http.StatusOK, packContents)
+	c.IndentedJSON(http.StatusOK, sharedPack)
 }
 
 func findPackIDBySharingCode(sharingCode string) (uint, error) {
@@ -1628,4 +1617,64 @@ func findPackIDBySharingCode(sharingCode string) (uint, error) {
 		return 0, err
 	}
 	return packID, nil
+}
+
+// returnPackInfoBySharingCode retrieves pack metadata using sharing code.
+// Returns nil if pack not found or sharing_code is NULL.
+func returnPackInfoBySharingCode(ctx context.Context, sharingCode string) (*dataset.SharedPackInfo, error) {
+	query := `
+		SELECT id, pack_name, pack_description, created_at
+		FROM pack
+		WHERE sharing_code = $1 AND sharing_code IS NOT NULL
+	`
+
+	var packInfo dataset.SharedPackInfo
+	err := database.DB().QueryRowContext(ctx, query, sharingCode).Scan(
+		&packInfo.ID,
+		&packInfo.PackName,
+		&packInfo.PackDescription,
+		&packInfo.CreatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrPackNotFound
+		}
+		return nil, fmt.Errorf("failed to fetch pack info by sharing code: %w", err)
+	}
+
+	return &packInfo, nil
+}
+
+// returnSharedPack retrieves both pack metadata and contents for a shared pack.
+// This function is used by the public shared pack endpoint.
+func returnSharedPack(ctx context.Context, sharingCode string) (*dataset.SharedPackResponse, error) {
+	// Get pack metadata
+	packInfo, err := returnPackInfoBySharingCode(ctx, sharingCode)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get pack contents
+	packContents, err := returnPackContentsByPackID(packInfo.ID)
+	if err != nil {
+		if errors.Is(err, ErrPackContentNotFound) {
+			// Pack exists but has no contents - return empty array
+			return &dataset.SharedPackResponse{
+				Pack:     *packInfo,
+				Contents: dataset.PackContentWithItems{},
+			}, nil
+		}
+		return nil, fmt.Errorf("failed to fetch pack contents: %w", err)
+	}
+
+	// Handle nil contents as empty array
+	if packContents == nil {
+		packContents = &dataset.PackContentWithItems{}
+	}
+
+	return &dataset.SharedPackResponse{
+		Pack:     *packInfo,
+		Contents: *packContents,
+	}, nil
 }
