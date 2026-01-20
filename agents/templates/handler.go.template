@@ -1,0 +1,47 @@
+package PACKAGE_NAME
+
+import (
+	"errors"
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+	"github.com/romain-broussard/pimpmypack/pkg/dataset"
+)
+
+// @Summary SUMMARY_TEXT
+// @Description DESCRIPTION_TEXT
+// @Security Bearer
+// @Tags TAG_NAME
+// @Accept json
+// @Produce json
+// @Param PARAM_NAME PARAM_TYPE PARAM_GO_TYPE REQUIRED "PARAM_DESCRIPTION"
+// @Success 200 {object} dataset.RESPONSE_TYPE "Success description"
+// @Failure 400 {object} dataset.ErrorResponse "Bad request"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 404 {object} dataset.ErrorResponse "Not found"
+// @Failure 500 {object} dataset.ErrorResponse "Internal server error"
+// @Router ROUTER_PATH [METHOD]
+func HANDLER_NAME(c *gin.Context) {
+	// 1. Bind input data (if needed)
+	var input dataset.INPUT_TYPE
+	if err := c.ShouldBindJSON(&input); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 2. Call business function
+	result, err := businessFunction(c.Request.Context(), input)
+
+	// 3. Handle errors with appropriate HTTP status codes
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "resource not found"})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 4. Return response
+	c.IndentedJSON(http.StatusOK, result)
+}

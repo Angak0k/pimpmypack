@@ -1,0 +1,106 @@
+package PACKAGE_NAME
+
+import (
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
+
+	"github.com/gin-gonic/gin"
+	"github.com/romain-broussard/pimpmypack/pkg/config"
+	"github.com/romain-broussard/pimpmypack/pkg/database"
+	"github.com/romain-broussard/pimpmypack/pkg/dataset"
+)
+
+func TestMain(m *testing.M) {
+	// 1. Initialize configuration
+	config.EnvInit("../../.env")
+
+	// 2. Initialize database
+	database.Initialization()
+
+	// 3. Run migrations
+	database.Migrate()
+
+	// 4. Load test datasets
+	loadingDataset()
+
+	// 5. Run tests
+	ret := m.Run()
+	os.Exit(ret)
+}
+
+func loadingDataset() {
+	// Load test data here
+}
+
+func TestHANDLER_NAME(t *testing.T) {
+	// Gin in test mode
+	gin.SetMode(gin.TestMode)
+
+	// Create a test router
+	router := gin.Default()
+	router.GET("/endpoint", HandlerToTest)
+
+	t.Run("Success case", func(t *testing.T) {
+		// Arrange
+		req, _ := http.NewRequest(http.MethodGet, "/endpoint", nil)
+		w := httptest.NewRecorder()
+
+		// Act
+		router.ServeHTTP(w, req)
+
+		// Assert
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected %d but got %d", http.StatusOK, w.Code)
+		}
+
+		var response dataset.RESPONSE_TYPE
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Errorf("Failed to parse response: %v", err)
+		}
+
+		// Add specific assertions here
+	})
+
+	t.Run("Error case - not found", func(t *testing.T) {
+		// Arrange
+		req, _ := http.NewRequest(http.MethodGet, "/endpoint/999999", nil)
+		w := httptest.NewRecorder()
+
+		// Act
+		router.ServeHTTP(w, req)
+
+		// Assert
+		if w.Code != http.StatusNotFound {
+			t.Errorf("Expected %d but got %d", http.StatusNotFound, w.Code)
+		}
+	})
+}
+
+// Helper function to reduce complexity
+func testSuccessCase(t *testing.T, router *gin.Engine, endpoint string) {
+	req, _ := http.NewRequest(http.MethodGet, endpoint, nil)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected %d but got %d", http.StatusOK, w.Code)
+	}
+}
+
+// Helper for pointer string comparison
+func ComparePtrString(t *testing.T, expected, actual *string, fieldName string) {
+	if expected == nil && actual == nil {
+		return
+	}
+	if expected == nil || actual == nil {
+		t.Errorf("%s mismatch: expected %v, got %v", fieldName, expected, actual)
+		return
+	}
+	if *expected != *actual {
+		t.Errorf("%s mismatch: expected %s, got %s", fieldName, *expected, *actual)
+	}
+}

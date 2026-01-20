@@ -1,0 +1,137 @@
+package PACKAGE_NAME
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+
+	"github.com/romain-broussard/pimpmypack/pkg/database"
+	"github.com/romain-broussard/pimpmypack/pkg/dataset"
+)
+
+// Sentinel errors
+var (
+	ErrNAME_NotFound = errors.New("NAME not found")
+)
+
+// returnNAME retrieves NAME(s) from the database.
+// Context is used for timeout and cancellation.
+func returnNAME(ctx context.Context, userID uint) (*dataset.TYPE, error) {
+	query := `
+		SELECT id, field1, field2, created_at, updated_at
+		FROM table_name
+		WHERE user_id = $1
+		ORDER BY created_at DESC
+	`
+
+	rows, err := database.DB.QueryContext(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query NAME: %w", err)
+	}
+	defer rows.Close()
+
+	var items dataset.COLLECTION_TYPE
+	for rows.Next() {
+		var item dataset.ITEM_TYPE
+		if err := rows.Scan(&item.ID, &item.Field1, &item.Field2, &item.CreatedAt, &item.UpdatedAt); err != nil {
+			return nil, fmt.Errorf("failed to scan NAME: %w", err)
+		}
+		items = append(items, item)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows iteration error: %w", err)
+	}
+
+	return &items, nil
+}
+
+// returnNAMEByID retrieves a single NAME by ID.
+func returnNAMEByID(ctx context.Context, id uint) (*dataset.TYPE, error) {
+	query := `
+		SELECT id, field1, field2, created_at, updated_at
+		FROM table_name
+		WHERE id = $1
+	`
+
+	var item dataset.TYPE
+	err := database.DB.QueryRowContext(ctx, query, id).Scan(
+		&item.ID,
+		&item.Field1,
+		&item.Field2,
+		&item.CreatedAt,
+		&item.UpdatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNAME_NotFound
+		}
+		return nil, fmt.Errorf("failed to fetch NAME: %w", err)
+	}
+
+	return &item, nil
+}
+
+// createNAME creates a new NAME in the database.
+func createNAME(ctx context.Context, input dataset.INPUT_TYPE, userID uint) error {
+	query := `
+		INSERT INTO table_name (user_id, field1, field2, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5)
+	`
+
+	now := time.Now().Truncate(time.Second)
+	_, err := database.DB.ExecContext(ctx, query, userID, input.Field1, input.Field2, now, now)
+	if err != nil {
+		return fmt.Errorf("failed to create NAME: %w", err)
+	}
+
+	return nil
+}
+
+// updateNAME updates an existing NAME.
+func updateNAME(ctx context.Context, id uint, updates dataset.INPUT_TYPE) error {
+	query := `
+		UPDATE table_name
+		SET field1 = $1, field2 = $2, updated_at = $3
+		WHERE id = $4
+	`
+
+	result, err := database.DB.ExecContext(ctx, query, updates.Field1, updates.Field2, time.Now().Truncate(time.Second), id)
+	if err != nil {
+		return fmt.Errorf("failed to update NAME: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return ErrNAME_NotFound
+	}
+
+	return nil
+}
+
+// deleteNAME removes a NAME from the database.
+func deleteNAME(ctx context.Context, id uint) error {
+	query := `DELETE FROM table_name WHERE id = $1`
+
+	result, err := database.DB.ExecContext(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("failed to delete NAME: %w", err)
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rows == 0 {
+		return ErrNAME_NotFound
+	}
+
+	return nil
+}
