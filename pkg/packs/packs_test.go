@@ -184,7 +184,7 @@ func TestGetPackByID(t *testing.T) {
 			t.Errorf("Expected Pack Name %v but got %v", packs[0].PackName, receivedPack.PackName)
 		case receivedPack.PackDescription != packs[0].PackDescription:
 			t.Errorf("Expected Pack Description %v but got %v", packs[0].PackDescription, receivedPack.PackDescription)
-		case (receivedPack.SharingCode == nil && packs[0].SharingCode != nil) || (receivedPack.SharingCode != nil && packs[0].SharingCode == nil) || (receivedPack.SharingCode != nil && packs[0].SharingCode != nil && *receivedPack.SharingCode != *packs[0].SharingCode):
+		case !helper.ComparePtrString(receivedPack.SharingCode, packs[0].SharingCode):
 			t.Errorf("Expected Sharing Code %v but got %v", packs[0].SharingCode, receivedPack.SharingCode)
 		case receivedPack.PackItemsCount != 5:
 			t.Errorf("Expected Pack Items Count %v but got %v", 5, receivedPack.PackItemsCount)
@@ -1049,225 +1049,185 @@ func TestGetPackBySharingCode(t *testing.T) {
 	}
 }
 
+func testShareUnsharedPack(t *testing.T, router *gin.Engine, token string) {
+	packID := helper.FindPackIDByPackName(packs, "Special Pack")
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/share", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+		return
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if response["sharing_code"] == "" {
+		t.Error("Expected sharing_code in response")
+	}
+	if response["message"] != "Pack shared successfully" {
+		t.Errorf("Expected success message but got: %s", response["message"])
+	}
+}
+
+func testShareIdempotent(t *testing.T, router *gin.Engine, token string) {
+	packID := helper.FindPackIDByPackName(packs, "First Pack")
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/share", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d but got %d", http.StatusOK, w.Code)
+		return
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if response["sharing_code"] != sharingCode1 {
+		t.Errorf("Expected sharing code %s but got %s", sharingCode1, response["sharing_code"])
+	}
+}
+
+func testShareForbidden(t *testing.T, router *gin.Engine, token string) {
+	packID := helper.FindPackIDByPackName(packs, "Third Pack")
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/share", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden && w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d or %d but got %d", http.StatusForbidden, http.StatusNotFound, w.Code)
+	}
+}
+
+func testShareNotFound(t *testing.T, router *gin.Engine, token string) {
+	req, _ := http.NewRequest(http.MethodPost, "/mypack/99999/share", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d but got %d", http.StatusNotFound, w.Code)
+	}
+}
+
 func TestShareMyPack(t *testing.T) {
-	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
-
-	// Create a Gin router instance
 	router := gin.Default()
-
-	// Define the endpoint for ShareMyPack handler
 	router.POST("/mypack/:id/share", ShareMyPack)
 
-	// Generate a valid JWT token for user 1
 	token, err := security.GenerateToken(users[0].ID)
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
 
 	t.Run("Successfully share unshared pack", func(t *testing.T) {
-		// Get the ID of "Special Pack" (private pack)
-		packID := helper.FindPackIDByPackName(packs, "Special Pack")
-
-		// Create request
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/share", packID), nil)
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Authorization", "Bearer "+token)
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		// Check status code
-		if w.Code != http.StatusOK {
-			t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
-		}
-
-		// Parse response
-		var response map[string]string
-		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-			t.Fatalf("Failed to unmarshal response: %v", err)
-		}
-
-		// Check response contains sharing_code
-		if response["sharing_code"] == "" {
-			t.Error("Expected sharing_code in response")
-		}
-		if response["message"] != "Pack shared successfully" {
-			t.Errorf("Expected success message but got: %s", response["message"])
-		}
+		testShareUnsharedPack(t, router, token)
 	})
-
 	t.Run("Idempotent - return existing sharing code", func(t *testing.T) {
-		// Get the ID of "First Pack" (already shared)
-		packID := helper.FindPackIDByPackName(packs, "First Pack")
-
-		// Create request
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/share", packID), nil)
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Authorization", "Bearer "+token)
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		// Check status code
-		if w.Code != http.StatusOK {
-			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
-		}
-
-		// Parse response
-		var response map[string]string
-		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-			t.Fatalf("Failed to unmarshal response: %v", err)
-		}
-
-		// Should return existing sharing code
-		if response["sharing_code"] != sharingCode1 {
-			t.Errorf("Expected existing sharing code %s but got %s", sharingCode1, response["sharing_code"])
-		}
+		testShareIdempotent(t, router, token)
 	})
-
 	t.Run("Forbidden - pack does not belong to user", func(t *testing.T) {
-		// Get the ID of "Third Pack" (belongs to user 2)
-		packID := helper.FindPackIDByPackName(packs, "Third Pack")
-
-		// Create request
-		req, err := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/share", packID), nil)
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Authorization", "Bearer "+token)
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		// Check status code - can be 403 or 404 (both acceptable for security)
-		if w.Code != http.StatusForbidden && w.Code != http.StatusNotFound {
-			t.Errorf("Expected status code %d or %d but got %d", http.StatusForbidden, http.StatusNotFound, w.Code)
-		}
+		testShareForbidden(t, router, token)
 	})
-
 	t.Run("Pack not found", func(t *testing.T) {
-		// Create request with non-existent pack ID
-		req, err := http.NewRequest(http.MethodPost, "/mypack/99999/share", nil)
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Authorization", "Bearer "+token)
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		// Check status code
-		if w.Code != http.StatusNotFound {
-			t.Errorf("Expected status code %d but got %d", http.StatusNotFound, w.Code)
-		}
+		testShareNotFound(t, router, token)
 	})
 }
 
+func testUnshareSharedPack(t *testing.T, router *gin.Engine, token string) {
+	packID := helper.FindPackIDByPackName(packs, "Second Pack")
+	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("/mypack/%d/share", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+		return
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if response["message"] != "Pack unshared successfully" {
+		t.Errorf("Expected success message but got: %s", response["message"])
+	}
+}
+
+func testUnshareIdempotent(t *testing.T, router *gin.Engine, token string) {
+	packID := helper.FindPackIDByPackName(packs, "Special Pack")
+	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("/mypack/%d/share", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d but got %d", http.StatusOK, w.Code)
+	}
+}
+
+func testUnshareForbidden(t *testing.T, router *gin.Engine, token string) {
+	packID := helper.FindPackIDByPackName(packs, "Third Pack")
+	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("/mypack/%d/share", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden && w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d or %d but got %d", http.StatusForbidden, http.StatusNotFound, w.Code)
+	}
+}
+
+func testUnshareNotFound(t *testing.T, router *gin.Engine, token string) {
+	req, _ := http.NewRequest(http.MethodDelete, "/mypack/99999/share", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d but got %d", http.StatusNotFound, w.Code)
+	}
+}
+
 func TestUnshareMyPack(t *testing.T) {
-	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
-
-	// Create a Gin router instance
 	router := gin.Default()
-
-	// Define the endpoint for UnshareMyPack handler
 	router.DELETE("/mypack/:id/share", UnshareMyPack)
 
-	// Generate a valid JWT token for user 1
 	token, err := security.GenerateToken(users[0].ID)
 	if err != nil {
 		t.Fatalf("Failed to generate token: %v", err)
 	}
 
 	t.Run("Successfully unshare shared pack", func(t *testing.T) {
-		// Get the ID of "Second Pack" (shared pack)
-		packID := helper.FindPackIDByPackName(packs, "Second Pack")
-
-		// Create request
-		req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("/mypack/%d/share", packID), nil)
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Authorization", "Bearer "+token)
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		// Check status code
-		if w.Code != http.StatusOK {
-			t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
-		}
-
-		// Parse response
-		var response map[string]string
-		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-			t.Fatalf("Failed to unmarshal response: %v", err)
-		}
-
-		if response["message"] != "Pack unshared successfully" {
-			t.Errorf("Expected success message but got: %s", response["message"])
-		}
+		testUnshareSharedPack(t, router, token)
 	})
-
 	t.Run("Idempotent - unshare already private pack", func(t *testing.T) {
-		// Get the ID of "Special Pack" (already private)
-		packID := helper.FindPackIDByPackName(packs, "Special Pack")
-
-		// Create request
-		req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("/mypack/%d/share", packID), nil)
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Authorization", "Bearer "+token)
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		// Check status code (should succeed even if not shared)
-		if w.Code != http.StatusOK {
-			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
-		}
+		testUnshareIdempotent(t, router, token)
 	})
-
 	t.Run("Forbidden - pack does not belong to user", func(t *testing.T) {
-		// Get the ID of "Third Pack" (belongs to user 2)
-		packID := helper.FindPackIDByPackName(packs, "Third Pack")
-
-		// Create request
-		req, err := http.NewRequest(http.MethodDelete, fmt.Sprintf("/mypack/%d/share", packID), nil)
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Authorization", "Bearer "+token)
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		// Check status code - can be 403 or 404 (both acceptable for security)
-		if w.Code != http.StatusForbidden && w.Code != http.StatusNotFound {
-			t.Errorf("Expected status code %d or %d but got %d", http.StatusForbidden, http.StatusNotFound, w.Code)
-		}
+		testUnshareForbidden(t, router, token)
 	})
-
 	t.Run("Pack not found", func(t *testing.T) {
-		// Create request with non-existent pack ID
-		req, err := http.NewRequest(http.MethodDelete, "/mypack/99999/share", nil)
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Authorization", "Bearer "+token)
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		// Check status code
-		if w.Code != http.StatusNotFound {
-			t.Errorf("Expected status code %d but got %d", http.StatusNotFound, w.Code)
-		}
+		testUnshareNotFound(t, router, token)
 	})
 }
