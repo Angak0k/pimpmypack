@@ -285,21 +285,17 @@ func PostMyPack(c *gin.Context) {
 }
 
 func insertPack(p *dataset.Pack) error {
-	var err error
 	if p == nil {
 		return errors.New("payload is empty")
 	}
 	p.CreatedAt = time.Now().Truncate(time.Second)
 	p.UpdatedAt = time.Now().Truncate(time.Second)
-	p.SharingCode, err = helper.GenerateRandomCode(30)
-	if err != nil {
-		return errors.New("failed to generate a sharing code")
-	}
+	// SharingCode is now NULL by default (pack is private)
 
 	//nolint:execinquery
-	err = database.DB().QueryRowContext(context.Background(),
-		`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) 
-		VALUES ($1,$2,$3,$4,$5,$6) 
+	err := database.DB().QueryRowContext(context.Background(),
+		`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6)
 		RETURNING id;`,
 		p.UserID,
 		p.PackName,
@@ -515,6 +511,113 @@ func deletePackByID(id uint) error {
 	}
 
 	return nil
+}
+
+// Share a pack by ID
+// @Summary Share a pack by ID
+// @Description Generate a sharing code for a pack to make it publicly accessible (idempotent)
+// @Security Bearer
+// @Tags Packs
+// @Produce  json
+// @Param id path int true "Pack ID"
+// @Success 200 {object} map[string]string "Pack shared successfully"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
+// @Failure 404 {object} dataset.ErrorResponse "Pack not found"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Router /v1/mypack/{id}/share [post]
+func ShareMyPack(c *gin.Context) {
+	id, err := helper.StringToUint(c.Param("id"))
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	userID, err := security.ExtractTokenID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Check if pack exists
+	_, err = findPackByID(id)
+	if err != nil {
+		if errors.Is(err, ErrPackNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Share the pack (idempotent)
+	sharingCode, err := sharePackByID(c.Request.Context(), id, userID)
+	if err != nil {
+		if err.Error() == "pack does not belong to user" {
+			c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{
+		"message":      "Pack shared successfully",
+		"sharing_code": sharingCode,
+	})
+}
+
+// Unshare a pack by ID
+// @Summary Unshare a pack by ID
+// @Description Remove the sharing code from a pack to make it private (idempotent)
+// @Security Bearer
+// @Tags Packs
+// @Produce  json
+// @Param id path int true "Pack ID"
+// @Success 200 {object} dataset.OkResponse "Pack unshared successfully"
+// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
+// @Failure 404 {object} dataset.ErrorResponse "Pack not found"
+// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Router /v1/mypack/{id}/share [delete]
+func UnshareMyPack(c *gin.Context) {
+	id, err := helper.StringToUint(c.Param("id"))
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	userID, err := security.ExtractTokenID(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Check if pack exists
+	_, err = findPackByID(id)
+	if err != nil {
+		if errors.Is(err, ErrPackNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Unshare the pack (idempotent)
+	err = unsharePackByID(c.Request.Context(), id, userID)
+	if err != nil {
+		if err.Error() == "pack does not belong to user" {
+			c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+			return
+		}
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, gin.H{"message": "Pack unshared successfully"})
 }
 
 // Get all pack contents
@@ -1233,6 +1336,79 @@ func checkPackOwnership(id uint, userID uint) (bool, error) {
 	}
 
 	return true, nil
+}
+
+// sharePackByID generates and sets a sharing code for a pack (idempotent)
+func sharePackByID(ctx context.Context, packID uint, userID uint) (string, error) {
+	// First check ownership
+	owns, err := checkPackOwnership(packID, userID)
+	if err != nil {
+		return "", err
+	}
+	if !owns {
+		return "", errors.New("pack does not belong to user")
+	}
+
+	// Check if pack already has a sharing code (idempotent behavior)
+	var existingCode *string
+	err = database.DB().QueryRowContext(ctx,
+		"SELECT sharing_code FROM pack WHERE id = $1;", packID).Scan(&existingCode)
+	if err != nil {
+		return "", err
+	}
+
+	// If already shared, return existing code
+	if existingCode != nil && *existingCode != "" {
+		return *existingCode, nil
+	}
+
+	// Generate new sharing code
+	sharingCode, err := helper.GenerateRandomCode(30)
+	if err != nil {
+		return "", errors.New("failed to generate sharing code")
+	}
+
+	// Update pack with new sharing code
+	statement, err := database.DB().PrepareContext(ctx,
+		"UPDATE pack SET sharing_code = $1, updated_at = $2 WHERE id = $3;")
+	if err != nil {
+		return "", err
+	}
+	defer statement.Close()
+
+	_, err = statement.ExecContext(ctx, sharingCode, time.Now().Truncate(time.Second), packID)
+	if err != nil {
+		return "", err
+	}
+
+	return sharingCode, nil
+}
+
+// unsharePackByID removes the sharing code from a pack (idempotent)
+func unsharePackByID(ctx context.Context, packID uint, userID uint) error {
+	// First check ownership
+	owns, err := checkPackOwnership(packID, userID)
+	if err != nil {
+		return err
+	}
+	if !owns {
+		return errors.New("pack does not belong to user")
+	}
+
+	// Set sharing_code to NULL (idempotent - no error if already NULL)
+	statement, err := database.DB().PrepareContext(ctx,
+		"UPDATE pack SET sharing_code = NULL, updated_at = $1 WHERE id = $2;")
+	if err != nil {
+		return err
+	}
+	defer statement.Close()
+
+	_, err = statement.ExecContext(ctx, time.Now().Truncate(time.Second), packID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Import from lighterpack

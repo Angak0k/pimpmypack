@@ -70,30 +70,36 @@ var inventoriesUserPack1 = dataset.Inventories{
 	},
 }
 
+var (
+	sharingCode1 = "share1-" + random.UniqueId()
+	sharingCode2 = "share2-" + random.UniqueId()
+	sharingCode3 = "share3-" + random.UniqueId()
+)
+
 var packs = dataset.Packs{
 	{
 		UserID:          1,
 		PackName:        "First Pack",
 		PackDescription: "Description for the first pack",
-		SharingCode:     "123456",
+		SharingCode:     &sharingCode1, // Shared pack
 	},
 	{
 		UserID:          1,
 		PackName:        "Second Pack",
 		PackDescription: "Description for the second pack",
-		SharingCode:     "654321",
+		SharingCode:     &sharingCode2, // Shared pack
 	},
 	{
 		UserID:          2,
 		PackName:        "Third Pack",
 		PackDescription: "Description for the third pack",
-		SharingCode:     "789456",
+		SharingCode:     &sharingCode3, // Shared pack
 	},
 	{
 		UserID:          1,
 		PackName:        "Special Pack",
 		PackDescription: "Description for the special pack",
-		SharingCode:     "321654",
+		SharingCode:     nil, // Private pack (not shared)
 	},
 }
 

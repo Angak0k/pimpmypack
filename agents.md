@@ -18,6 +18,13 @@ If you are an agent willing to contribute to this project, please follow these s
 - **validate**: validate the design with the project owner before starting the implementation.
 - **all-in mode**: ask to the project owner if you could run all tasks in a single go or if you should ask for a validation for each task.
 - **implement**: implement the feature following the guidelines in this document, write tests and document the code.
+- **update task status**: during implementation, systematically update the task status in the specs file:
+  - Mark tasks as complete (✅) with implementation date
+  - Document key implementation details (files modified, functions added, architecture decisions)
+  - Include code snippets for critical changes
+  - Note any deviations from the original design
+  - Add testing results and validation status
+  - Keep the specs file as a living document that reflects the actual implementation state
 
 ## 🏗️ General Architecture
 
