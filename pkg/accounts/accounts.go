@@ -15,11 +15,13 @@ import (
 	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
 
 // ErrNoAccountFound is returned when no account is found for a given ID.
 var ErrNoAccountFound = errors.New("no account found")
+
+// ErrInvalidCredentials is returned when login credentials are invalid.
+var ErrInvalidCredentials = errors.New("invalid credentials")
 
 // Register a new user account
 // @Summary Register new user
@@ -276,7 +278,11 @@ func Login(c *gin.Context) {
 	token, pending, err := loginCheck(c.Request.Context(), input.Username, input.Password)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "credentials are incorrect or token generation failed. "})
+		if errors.Is(err, ErrInvalidCredentials) {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "credentials are incorrect"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
 		return
 	}
 
@@ -303,15 +309,15 @@ func loginCheck(ctx context.Context, username string, password string) (string, 
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", false, nil
+			return "", false, ErrInvalidCredentials
 		}
-		return "", false, err
+		return "", false, fmt.Errorf("failed to query user: %w", err)
 	}
 
 	err = security.VerifyPassword(password, storedPassword)
 
-	if err != nil && errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
-		return "", false, err
+	if err != nil {
+		return "", false, ErrInvalidCredentials
 	}
 
 	token, err := security.GenerateToken(id)
