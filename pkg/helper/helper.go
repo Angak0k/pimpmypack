@@ -20,6 +20,17 @@ func StringToUint(s string) (uint, error) {
 	return uint(i), nil
 }
 
+func ComparePtrString(a, b *string) bool {
+	// Compare two string pointers for equality
+	if a == nil && b == nil {
+		return true
+	}
+	if a == nil || b == nil {
+		return false
+	}
+	return *a == *b
+}
+
 func ConvertWeightUnit(unit string) string {
 	// Convert a weight unit to an enum, METRIC by default
 	switch unit {

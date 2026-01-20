@@ -43,7 +43,7 @@ type Pack struct {
 	PackDescription string    `json:"pack_description"`
 	PackWeight      int       `json:"pack_weight"`
 	PackItemsCount  int       `json:"pack_items_count"`
-	SharingCode     string    `json:"sharing_code"`
+	SharingCode     *string   `json:"sharing_code,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }

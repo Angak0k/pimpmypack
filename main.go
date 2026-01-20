@@ -95,6 +95,8 @@ func setupProtectedRoutes(router *gin.Engine) {
 	protected.POST("/mypack", packs.PostMyPack)
 	protected.PUT("/mypack/:id", packs.PutMyPackByID)
 	protected.DELETE("/mypack/:id", packs.DeleteMyPackByID)
+	protected.POST("/mypack/:id/share", packs.ShareMyPack)
+	protected.DELETE("/mypack/:id/share", packs.UnshareMyPack)
 	protected.GET("/mypack/:id/packcontents", packs.GetMyPackContentsByPackID)
 	protected.POST("/mypack/:id/packcontent", packs.PostMyPackContent)
 	protected.PUT("/mypack/:id/packcontent/:item_id", packs.PutMyPackContentByID)
