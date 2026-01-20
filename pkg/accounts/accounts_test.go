@@ -496,6 +496,92 @@ func TestRegisterKO(t *testing.T) {
 	})
 }
 
+func testLoginWithInvalidUsername(t *testing.T, router *gin.Engine) {
+	// Try to login with a username that doesn't exist
+	invalidLogin := dataset.LoginInput{
+		Username: "nonexistent-user-" + random.UniqueId(),
+		Password: "anypassword",
+	}
+	invalidJSON, err := json.Marshal(invalidLogin)
+	if err != nil {
+		t.Fatalf("Failed to marshal login data: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(invalidJSON))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Should return 401 Unauthorized
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusUnauthorized, w.Code, w.Body.String())
+	}
+
+	// Verify error message doesn't leak user existence
+	var response map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if errMsg, ok := response["error"].(string); ok {
+		if errMsg != "credentials are incorrect" {
+			t.Errorf("Expected generic error message but got: %s", errMsg)
+		}
+	}
+}
+
+func testLoginWithIncorrectPassword(t *testing.T, router *gin.Engine, username string) {
+	// Reset user status to active for this test
+	statement, err := database.DB().Prepare("UPDATE account SET status = 'active' WHERE username = $1;")
+	if err != nil {
+		t.Fatalf("failed to prepare update statement: %v", err)
+	}
+	defer statement.Close()
+
+	_, err = statement.Exec(username)
+	if err != nil {
+		t.Fatalf("failed to execute update query: %v", err)
+	}
+
+	// Try to login with wrong password
+	wrongPasswordLogin := dataset.LoginInput{
+		Username: username,
+		Password: "wrong-password-123",
+	}
+	wrongJSON, err := json.Marshal(wrongPasswordLogin)
+	if err != nil {
+		t.Fatalf("Failed to marshal login data: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(wrongJSON))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	// Should return 401 Unauthorized
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusUnauthorized, w.Code, w.Body.String())
+	}
+
+	// Verify error message is generic
+	var response map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if errMsg, ok := response["error"].(string); ok {
+		if errMsg != "credentials are incorrect" {
+			t.Errorf("Expected generic error message but got: %s", errMsg)
+		}
+	}
+}
+
 func TestLogin(t *testing.T) {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
@@ -617,6 +703,14 @@ func TestLogin(t *testing.T) {
 		if w.Code != http.StatusUnauthorized {
 			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
 		}
+	})
+
+	t.Run("Login with invalid username", func(t *testing.T) {
+		testLoginWithInvalidUsername(t, router)
+	})
+
+	t.Run("Login with incorrect password", func(t *testing.T) {
+		testLoginWithIncorrectPassword(t, router, newUser.Username)
 	})
 }
 
