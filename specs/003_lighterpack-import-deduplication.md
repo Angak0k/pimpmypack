@@ -48,9 +48,9 @@ In `pkg/packs/packs.go:insertLighterPack()` (lines 1537-1577):
 **Description**: Before creating a new inventory item during import, check if an identical item already exists for the user.
 
 **Acceptance Criteria**:
-- [ ] Query inventory by UserID + ItemName + Category + Description before insert
-- [ ] If item exists, use its ID instead of creating new one
-- [ ] If item doesn't exist, create it as before
+- [x] Query inventory by UserID + ItemName + Category + Description before insert
+- [x] If item exists, use its ID instead of creating new one
+- [x] If item doesn't exist, create it as before
 
 **Priority**: High
 
@@ -58,9 +58,9 @@ In `pkg/packs/packs.go:insertLighterPack()` (lines 1537-1577):
 **Description**: When an existing item is found, link the imported pack to that item.
 
 **Acceptance Criteria**:
-- [ ] PackContent created with existing item ID
-- [ ] Quantity, Worn, and Consumable attributes from CSV applied to PackContent
-- [ ] No duplicate items created in inventory
+- [x] PackContent created with existing item ID
+- [x] Quantity, Worn, and Consumable attributes from CSV applied to PackContent
+- [x] No duplicate items created in inventory
 
 **Priority**: High
 
@@ -68,11 +68,11 @@ In `pkg/packs/packs.go:insertLighterPack()` (lines 1537-1577):
 **Description**: Define clear criteria for determining if two items are identical.
 
 **Acceptance Criteria**:
-- [ ] Match on: UserID (exact match)
-- [ ] Match on: ItemName (exact match, case-sensitive)
-- [ ] Match on: Category (exact match, case-sensitive)
-- [ ] Match on: Description (exact match, case-sensitive)
-- [ ] Note: Weight, Price are NOT used for matching
+- [x] Match on: UserID (exact match)
+- [x] Match on: ItemName (exact match, case-sensitive)
+- [x] Match on: Category (exact match, case-sensitive)
+- [x] Match on: Description (exact match, case-sensitive)
+- [x] Note: Weight, Price are NOT used for matching
 
 **Rationale**:
 - Weight/Price may vary over time (updates, different vendors)
@@ -296,34 +296,34 @@ func insertLighterPack(lp *dataset.LighterPack, userID uint) error {
 ## 📝 Implementation Plan
 
 ### Phase 1: Create Database Index
-- [ ] Create migration file for index on (user_id, item_name, category, description)
-- [ ] Test migration up/down
-- [ ] Apply migration to database
+- [x] Create migration file for index on (user_id, item_name, category, description)
+- [x] Test migration up/down
+- [x] Apply migration to database
 
 ### Phase 2: Add Lookup Function
-- [ ] Create `FindInventoryItemByAttributes` in `pkg/inventories/inventories.go`
-- [ ] Export the function (capitalize first letter)
-- [ ] Add context parameter for proper request context propagation
-- [ ] Add parameters: userID, itemName, category, description
+- [x] Create `FindInventoryItemByAttributes` in `pkg/inventories/inventories.go`
+- [x] Export the function (capitalize first letter)
+- [x] Add context parameter for proper request context propagation
+- [x] Add parameters: userID, itemName, category, description
 
 ### Phase 3: Update Import Logic
-- [ ] Modify `insertLighterPack` to check for existing items
-- [ ] Call `FindInventoryItemByAttributes` with all 4 criteria
-- [ ] Use existing item ID when found
-- [ ] Create new item only when not found
-- [ ] Link PackContent to correct item ID
+- [x] Modify `insertLighterPack` to check for existing items
+- [x] Call `FindInventoryItemByAttributes` with all 4 criteria
+- [x] Use existing item ID when found
+- [x] Create new item only when not found
+- [x] Link PackContent to correct item ID
 
 ### Phase 4: Add Tests
-- [ ] Unit tests for `FindInventoryItemByAttributes`
-- [ ] Test for existing item reused
-- [ ] Test for new item created
-- [ ] Test for different descriptions
-- [ ] Update `TestImportFromLighterPack` if exists
-- [ ] Integration test: import same CSV twice
+- [x] Unit tests for `FindInventoryItemByAttributes`
+- [x] Test for existing item reused
+- [x] Test for new item created
+- [x] Test for different descriptions
+- [x] Update `TestImportFromLighterPack` if exists
+- [x] Integration test: import same CSV twice
 
 ### Phase 5: Documentation
-- [ ] Update Swagger docs if needed
-- [ ] Add comments explaining deduplication logic
+- [x] Update Swagger docs if needed
+- [x] Add comments explaining deduplication logic
 
 ---
 
@@ -406,13 +406,13 @@ Create hash of item attributes for matching.
 
 ## ✅ Acceptance Criteria Summary
 
-- [ ] Importing same item in multiple packs creates only one inventory entry
-- [ ] Each pack correctly links to the shared inventory item
-- [ ] Matching is based on UserID + ItemName + Category (exact match)
-- [ ] New items are created when no match is found
-- [ ] All tests pass
-- [ ] No breaking changes to API
-- [ ] Performance remains acceptable (< 100ms per item lookup)
+- [x] Importing same item in multiple packs creates only one inventory entry
+- [x] Each pack correctly links to the shared inventory item
+- [x] Matching is based on UserID + ItemName + Category + Description (exact match)
+- [x] New items are created when no match is found
+- [x] All tests pass
+- [x] No breaking changes to API
+- [x] Performance remains acceptable (< 100ms per item lookup)
 
 ---
 
