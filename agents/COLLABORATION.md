@@ -455,6 +455,86 @@ For each phase, provide:
 - Status notes (blockers, pending items)
 - Deviations or decisions
 
+## 🚫 Git and Remote Operations Policy
+
+### CRITICAL: Never Push Without Explicit Approval
+
+**This is a hard rule that must NEVER be violated.**
+
+#### Forbidden Operations
+
+The following operations are FORBIDDEN unless the user explicitly requests them:
+
+- `git push` (pushing commits to remote)
+- `git push origin <branch>` (pushing specific branches)
+- `gh pr create` (creating pull requests)
+- Any operation that sends local commits to a remote repository
+
+#### Allowed Operations
+
+The following operations are ALLOWED without asking:
+
+- `git add` (staging files)
+- `git commit` (creating local commits)
+- `git status` (checking repository status)
+- `git diff` (viewing changes)
+- `git log` (viewing commit history)
+- `git branch` (managing local branches)
+
+#### Workflow Guidelines
+
+**Correct workflow**:
+
+1. Make changes to code
+2. Stage changes with `git add`
+3. Create local commit with `git commit`
+4. **STOP and WAIT for user approval**
+5. User explicitly says "push" or "create PR"
+6. Only then execute `git push` or `gh pr create`
+
+**What NOT to do**:
+
+1. Never assume "ready to merge" means "push now"
+2. Never automatically push after committing
+3. Never open PRs without explicit instruction
+4. Never batch "commit + push" operations without asking
+
+#### Why This Matters
+
+- User autonomy: The user controls when code goes to remote
+- Review opportunity: User may want to review commits before pushing
+- Workflow respect: User has their own process and timing
+- Trust: Violating this rule breaks user trust
+
+#### Exception Cases
+
+The ONLY time pushing without asking is acceptable:
+
+- User explicitly says: "push to remote"
+- User explicitly says: "create a PR"
+- User explicitly says: "open a pull request"
+- User uses command: `/push` or similar explicit command
+
+#### What to Do After Committing
+
+After creating local commits, respond with:
+
+"I've created a local commit with the changes. The commit is ready to be pushed to remote when you're ready. Would you like me to push it now?"
+
+Or simply:
+
+"Changes committed locally. Let me know when you'd like to push to remote."
+
+#### If This Rule Is Broken
+
+If you accidentally push or create a PR without approval:
+
+1. Immediately acknowledge the mistake
+2. Apologize sincerely
+3. Explain what happened
+4. Ask if the user wants you to close the PR or take other action
+5. Reference this section to show you understand the policy
+
 ## 🏛️ Technical Decisions
 
 ### Design Patterns Validated
