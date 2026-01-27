@@ -640,3 +640,119 @@ func TestGetMyInventoryByID(t *testing.T) {
 		}
 	})
 }
+
+// Helper functions to reduce cognitive complexity
+func testFindExistingItem(ctx context.Context, t *testing.T) {
+	expected := inventories[0]
+	found, err := FindInventoryItemByAttributes(
+		ctx,
+		expected.UserID,
+		expected.ItemName,
+		expected.Category,
+		expected.Description,
+	)
+
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if found == nil {
+		t.Fatal("Expected to find item, got nil")
+	}
+
+	if found.ID != expected.ID {
+		t.Errorf("Expected ID %d, got %d", expected.ID, found.ID)
+	}
+	if found.ItemName != expected.ItemName {
+		t.Errorf("Expected ItemName %s, got %s", expected.ItemName, found.ItemName)
+	}
+	if found.Category != expected.Category {
+		t.Errorf("Expected Category %s, got %s", expected.Category, found.Category)
+	}
+}
+
+func testItemNotFound(
+	ctx context.Context,
+	t *testing.T,
+	userID uint,
+	itemName, category, description string,
+) {
+	found, err := FindInventoryItemByAttributes(ctx, userID, itemName, category, description)
+
+	if !errors.Is(err, ErrNoItemFound) {
+		t.Fatalf("Expected ErrNoItemFound, got: %v", err)
+	}
+
+	if found != nil {
+		t.Errorf("Expected nil, found item with ID %d", found.ID)
+	}
+}
+
+func testFindEmptyDescription(ctx context.Context, t *testing.T) {
+	var testItem dataset.Inventory
+	testItem.UserID = users[0].ID
+	testItem.ItemName = "Test Item Empty Desc"
+	testItem.Category = "Test Category"
+	testItem.Description = ""
+	testItem.Weight = 100
+	testItem.Price = 50
+	testItem.Currency = "USD"
+
+	err := InsertInventory(ctx, &testItem)
+	if err != nil {
+		t.Fatalf("Failed to insert test item: %v", err)
+	}
+
+	found, err := FindInventoryItemByAttributes(ctx, testItem.UserID, testItem.ItemName, testItem.Category, "")
+	if err != nil {
+		t.Fatalf("Expected no error, got: %v", err)
+	}
+
+	if found == nil {
+		t.Fatal("Expected to find item with empty description, got nil")
+	}
+
+	if found.ID != testItem.ID {
+		t.Errorf("Expected ID %d, got %d", testItem.ID, found.ID)
+	}
+}
+
+func TestFindInventoryItemByAttributes(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Find existing item by all attributes", func(t *testing.T) {
+		testFindExistingItem(ctx, t)
+	})
+
+	t.Run("Item not found - different user", func(t *testing.T) {
+		testItemNotFound(
+			ctx, t, 9999,
+			inventories[0].ItemName, inventories[0].Category, inventories[0].Description,
+		)
+	})
+
+	t.Run("Item not found - different name", func(t *testing.T) {
+		testItemNotFound(
+			ctx, t, inventories[0].UserID,
+			"Non-existent Item Name", inventories[0].Category, inventories[0].Description,
+		)
+	})
+
+	t.Run("Item not found - different category", func(t *testing.T) {
+		testItemNotFound(
+			ctx, t, inventories[0].UserID,
+			inventories[0].ItemName, "Different Category", inventories[0].Description,
+		)
+	})
+
+	t.Run("Item not found - different description", func(t *testing.T) {
+		testItemNotFound(
+			ctx, t, inventories[0].UserID,
+			inventories[0].ItemName, inventories[0].Category, "Different Description",
+		)
+	})
+
+	t.Run("Find item with empty description", func(t *testing.T) {
+		testFindEmptyDescription(ctx, t)
+	})
+}

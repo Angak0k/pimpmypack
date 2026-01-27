@@ -305,6 +305,56 @@ func findInventoryByID(ctx context.Context, id uint) (*dataset.Inventory, error)
 	return &inventory, nil
 }
 
+// FindInventoryItemByAttributes finds an existing inventory item for a user
+// by exact match on item_name, category, and description.
+// Returns the item if found, nil with ErrNoItemFound if not found, or error if query fails.
+func FindInventoryItemByAttributes(
+	ctx context.Context,
+	userID uint,
+	itemName, category, description string,
+) (*dataset.Inventory, error) {
+	var inventory dataset.Inventory
+
+	query := `
+		SELECT id,
+			user_id,
+			item_name,
+			category,
+			description,
+			weight,
+			url,
+			price,
+			currency,
+			created_at,
+			updated_at
+		FROM inventory
+		WHERE user_id = $1 AND item_name = $2 AND category = $3 AND description = $4
+		LIMIT 1`
+
+	row := database.DB().QueryRowContext(ctx, query, userID, itemName, category, description)
+	err := row.Scan(
+		&inventory.ID,
+		&inventory.UserID,
+		&inventory.ItemName,
+		&inventory.Category,
+		&inventory.Description,
+		&inventory.Weight,
+		&inventory.URL,
+		&inventory.Price,
+		&inventory.Currency,
+		&inventory.CreatedAt,
+		&inventory.UpdatedAt)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNoItemFound
+		}
+		return nil, err
+	}
+
+	return &inventory, nil
+}
+
 // PostInventory creates an inventory
 // @Summary [ADMIN] Create an inventory
 // @Description Creates an inventory -  for admin use only

@@ -916,6 +916,176 @@ item2,category2,description2,2,150,g,http://example2.com,20,,consumable`
 	}
 }
 
+// Helper functions for import deduplication tests
+func performLighterPackImport(t *testing.T, router *gin.Engine, token, csvData string) int {
+	bodyBuf := &bytes.Buffer{}
+	bodyWriter := multipart.NewWriter(bodyBuf)
+
+	fileWriter, err := bodyWriter.CreateFormFile("file", "test.csv")
+	if err != nil {
+		t.Fatalf("Failed to create form file: %v", err)
+	}
+
+	if _, err = fileWriter.Write([]byte(csvData)); err != nil {
+		t.Fatalf("Failed to write file contents: %v", err)
+	}
+
+	contentType := bodyWriter.FormDataContentType()
+	bodyWriter.Close()
+
+	req, err := http.NewRequest(http.MethodPost, "/importfromlighterpack", bodyBuf)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	return w.Code
+}
+
+func countUserInventoryItems(t *testing.T, userID uint) int {
+	var count int
+	err := database.DB().QueryRow(
+		"SELECT COUNT(*) FROM inventory WHERE user_id = $1",
+		userID,
+	).Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to count inventory items: %v", err)
+	}
+	return count
+}
+
+func TestImportFromLighterPackDeduplication(t *testing.T) {
+	csvData := `Item Name,Category,desc,qty,weight,unit,url,price,worn,consumable
+Tent,Shelter,2-person tent,1,1200,g,http://example.com/tent,200,,
+Backpack,Gear,30L backpack,1,950,g,http://example.com/backpack,150,,`
+
+	token, err := security.GenerateToken(users[0].ID)
+	if err != nil {
+		t.Fatalf("Failed to generate token: %v", err)
+	}
+
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.POST("/importfromlighterpack", ImportFromLighterPack)
+
+	t.Run("First import creates items", func(t *testing.T) {
+		initialCount := countUserInventoryItems(t, users[0].ID)
+
+		statusCode := performLighterPackImport(t, router, token, csvData)
+		if statusCode != http.StatusOK {
+			t.Errorf("Expected status %d, got %d", http.StatusOK, statusCode)
+		}
+
+		newCount := countUserInventoryItems(t, users[0].ID)
+		if newCount != initialCount+2 {
+			t.Errorf("Expected %d items after first import, got %d", initialCount+2, newCount)
+		}
+	})
+
+	t.Run("Second import reuses existing items", func(t *testing.T) {
+		countBeforeSecondImport := countUserInventoryItems(t, users[0].ID)
+
+		statusCode := performLighterPackImport(t, router, token, csvData)
+		if statusCode != http.StatusOK {
+			t.Errorf("Expected status %d, got %d", http.StatusOK, statusCode)
+		}
+
+		countAfterSecondImport := countUserInventoryItems(t, users[0].ID)
+		if countAfterSecondImport != countBeforeSecondImport {
+			t.Errorf("Expected same inventory count after second import (no duplicates). Before: %d, After: %d",
+				countBeforeSecondImport, countAfterSecondImport)
+		}
+
+		// Verify we have 2 packs with the same items
+		var packCount int
+		err := database.DB().QueryRow(
+			"SELECT COUNT(*) FROM pack WHERE user_id = $1 AND pack_name = 'LighterPack Import'",
+			users[0].ID,
+		).Scan(&packCount)
+		if err != nil {
+			t.Fatalf("Failed to count packs: %v", err)
+		}
+
+		if packCount < 2 {
+			t.Errorf("Expected at least 2 imported packs, got %d", packCount)
+		}
+	})
+}
+
+func TestImportFromLighterPackWornConsumable(t *testing.T) {
+	csvData := `Item Name,Category,desc,qty,weight,unit,url,price,worn,consumable
+Hiking Boots,Wear,Trail shoes,1,800,g,http://example.com/boots,120,Worn,
+Trail Mix,Food,Energy snack,2,100,g,http://example.com/mix,5,,Consumable
+Compass,Navigation,Emergency compass,1,50,g,http://example.com/compass,25,Worn,Consumable`
+
+	token, err := security.GenerateToken(users[0].ID)
+	if err != nil {
+		t.Fatalf("Failed to generate token: %v", err)
+	}
+
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.POST("/importfromlighterpack", ImportFromLighterPack)
+
+	t.Run("Import items with Worn and Consumable attributes", func(t *testing.T) {
+		statusCode := performLighterPackImport(t, router, token, csvData)
+		if statusCode != http.StatusOK {
+			t.Errorf("Expected status %d, got %d", http.StatusOK, statusCode)
+			return
+		}
+
+		// Get the pack that was just created
+		var packID uint
+		err := database.DB().QueryRow(
+			`SELECT id FROM pack
+			WHERE user_id = $1 AND pack_name = 'LighterPack Import'
+			ORDER BY id DESC LIMIT 1`,
+			users[0].ID,
+		).Scan(&packID)
+		if err != nil {
+			t.Fatalf("Failed to get pack ID: %v", err)
+		}
+
+		// Verify worn and consumable attributes for each item
+		testCases := []struct {
+			itemName           string
+			expectedWorn       bool
+			expectedConsumable bool
+		}{
+			{"Hiking Boots", true, false},
+			{"Trail Mix", false, true},
+			{"Compass", true, true},
+		}
+
+		for _, tc := range testCases {
+			var worn, consumable bool
+			err := database.DB().QueryRow(
+				`SELECT pc.worn, pc.consumable
+				FROM pack_content pc
+				JOIN inventory i ON pc.item_id = i.id
+				WHERE pc.pack_id = $1 AND i.item_name = $2`,
+				packID, tc.itemName,
+			).Scan(&worn, &consumable)
+			if err != nil {
+				t.Errorf("Failed to get pack content for %s: %v", tc.itemName, err)
+				continue
+			}
+
+			if worn != tc.expectedWorn {
+				t.Errorf("Item %s: expected worn=%v, got %v", tc.itemName, tc.expectedWorn, worn)
+			}
+			if consumable != tc.expectedConsumable {
+				t.Errorf("Item %s: expected consumable=%v, got %v", tc.itemName, tc.expectedConsumable, consumable)
+			}
+		}
+	})
+}
+
 func TestCheckPackOwnership(t *testing.T) {
 	testCases := []struct {
 		packID   uint

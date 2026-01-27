@@ -1523,11 +1523,11 @@ func readLineFromCSV(record []string) (dataset.LighterPackItem, error) {
 
 	lighterPackItem.Price = price
 
-	if record[8] == "worn" {
+	if record[8] == "Worn" {
 		lighterPackItem.Worn = true
 	}
 
-	if record[9] == "consumable" {
+	if record[9] == "Consumable" {
 		lighterPackItem.Consumable = true
 	}
 
@@ -1549,24 +1549,49 @@ func insertLighterPack(lp *dataset.LighterPack, userID uint) error {
 		return err
 	}
 
+	ctx := context.Background()
+
 	// Insert content in new pack with insertPackContent
 	for _, item := range *lp {
-		var i dataset.Inventory
-		i.UserID = userID
-		i.ItemName = item.ItemName
-		i.Category = item.Category
-		i.Description = item.Desc
-		i.Weight = item.Weight
-		i.URL = item.URL
-		i.Price = item.Price
-		i.Currency = "USD"
-		err := inventories.InsertInventory(context.Background(), &i)
-		if err != nil {
-			return err
+		var itemID uint
+
+		// Check if item already exists in inventory
+		existingItem, err := inventories.FindInventoryItemByAttributes(
+			ctx,
+			userID,
+			item.ItemName,
+			item.Category,
+			item.Desc,
+		)
+		if err != nil && !errors.Is(err, inventories.ErrNoItemFound) {
+			return fmt.Errorf("failed to check for existing item: %w", err)
 		}
+
+		if existingItem != nil {
+			// Item exists, reuse it
+			itemID = existingItem.ID
+		} else {
+			// Item doesn't exist, create it
+			var i dataset.Inventory
+			i.UserID = userID
+			i.ItemName = item.ItemName
+			i.Category = item.Category
+			i.Description = item.Desc
+			i.Weight = item.Weight
+			i.URL = item.URL
+			i.Price = item.Price
+			i.Currency = "USD"
+			err := inventories.InsertInventory(ctx, &i)
+			if err != nil {
+				return err
+			}
+			itemID = i.ID
+		}
+
+		// Create PackContent with the item (existing or new)
 		var pc dataset.PackContent
 		pc.PackID = newPack.ID
-		pc.ItemID = i.ID
+		pc.ItemID = itemID
 		pc.Quantity = item.Qty
 		pc.Worn = item.Worn
 		pc.Consumable = item.Consumable
