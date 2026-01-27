@@ -1523,11 +1523,11 @@ func readLineFromCSV(record []string) (dataset.LighterPackItem, error) {
 
 	lighterPackItem.Price = price
 
-	if record[8] == "worn" {
+	if record[8] == "Worn" {
 		lighterPackItem.Worn = true
 	}
 
-	if record[9] == "consumable" {
+	if record[9] == "Consumable" {
 		lighterPackItem.Consumable = true
 	}
 

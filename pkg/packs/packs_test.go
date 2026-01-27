@@ -1017,6 +1017,75 @@ Backpack,Gear,30L backpack,1,950,g,http://example.com/backpack,150,,`
 	})
 }
 
+func TestImportFromLighterPackWornConsumable(t *testing.T) {
+	csvData := `Item Name,Category,desc,qty,weight,unit,url,price,worn,consumable
+Hiking Boots,Wear,Trail shoes,1,800,g,http://example.com/boots,120,Worn,
+Trail Mix,Food,Energy snack,2,100,g,http://example.com/mix,5,,Consumable
+Compass,Navigation,Emergency compass,1,50,g,http://example.com/compass,25,Worn,Consumable`
+
+	token, err := security.GenerateToken(users[0].ID)
+	if err != nil {
+		t.Fatalf("Failed to generate token: %v", err)
+	}
+
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.POST("/importfromlighterpack", ImportFromLighterPack)
+
+	t.Run("Import items with Worn and Consumable attributes", func(t *testing.T) {
+		statusCode := performLighterPackImport(t, router, token, csvData)
+		if statusCode != http.StatusOK {
+			t.Errorf("Expected status %d, got %d", http.StatusOK, statusCode)
+			return
+		}
+
+		// Get the pack that was just created
+		var packID uint
+		err := database.DB().QueryRow(
+			`SELECT id FROM pack
+			WHERE user_id = $1 AND pack_name = 'LighterPack Import'
+			ORDER BY id DESC LIMIT 1`,
+			users[0].ID,
+		).Scan(&packID)
+		if err != nil {
+			t.Fatalf("Failed to get pack ID: %v", err)
+		}
+
+		// Verify worn and consumable attributes for each item
+		testCases := []struct {
+			itemName           string
+			expectedWorn       bool
+			expectedConsumable bool
+		}{
+			{"Hiking Boots", true, false},
+			{"Trail Mix", false, true},
+			{"Compass", true, true},
+		}
+
+		for _, tc := range testCases {
+			var worn, consumable bool
+			err := database.DB().QueryRow(
+				`SELECT pc.worn, pc.consumable
+				FROM pack_content pc
+				JOIN inventory i ON pc.item_id = i.id
+				WHERE pc.pack_id = $1 AND i.item_name = $2`,
+				packID, tc.itemName,
+			).Scan(&worn, &consumable)
+			if err != nil {
+				t.Errorf("Failed to get pack content for %s: %v", tc.itemName, err)
+				continue
+			}
+
+			if worn != tc.expectedWorn {
+				t.Errorf("Item %s: expected worn=%v, got %v", tc.itemName, tc.expectedWorn, worn)
+			}
+			if consumable != tc.expectedConsumable {
+				t.Errorf("Item %s: expected consumable=%v, got %v", tc.itemName, tc.expectedConsumable, consumable)
+			}
+		}
+	})
+}
+
 func TestCheckPackOwnership(t *testing.T) {
 	testCases := []struct {
 		packID   uint
