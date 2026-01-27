@@ -916,6 +916,107 @@ item2,category2,description2,2,150,g,http://example2.com,20,,consumable`
 	}
 }
 
+// Helper functions for import deduplication tests
+func performLighterPackImport(t *testing.T, router *gin.Engine, token, csvData string) int {
+	bodyBuf := &bytes.Buffer{}
+	bodyWriter := multipart.NewWriter(bodyBuf)
+
+	fileWriter, err := bodyWriter.CreateFormFile("file", "test.csv")
+	if err != nil {
+		t.Fatalf("Failed to create form file: %v", err)
+	}
+
+	if _, err = fileWriter.Write([]byte(csvData)); err != nil {
+		t.Fatalf("Failed to write file contents: %v", err)
+	}
+
+	contentType := bodyWriter.FormDataContentType()
+	bodyWriter.Close()
+
+	req, err := http.NewRequest(http.MethodPost, "/importfromlighterpack", bodyBuf)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	return w.Code
+}
+
+func countUserInventoryItems(t *testing.T, userID uint) int {
+	var count int
+	err := database.DB().QueryRow(
+		"SELECT COUNT(*) FROM inventory WHERE user_id = $1",
+		userID,
+	).Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to count inventory items: %v", err)
+	}
+	return count
+}
+
+func TestImportFromLighterPackDeduplication(t *testing.T) {
+	csvData := `Item Name,Category,desc,qty,weight,unit,url,price,worn,consumable
+Tent,Shelter,2-person tent,1,1200,g,http://example.com/tent,200,,
+Backpack,Gear,30L backpack,1,950,g,http://example.com/backpack,150,,`
+
+	token, err := security.GenerateToken(users[0].ID)
+	if err != nil {
+		t.Fatalf("Failed to generate token: %v", err)
+	}
+
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.POST("/importfromlighterpack", ImportFromLighterPack)
+
+	t.Run("First import creates items", func(t *testing.T) {
+		initialCount := countUserInventoryItems(t, users[0].ID)
+
+		statusCode := performLighterPackImport(t, router, token, csvData)
+		if statusCode != http.StatusOK {
+			t.Errorf("Expected status %d, got %d", http.StatusOK, statusCode)
+		}
+
+		newCount := countUserInventoryItems(t, users[0].ID)
+		if newCount != initialCount+2 {
+			t.Errorf("Expected %d items after first import, got %d", initialCount+2, newCount)
+		}
+	})
+
+	t.Run("Second import reuses existing items", func(t *testing.T) {
+		countBeforeSecondImport := countUserInventoryItems(t, users[0].ID)
+
+		statusCode := performLighterPackImport(t, router, token, csvData)
+		if statusCode != http.StatusOK {
+			t.Errorf("Expected status %d, got %d", http.StatusOK, statusCode)
+		}
+
+		countAfterSecondImport := countUserInventoryItems(t, users[0].ID)
+		if countAfterSecondImport != countBeforeSecondImport {
+			t.Errorf("Expected same inventory count after second import (no duplicates). Before: %d, After: %d",
+				countBeforeSecondImport, countAfterSecondImport)
+		}
+
+		// Verify we have 2 packs with the same items
+		var packCount int
+		err := database.DB().QueryRow(
+			"SELECT COUNT(*) FROM pack WHERE user_id = $1 AND pack_name = 'LighterPack Import'",
+			users[0].ID,
+		).Scan(&packCount)
+		if err != nil {
+			t.Fatalf("Failed to count packs: %v", err)
+		}
+
+		if packCount < 2 {
+			t.Errorf("Expected at least 2 imported packs, got %d", packCount)
+		}
+	})
+}
+
 func TestCheckPackOwnership(t *testing.T) {
 	testCases := []struct {
 		packID   uint
