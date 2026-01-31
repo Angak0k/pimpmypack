@@ -114,7 +114,7 @@ func GetPackByID(c *gin.Context) {
 		return
 	}
 
-	pack, err := findPackByID(id)
+	pack, err := FindPackByID(id)
 
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
@@ -160,14 +160,14 @@ func GetMyPackByID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if myPack {
-		pack, err := findPackByID(id)
+		pack, err := FindPackByID(id)
 		if err != nil {
 			if errors.Is(err, ErrPackNotFound) {
 				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
@@ -184,7 +184,8 @@ func GetMyPackByID(c *gin.Context) {
 	}
 }
 
-func findPackByID(id uint) (*dataset.Pack, error) {
+// FindPackByID finds a pack by its ID
+func FindPackByID(id uint) (*dataset.Pack, error) {
 	var pack dataset.Pack
 
 	row := database.DB().QueryRowContext(context.Background(),
@@ -382,7 +383,7 @@ func PutMyPackByID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -479,7 +480,7 @@ func DeleteMyPackByID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -542,7 +543,7 @@ func ShareMyPack(c *gin.Context) {
 	}
 
 	// Check if pack exists
-	_, err = findPackByID(id)
+	_, err = FindPackByID(id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
@@ -597,7 +598,7 @@ func UnshareMyPack(c *gin.Context) {
 	}
 
 	// Check if pack exists
-	_, err = findPackByID(id)
+	_, err = FindPackByID(id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
@@ -812,7 +813,7 @@ func PostMyPackContent(c *gin.Context) {
 	newPackContent.Worn = requestData.Worn
 	newPackContent.Consumable = requestData.Consumable
 
-	myPack, err := checkPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -937,7 +938,7 @@ func PutMyPackContentByID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -1041,7 +1042,7 @@ func DeleteMyPackContentByID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -1139,7 +1140,7 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := checkPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -1322,7 +1323,8 @@ func findPacksByUserID(id uint) (*dataset.Packs, error) {
 	return &packs, nil
 }
 
-func checkPackOwnership(id uint, userID uint) (bool, error) {
+// CheckPackOwnership verifies if a user owns a specific pack
+func CheckPackOwnership(id uint, userID uint) (bool, error) {
 	var rows int
 
 	row := database.DB().QueryRowContext(context.Background(),
@@ -1342,7 +1344,7 @@ func checkPackOwnership(id uint, userID uint) (bool, error) {
 // sharePackByID generates and sets a sharing code for a pack (idempotent)
 func sharePackByID(ctx context.Context, packID uint, userID uint) (string, error) {
 	// First check ownership
-	owns, err := checkPackOwnership(packID, userID)
+	owns, err := CheckPackOwnership(packID, userID)
 	if err != nil {
 		return "", err
 	}
@@ -1388,7 +1390,7 @@ func sharePackByID(ctx context.Context, packID uint, userID uint) (string, error
 // unsharePackByID removes the sharing code from a pack (idempotent)
 func unsharePackByID(ctx context.Context, packID uint, userID uint) error {
 	// First check ownership
-	owns, err := checkPackOwnership(packID, userID)
+	owns, err := CheckPackOwnership(packID, userID)
 	if err != nil {
 		return err
 	}

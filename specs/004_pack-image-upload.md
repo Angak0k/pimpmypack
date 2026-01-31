@@ -518,19 +518,21 @@ testdata/
 
 **Status**: Storage layer complete with interface-based design for future S3 migration. Database implementation uses UPSERT for idempotent saves and handles all CRUD operations. Integration tests verify Save, Update, Get, Delete, and Exists operations.
 
-### Phase 4: HTTP Handlers
+### Phase 4: HTTP Handlers ✅ Completed (2026-01-31)
 
-- [ ] Implement POST `/api/v1/mypack/{id}/image` handler
-- [ ] Implement GET `/api/v1/packs/{id}/image` handler
-- [ ] Implement DELETE `/api/v1/mypack/{id}/image` handler
-- [ ] Add ownership verification
-- [ ] Add cache headers for GET
-- [ ] Write handler tests
+- [x] Implement POST `/api/v1/mypack/{id}/image` handler
+- [x] Implement GET `/api/v1/packs/{id}/image` handler
+- [x] Implement DELETE `/api/v1/mypack/{id}/image` handler
+- [x] Add ownership verification
+- [x] Add cache headers for GET
+- [ ] Write handler tests (deferred to Phase 6)
 
 **Files**:
 
-- `pkg/images/handlers.go`
-- `pkg/images/handlers_test.go`
+- `pkg/images/handlers.go` - All three handlers with Swagger documentation
+- `pkg/packs/packs.go` - Exported FindPackByID and CheckPackOwnership for reuse
+
+**Status**: All HTTP handlers implemented with proper authentication, ownership verification, and error handling. POST endpoint processes and stores images. GET endpoint serves images with cache headers (ETag, Cache-Control). DELETE endpoint removes images idempotently. Ownership checks ensure only pack owners can upload/delete. Public packs allow unauthenticated image access.
 
 ### Phase 5: API Integration
 
