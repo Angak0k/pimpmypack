@@ -33,7 +33,7 @@ var storage ImageStorage = NewDBImageStorage()
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /v1/mypack/{id}/image [post]
 func UploadPackImage(c *gin.Context) {
-	ctx := context.Background()
+	ctx := c.Request.Context()
 
 	// Extract user ID from JWT
 	userID, err := security.ExtractTokenID(c)
