@@ -5,22 +5,30 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
 	"github.com/joho/godotenv"
 )
 
+// MailServer contains SMTP configuration
+type MailServer struct {
+	MailServer   string `json:"mail_server"`
+	MailPort     int    `json:"mail_port"`
+	MailIdentity string `json:"mail_identity"`
+	MailUsername string `json:"mail_username"`
+	MailPassword string `json:"mail_password"`
+}
+
 var (
-	Scheme        string
-	HostName      string
-	DBHost        string
-	DBUser        string
-	DBPassword    string
-	DBName        string
-	DBPort        int
-	Stage         string
-	APISecret     string
-	TokenLifespan int
-	MailServer    dataset.MailServer
+	Scheme           string
+	HostName         string
+	DBHost           string
+	DBUser           string
+	DBPassword       string
+	DBName           string
+	DBPort           int
+	Stage            string
+	APISecret        string
+	TokenLifespan    int
+	MailServerConfig MailServer
 )
 
 type Config struct {
@@ -30,7 +38,7 @@ type Config struct {
 	Stage         string
 	APISecret     string
 	TokenLifespan int
-	MailServer    dataset.MailServer
+	MailServer    MailServer
 }
 
 type DBConfig struct {
@@ -57,7 +65,7 @@ func EnvInit(envFilePath string) error {
 	Stage = newConfig.Stage
 	APISecret = newConfig.APISecret
 	TokenLifespan = newConfig.TokenLifespan
-	MailServer = newConfig.MailServer
+	MailServerConfig = newConfig.MailServer
 
 	return nil
 }
@@ -98,7 +106,7 @@ func newConfig() Config {
 		DBConfig: DBConfig{
 			DBPort: 5432,
 		},
-		MailServer: dataset.MailServer{
+		MailServer: MailServer{
 			MailPort: 587,
 		},
 	}

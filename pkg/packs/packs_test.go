@@ -15,7 +15,6 @@ import (
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
 	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/gin-gonic/gin"
@@ -56,7 +55,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestGetPacks(t *testing.T) {
-	var getPacks dataset.Packs
+	var getPacks Packs
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -170,7 +169,7 @@ func TestGetPackByID(t *testing.T) {
 		}
 
 		// Unmarshal the response body into a pack struct
-		var receivedPack dataset.Pack
+		var receivedPack Pack
 		if err := json.Unmarshal(w.Body.Bytes(), &receivedPack); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
@@ -219,7 +218,7 @@ func TestPostPack(t *testing.T) {
 	router.POST("/packs", PostPack)
 
 	// Sample pack data
-	newPack := dataset.Pack{
+	newPack := Pack{
 		UserID:          users[0].ID,
 		PackName:        "SomePack",
 		PackDescription: "This is a new pack",
@@ -248,7 +247,7 @@ func TestPostPack(t *testing.T) {
 		}
 
 		// Query the database to get the inserted pack
-		var insertedPack dataset.Pack
+		var insertedPack Pack
 		row := database.DB().QueryRow(
 			`SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at 
 			FROM pack 
@@ -270,7 +269,7 @@ func TestPostPack(t *testing.T) {
 		}
 
 		// Unmarshal the response body into a pack struct
-		var receivedPack dataset.Pack
+		var receivedPack Pack
 		if err := json.Unmarshal(w.Body.Bytes(), &receivedPack); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
@@ -301,7 +300,7 @@ func TestPutPackByID(t *testing.T) {
 	router.PUT("/packs/:id", PutPackByID)
 
 	// Sample pack data
-	testUpdatedPack := dataset.Pack{
+	testUpdatedPack := Pack{
 		UserID:          users[1].ID,
 		PackName:        "Amazing Pack",
 		PackDescription: "Updated pack description",
@@ -331,7 +330,7 @@ func TestPutPackByID(t *testing.T) {
 		}
 
 		// Query the database to get the updated pack
-		var updatedPack dataset.Pack
+		var updatedPack Pack
 		row := database.DB().QueryRow(
 			`SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at 
 			FROM pack 
@@ -405,7 +404,7 @@ func TestDeletePackByID(t *testing.T) {
 }
 
 func TestGetPackContents(t *testing.T) {
-	var packContents dataset.PackContents
+	var packContents PackContents
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -510,7 +509,7 @@ func TestGetPackContentByID(t *testing.T) {
 		}
 
 		// Unmarshal the response body into a PackContent struct
-		var receivedPackContent dataset.PackContent
+		var receivedPackContent PackContent
 		if err := json.Unmarshal(w.Body.Bytes(), &receivedPackContent); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
@@ -557,7 +556,7 @@ func TestPostPackContent(t *testing.T) {
 	router.POST("/packcontents", PostPackContent)
 
 	// Sample pack content data
-	newPackContent := dataset.PackContent{
+	newPackContent := PackContent{
 		PackID:     packs[1].ID,
 		ItemID:     inventoriesUserPack1[2].ID,
 		Quantity:   10,
@@ -588,7 +587,7 @@ func TestPostPackContent(t *testing.T) {
 		}
 
 		// Query the database to get the inserted pack content
-		var insertedPackContent dataset.PackContent
+		var insertedPackContent PackContent
 		row := database.DB().QueryRow(
 			`SELECT id, pack_id, item_id, quantity, worn, consumable, created_at, updated_at 
 			FROM pack_content 
@@ -611,7 +610,7 @@ func TestPostPackContent(t *testing.T) {
 		}
 
 		// Unmarshal the response body into a pack content struct
-		var receivedPackContent dataset.PackContent
+		var receivedPackContent PackContent
 		if err := json.Unmarshal(w.Body.Bytes(), &receivedPackContent); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
@@ -644,7 +643,7 @@ func TestPutPackContentByID(t *testing.T) {
 	router.PUT("/packcontents/:id", PutPackContentByID)
 
 	// Sample pack content data
-	testUpdatedPackContent := dataset.PackContent{
+	testUpdatedPackContent := PackContent{
 		PackID:     packs[1].ID,
 		ItemID:     packItems[2].ItemID,
 		Quantity:   10,
@@ -676,7 +675,7 @@ func TestPutPackContentByID(t *testing.T) {
 		}
 
 		// Query the database to get the updated pack content
-		var updatedPackContent dataset.PackContent
+		var updatedPackContent PackContent
 		row := database.DB().QueryRow(
 			`SELECT id, pack_id, item_id, quantity, worn, consumable, created_at, updated_at 
 			FROM pack_content 
@@ -755,7 +754,7 @@ func TestDeletePackContentByID(t *testing.T) {
 }
 
 func TestGetPackContentsByPackID(t *testing.T) {
-	var packContentWithItems dataset.PackContentWithItems
+	var packContentWithItems PackContentWithItems
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
@@ -1181,7 +1180,7 @@ func testValidSharingCode(t *testing.T, router *gin.Engine, sharingCode string) 
 		t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
 	}
 
-	var response dataset.SharedPackResponse
+	var response SharedPackResponse
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to unmarshal response body: %v", err)
 	}
@@ -1212,7 +1211,7 @@ func testInvalidSharingCode(t *testing.T, router *gin.Engine, sharingCode string
 }
 
 func testShareUnsharedPack(t *testing.T, router *gin.Engine, token string) {
-	packID := helper.FindPackIDByPackName(packs, "Special Pack")
+	packID := FindPackIDByPackName(packs, "Special Pack")
 	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/share", packID), nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -1238,7 +1237,7 @@ func testShareUnsharedPack(t *testing.T, router *gin.Engine, token string) {
 }
 
 func testShareIdempotent(t *testing.T, router *gin.Engine, token string) {
-	packID := helper.FindPackIDByPackName(packs, "First Pack")
+	packID := FindPackIDByPackName(packs, "First Pack")
 	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/share", packID), nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -1261,7 +1260,7 @@ func testShareIdempotent(t *testing.T, router *gin.Engine, token string) {
 }
 
 func testShareForbidden(t *testing.T, router *gin.Engine, token string) {
-	packID := helper.FindPackIDByPackName(packs, "Third Pack")
+	packID := FindPackIDByPackName(packs, "Third Pack")
 	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/share", packID), nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -1310,7 +1309,7 @@ func TestShareMyPack(t *testing.T) {
 }
 
 func testUnshareSharedPack(t *testing.T, router *gin.Engine, token string) {
-	packID := helper.FindPackIDByPackName(packs, "Second Pack")
+	packID := FindPackIDByPackName(packs, "Second Pack")
 	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("/mypack/%d/share", packID), nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -1333,7 +1332,7 @@ func testUnshareSharedPack(t *testing.T, router *gin.Engine, token string) {
 }
 
 func testUnshareIdempotent(t *testing.T, router *gin.Engine, token string) {
-	packID := helper.FindPackIDByPackName(packs, "Special Pack")
+	packID := FindPackIDByPackName(packs, "Special Pack")
 	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("/mypack/%d/share", packID), nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -1346,7 +1345,7 @@ func testUnshareIdempotent(t *testing.T, router *gin.Engine, token string) {
 }
 
 func testUnshareForbidden(t *testing.T, router *gin.Engine, token string) {
-	packID := helper.FindPackIDByPackName(packs, "Third Pack")
+	packID := FindPackIDByPackName(packs, "Third Pack")
 	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("/mypack/%d/share", packID), nil)
 	req.Header.Set("Authorization", "Bearer "+token)
 
@@ -1416,7 +1415,7 @@ func TestSharedList(t *testing.T) {
 			t.Errorf("Expected status %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
 		}
 
-		var response dataset.SharedPackResponse
+		var response SharedPackResponse
 		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 			t.Fatalf("Failed to parse response: %v", err)
 		}

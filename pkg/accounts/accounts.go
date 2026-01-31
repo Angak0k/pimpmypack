@@ -11,7 +11,6 @@ import (
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
 	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/gin-gonic/gin"
@@ -29,19 +28,19 @@ var ErrInvalidCredentials = errors.New("invalid credentials")
 // @Tags Public
 // @Accept  json
 // @Produce  json
-// @Param   input  body    dataset.RegisterInput  true  "Register Informations"
-// @Success 200 {object} dataset.OkResponse
-// @Failure 400 {object} dataset.ErrorResponse
+// @Param   input  body    RegisterInput  true  "Register Informations"
+// @Success 200 {object} apitypes.OkResponse
+// @Failure 400 {object} apitypes.ErrorResponse
 // @Router /register [post]
 func Register(c *gin.Context) {
-	var input dataset.RegisterInput
+	var input RegisterInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	user := dataset.User{}
+	user := User{}
 
 	if helper.IsValidEmail(input.Email) {
 		user.Email = input.Email
@@ -73,7 +72,7 @@ func Register(c *gin.Context) {
 	}
 }
 
-func registerUser(ctx context.Context, u dataset.User) (bool, error) {
+func registerUser(ctx context.Context, u User) (bool, error) {
 	var id int
 
 	confirmationCode, err := helper.GenerateRandomCode(30)
@@ -127,7 +126,7 @@ func registerUser(ctx context.Context, u dataset.User) (bool, error) {
 }
 
 // Send confirmation email
-func sendConfirmationEmail(u dataset.User, code string) error {
+func sendConfirmationEmail(u User, code string) error {
 	// Send confirmation email
 	mailRcpt := u.Email
 	mailSubject := "PimpMyPack - Confirm your email address"
@@ -135,7 +134,7 @@ func sendConfirmationEmail(u dataset.User, code string) error {
 		config.Scheme + "://" + config.HostName + "/confirmemail.html?id=" +
 		strconv.FormatUint(uint64(u.ID), 10) + "&code=" + code
 
-	smtpClient := helper.SMTPClient{Server: config.MailServer}
+	smtpClient := helper.SMTPClient{Server: config.MailServerConfig}
 
 	err := smtpClient.SendEmail(mailRcpt, mailSubject, mailBody)
 	if err != nil {
@@ -150,9 +149,9 @@ func sendConfirmationEmail(u dataset.User, code string) error {
 // @Description Confirm email address by providing username and email
 // @Tags Public
 // @Produce  json
-// @Success 200 {object} dataset.OkResponse
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Success 200 {object} apitypes.OkResponse
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /confirmemail [get]
 func ConfirmEmail(c *gin.Context) {
 	// Retrieve the confirmation code from the url query
@@ -204,13 +203,13 @@ func confirmEmail(ctx context.Context, id string, code string) error {
 // @Tags Public
 // @Accept  json
 // @Produce  json
-// @Param   input  body    dataset.ForgotPasswordInput  true  "Email Address"
-// @Success 200 {object} dataset.OkResponse
-// @Failure 400 {object} dataset.ErrorResponse "Bad Request"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Param   input  body    ForgotPasswordInput  true  "Email Address"
+// @Success 200 {object} apitypes.OkResponse
+// @Failure 400 {object} apitypes.ErrorResponse "Bad Request"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /forgotpassword [post]
 func ForgotPassword(c *gin.Context) {
-	var email dataset.ForgotPasswordInput
+	var email ForgotPasswordInput
 
 	if err := c.ShouldBindJSON(&email); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -249,7 +248,7 @@ func forgotPassword(ctx context.Context, email string) error {
 	mailBody := "Hi! your password has been reset. If you did not request this, " +
 		"please contact us.\n\nYour new password is: " + newPassword
 
-	smtpClient := helper.SMTPClient{Server: config.MailServer}
+	smtpClient := helper.SMTPClient{Server: config.MailServerConfig}
 
 	err = smtpClient.SendEmail(mailRcpt, mailSubject, mailBody)
 	if err != nil {
@@ -263,12 +262,12 @@ func forgotPassword(ctx context.Context, email string) error {
 // @Description Log in a user by providing username and password
 // @Tags Public
 // @Produce  json
-// @Param   input  body    dataset.LoginInput  true  "Credentials Info"
-// @Success 200 {object} dataset.Token
-// @Failure 401 {object} dataset.ErrorResponse
+// @Param   input  body    LoginInput  true  "Credentials Info"
+// @Success 200 {object} Token
+// @Failure 401 {object} apitypes.ErrorResponse
 // @Router /login [post]
 func Login(c *gin.Context) {
-	var input dataset.LoginInput
+	var input LoginInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -339,10 +338,10 @@ func loginCheck(ctx context.Context, username string, password string) (string, 
 // @Security Bearer
 // @Tags Accounts
 // @Produce  json
-// @Success 200 {object} dataset.Account "Account Information"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 404 {object} dataset.ErrorResponse "Account not found"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Success 200 {object} Account "Account Information"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 404 {object} apitypes.ErrorResponse "Account not found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/myaccount [get]
 func GetMyAccount(c *gin.Context) {
 	userID, err := security.ExtractTokenID(c)
@@ -376,14 +375,14 @@ func GetMyAccount(c *gin.Context) {
 // @Tags Accounts
 // @Accept  json
 // @Produce  json
-// @Param   password  body dataset.PasswordUpdateInput  true  "Current and New Password"
-// @Success 200 {object} dataset.OkResponse "Password updated"
-// @Failure 400 {object} dataset.ErrorResponse "Bad Request"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Param   password  body PasswordUpdateInput  true  "Current and New Password"
+// @Success 200 {object} apitypes.OkResponse "Password updated"
+// @Failure 400 {object} apitypes.ErrorResponse "Bad Request"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypassword [put]
 func PutMyPassword(c *gin.Context) {
-	var input dataset.PasswordUpdateInput
+	var input PasswordUpdateInput
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -465,14 +464,14 @@ func updatePassword(ctx context.Context, userID uint, updatedPassword string) er
 // @Tags Accounts
 // @Accept  json
 // @Produce  json
-// @Param   input  body    dataset.Account  true  "Account Information"
-// @Success 200 {object} dataset.Account
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 401 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Param   input  body    Account  true  "Account Information"
+// @Success 200 {object} Account
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 401 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /v1/myaccount [put]
 func PutMyAccount(c *gin.Context) {
-	var updatedAccount dataset.Account
+	var updatedAccount Account
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -504,8 +503,8 @@ func PutMyAccount(c *gin.Context) {
 // @Security Bearer
 // @Tags Internal
 // @Produce  json
-// @Success 200 {object} dataset.Account
-// @Failure 500 {object} dataset.ErrorResponse
+// @Success 200 {object} Account
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/accounts [get]
 func GetAccounts(c *gin.Context) {
 	accounts, err := returnAccounts(c.Request.Context())
@@ -517,8 +516,8 @@ func GetAccounts(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, *accounts)
 }
 
-func returnAccounts(ctx context.Context) (*dataset.Accounts, error) {
-	var accounts dataset.Accounts
+func returnAccounts(ctx context.Context) (*Accounts, error) {
+	var accounts Accounts
 
 	rows, err := database.DB().QueryContext(ctx,
 		`SELECT id, username, email, firstname, lastname, role, status, preferred_currency, 
@@ -530,7 +529,7 @@ func returnAccounts(ctx context.Context) (*dataset.Accounts, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var account dataset.Account
+		var account Account
 		err := rows.Scan(
 			&account.ID,
 			&account.Username,
@@ -563,10 +562,10 @@ func returnAccounts(ctx context.Context) (*dataset.Accounts, error) {
 // @Tags Internal
 // @Produce  json
 // @Param   id  path    int  true  "Account ID"
-// @Success 200 {object} dataset.Account
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 404 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Success 200 {object} Account
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 404 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/accounts/{id} [get]
 func GetAccountByID(c *gin.Context) {
 	id64, err := strconv.ParseUint(c.Param("id"), 10, 32)
@@ -596,8 +595,8 @@ func GetAccountByID(c *gin.Context) {
 	}
 }
 
-func findAccountByID(ctx context.Context, id uint) (*dataset.Account, error) {
-	var account dataset.Account
+func findAccountByID(ctx context.Context, id uint) (*Account, error) {
+	var account Account
 
 	row := database.DB().QueryRowContext(ctx,
 		`SELECT id, username, email, firstname, lastname, role, status, preferred_currency, 
@@ -636,13 +635,13 @@ func findAccountByID(ctx context.Context, id uint) (*dataset.Account, error) {
 // @Tags Internal
 // @Accept  json
 // @Produce  json
-// @Param   input  body    dataset.Account  true  "Account Information"
-// @Success 201 {object} dataset.Account
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Param   input  body    Account  true  "Account Information"
+// @Success 201 {object} Account
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/accounts [post]
 func PostAccount(c *gin.Context) {
-	var newAccount dataset.Account
+	var newAccount Account
 
 	// Call BindJSON to bind the received JSON to
 	// newAccount.
@@ -665,7 +664,7 @@ func PostAccount(c *gin.Context) {
 	}
 }
 
-func insertAccount(ctx context.Context, a *dataset.Account) error {
+func insertAccount(ctx context.Context, a *Account) error {
 	if a == nil {
 		return errors.New("payload is empty")
 	}
@@ -694,13 +693,13 @@ func insertAccount(ctx context.Context, a *dataset.Account) error {
 // @Accept  json
 // @Produce  json
 // @Param   id  path    int  true  "Account ID"
-// @Param   input  body    dataset.Account  true  "Account Information"
-// @Success 200 {object} dataset.Account
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Param   input  body    Account  true  "Account Information"
+// @Success 200 {object} Account
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/accounts/{id} [put]
 func PutAccountByID(c *gin.Context) {
-	var updatedAccount dataset.Account
+	var updatedAccount Account
 
 	id64, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
@@ -723,7 +722,7 @@ func PutAccountByID(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, updatedAccount)
 }
 
-func updateAccountByID(ctx context.Context, id uint, a *dataset.Account) error {
+func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 	if a == nil {
 		return errors.New("payload is empty")
 	}
@@ -755,9 +754,9 @@ func updateAccountByID(ctx context.Context, id uint, a *dataset.Account) error {
 // @Tags Internal
 // @Produce  json
 // @Param   id  path    int  true  "Account ID"
-// @Success 200 {object} dataset.OkResponse
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Success 200 {object} apitypes.OkResponse
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/accounts/{id} [delete]
 func DeleteAccountByID(c *gin.Context) {
 	id := c.Param("id")
@@ -793,4 +792,15 @@ func getUserIDByEmail(ctx context.Context, email string) (uint, error) {
 		return 0, err
 	}
 	return id, nil
+}
+
+// FindUserIDByUsername finds a user ID by username
+// Returns 0 if not found
+func FindUserIDByUsername(users []User, username string) uint {
+	for _, user := range users {
+		if user.Username == username {
+			return user.ID
+		}
+	}
+	return 0
 }

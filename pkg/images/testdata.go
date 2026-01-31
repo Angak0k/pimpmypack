@@ -8,11 +8,11 @@ import (
 	"time"
 
 	"github.com/Angak0k/pimpmypack/pkg/database"
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
+	"github.com/Angak0k/pimpmypack/pkg/packs"
 )
 
 // Test packs for image storage tests
-var testPacks = []dataset.Pack{
+var testPacks = []packs.Pack{
 	{
 		ID:              999,
 		UserID:          1,

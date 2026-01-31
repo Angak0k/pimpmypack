@@ -6,12 +6,11 @@ import (
 	"time"
 
 	"github.com/Angak0k/pimpmypack/pkg/database"
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
-var users = []dataset.User{
+var users = []User{
 	{
 		Username:            "user-" + random.UniqueId(),
 		Email:               "user-" + random.UniqueId() + "@exemple.com",

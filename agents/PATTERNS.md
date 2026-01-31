@@ -6,6 +6,7 @@ This document contains detailed code patterns, examples, and templates used in t
 
 ## Table of Contents
 
+- [Architecture & Package Organization](#architecture--package-organization)
 - [Handlers](#handlers)
 - [Business Functions](#business-functions)
 - [Testing](#testing)
@@ -13,34 +14,297 @@ This document contains detailed code patterns, examples, and templates used in t
 - [Database Operations](#database-operations)
 - [Swagger Documentation](#swagger-documentation)
 
+## Architecture & Package Organization
+
+### Package Structure
+
+The codebase follows a **domain-driven design** approach where each business domain has its own package with clear boundaries:
+
+```
+pkg/
+├── accounts/          # User accounts and authentication
+│   ├── types.go       # Domain types (User, Account, LoginInput, etc.)
+│   ├── accounts.go    # Handlers, service, and repository functions
+│   └── testdata.go    # Test fixtures
+├── packs/             # Pack management
+│   ├── types.go       # Domain types (Pack, PackContent, etc.)
+│   ├── packs.go       # Handlers, service, and repository functions
+│   └── testdata.go    # Test fixtures
+├── inventories/       # Inventory items
+│   ├── types.go       # Domain types (Inventory, etc.)
+│   ├── handlers.go    # HTTP handlers
+│   ├── service.go     # Business logic (public functions)
+│   ├── repository.go  # Data access (private functions)
+│   └── testdata.go    # Test fixtures
+├── images/            # Image management
+│   ├── types.go       # Domain types and interfaces
+│   ├── handlers.go    # HTTP handlers
+│   ├── processor.go   # Image processing logic
+│   └── storage_db.go  # Database storage implementation
+├── apitypes/          # Shared HTTP response types
+│   └── types.go       # OkResponse, ErrorResponse
+├── config/            # Configuration
+│   └── env.go         # Environment config, MailServer type
+├── helper/            # Generic utilities
+│   └── helper.go      # StringToUint, GenerateRandomCode, SMTPClient, etc.
+└── security/          # Security utilities
+    └── security.go    # Password hashing, JWT, etc.
+```
+
+### Domain Types Location
+
+**IMPORTANT**: Types must be defined in their domain package, not in a centralized `dataset` package.
+
+```go
+// ✅ CORRECT: Domain-specific types in their own package
+package accounts
+
+type User struct {
+    ID        uint      `json:"id"`
+    Username  string    `json:"username"`
+    Email     string    `json:"email"`
+    // ...
+}
+
+type LoginInput struct {
+    Username string `json:"username" binding:"required"`
+    Password string `json:"password" binding:"required"`
+}
+```
+
+```go
+// ❌ INCORRECT: Don't use a centralized dataset package
+package dataset
+
+type User struct { /* ... */ }
+type Pack struct { /* ... */ }
+type Inventory struct { /* ... */ }
+```
+
+### Package File Organization
+
+#### Option A: Single File (Small Packages)
+For smaller packages, keep everything in one file:
+
+```go
+// pkg/packs/packs.go
+package packs
+
+// Types are in types.go
+
+// Handlers (public, Gin-specific)
+func GetPacks(c *gin.Context) { /* ... */ }
+
+// Service functions (public, framework-agnostic)
+func GetAllPacks(ctx context.Context, userID uint) (Packs, error) { /* ... */ }
+
+// Repository functions (private, database access)
+func getAllPacks(ctx context.Context, db *sql.DB, userID uint) (Packs, error) { /* ... */ }
+
+// Helper functions (package-specific)
+func FindPackIDByPackName(packs Packs, packname string) uint { /* ... */ }
+```
+
+#### Option B: Separate Files (Larger Packages)
+For larger packages, separate concerns into files:
+
+```go
+// pkg/inventories/types.go
+package inventories
+type Inventory struct { /* ... */ }
+
+// pkg/inventories/handlers.go
+package inventories
+func GetMyInventories(c *gin.Context) { /* ... */ }
+
+// pkg/inventories/service.go (public business functions)
+package inventories
+func GetAllInventoriesByUserID(ctx context.Context, userID uint) (Inventories, error) { /* ... */ }
+
+// pkg/inventories/repository.go (private data access)
+package inventories
+func getAllInventoriesByUserID(ctx context.Context, db *sql.DB, userID uint) (Inventories, error) { /* ... */ }
+```
+
+### Helper Functions
+
+Helper functions should live in the package they belong to, **not** in a centralized helper package.
+
+```go
+// ✅ CORRECT: Domain-specific helpers in domain package
+// pkg/packs/packs.go
+func FindPackIDByPackName(packs Packs, packname string) uint {
+    for _, pack := range packs {
+        if pack.PackName == packname {
+            return pack.ID
+        }
+    }
+    return 0
+}
+
+// pkg/accounts/accounts.go
+func FindUserIDByUsername(users []User, username string) uint {
+    for _, user := range users {
+        if user.Username == username {
+            return user.ID
+        }
+    }
+    return 0
+}
+```
+
+```go
+// ✅ CORRECT: Generic utilities in helper package
+// pkg/helper/helper.go
+func StringToUint(s string) (uint, error) { /* ... */ }
+func GenerateRandomCode(length int) (string, error) { /* ... */ }
+func IsValidEmail(email string) bool { /* ... */ }
+```
+
+```go
+// ❌ INCORRECT: Domain-specific logic in helper package
+// pkg/helper/helper.go
+func FindPackIDByPackName(packs dataset.Packs, packname string) uint { /* ... */ }
+```
+
+### Service Layer Pattern
+
+Use a clean separation between handlers (HTTP), service (business logic), and repository (data access):
+
+```go
+// Handler layer (Gin-specific, public)
+func GetMyInventories(c *gin.Context) {
+    userID := c.GetUint("user_id")
+
+    inventories, err := GetAllInventoriesByUserID(c.Request.Context(), userID)
+    if err != nil {
+        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        return
+    }
+
+    c.JSON(http.StatusOK, inventories)
+}
+
+// Service layer (framework-agnostic, public)
+func GetAllInventoriesByUserID(ctx context.Context, userID uint) (Inventories, error) {
+    db := database.DB()
+    return getAllInventoriesByUserID(ctx, db, userID)
+}
+
+// Repository layer (data access, private)
+func getAllInventoriesByUserID(ctx context.Context, db *sql.DB, userID uint) (Inventories, error) {
+    query := `SELECT id, user_id, item_name, category, weight FROM inventory WHERE user_id = $1`
+    // ... database query logic
+}
+```
+
+### Avoiding Circular Dependencies
+
+**Problem**: If package A imports package B, then package B cannot import package A.
+
+**Solution**: Keep dependencies flowing in one direction:
+
+```
+handlers → service → repository → database
+   ↓
+ types (same package)
+```
+
+**Example of proper dependency flow**:
+
+```go
+// ✅ CORRECT: Config defines MailServer, helper uses it
+// pkg/config/env.go
+package config
+
+type MailServer struct {
+    MailServer   string
+    MailPort     int
+    MailIdentity string
+    MailUsername string
+    MailPassword string
+}
+
+var MailServerConfig MailServer
+
+// pkg/helper/helper.go
+package helper
+
+import "github.com/Angak0k/pimpmypack/pkg/config"
+
+type SMTPClient struct {
+    Server config.MailServer  // Uses type from config
+}
+
+// pkg/accounts/accounts.go
+package accounts
+
+import (
+    "github.com/Angak0k/pimpmypack/pkg/config"
+    "github.com/Angak0k/pimpmypack/pkg/helper"
+)
+
+func sendVerificationEmail() {
+    client := helper.SMTPClient{
+        Server: config.MailServerConfig,  // Uses instance from config
+    }
+    // ...
+}
+```
+
+### Shared Types
+
+For types shared across multiple packages:
+
+- **HTTP responses**: Use `pkg/apitypes` (OkResponse, ErrorResponse)
+- **Configuration**: Use `pkg/config` (MailServer, database config)
+- **Utilities**: Use appropriate utility package (security, helper)
+
+```go
+// pkg/apitypes/types.go
+package apitypes
+
+type OkResponse struct {
+    Response string `json:"message"`
+}
+
+type ErrorResponse struct {
+    Error string `json:"error"`
+}
+
+// Usage in handlers
+c.JSON(http.StatusOK, apitypes.OkResponse{Response: "Success"})
+c.JSON(http.StatusBadRequest, apitypes.ErrorResponse{Error: "Invalid input"})
+```
+
 ## Handlers
 
 ### Standard Handler Structure
 
 ```go
 func HandlerName(c *gin.Context) {
-    // 1. Bind input data
-    var input dataset.Input
+    // 1. Bind input data (use domain-specific type)
+    var input InputType
     if err := c.ShouldBindJSON(&input); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        c.JSON(http.StatusBadRequest, apitypes.ErrorResponse{Error: err.Error()})
         return
     }
 
-    // 2. Call business function
-    result, err := businessFunction(c.Request.Context(), input)
+    // 2. Call service function
+    result, err := ServiceFunction(c.Request.Context(), input)
 
     // 3. Handle errors with appropriate HTTP status codes
     if err != nil {
         if errors.Is(err, ErrNotFound) {
-            c.IndentedJSON(http.StatusNotFound, gin.H{"error": "message"})
+            c.JSON(http.StatusNotFound, apitypes.ErrorResponse{Error: "resource not found"})
             return
         }
-        c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        c.JSON(http.StatusInternalServerError, apitypes.ErrorResponse{Error: "internal server error"})
         return
     }
 
     // 4. Return response
-    c.IndentedJSON(http.StatusOK, result)
+    c.JSON(http.StatusOK, result)
 }
 ```
 
@@ -80,31 +344,56 @@ func returnXxx(ctx context.Context) (*Type, error) {
 ### Naming Pattern
 
 ```go
-// Read operations: prefix with "return"
-func returnInventories(ctx context.Context, userID uint) (*dataset.Inventories, error)
-func returnPacks(ctx context.Context, userID uint) (*dataset.Packs, error)
-func returnPackByID(ctx context.Context, packID uint) (*dataset.Pack, error)
+// Service layer: Public functions (Uppercase)
+// Read operations: use "Get" prefix
+func GetAllInventories(ctx context.Context, userID uint) (Inventories, error)
+func GetPackByID(ctx context.Context, packID uint) (*Pack, error)
+
+// Write operations: use descriptive verbs
+func CreateInventoryItem(ctx context.Context, userID uint, item *Inventory) error
+func UpdatePackContent(ctx context.Context, content *PackContent) error
+func DeletePackByID(ctx context.Context, packID uint) error
+
+// Repository layer: Private functions (lowercase)
+// Read operations: prefix with "get" or "return"
+func getAllInventories(ctx context.Context, db *sql.DB, userID uint) (Inventories, error)
+func getPackByID(ctx context.Context, db *sql.DB, packID uint) (*Pack, error)
 
 // Write operations: descriptive verbs
-func createInventoryItem(ctx context.Context, item dataset.InventoryInput) error
-func updatePackContent(ctx context.Context, content dataset.PackContent) error
-func deletePackByID(ctx context.Context, packID uint) error
+func createInventoryItem(ctx context.Context, db *sql.DB, item *Inventory) error
+func updatePackContent(ctx context.Context, db *sql.DB, content *PackContent) error
+func deletePackByID(ctx context.Context, db *sql.DB, packID uint) error
 ```
 
 ### Context Propagation Pattern
 
 ```go
-// Always accept context.Context as first parameter
-func businessFunction(ctx context.Context, userID uint, data dataset.Input) (*dataset.Result, error) {
-    // Use ctx for database operations
-    rows, err := database.DB.QueryContext(ctx, query, userID)
+// Service layer: Always accept context.Context as first parameter
+func GetInventoryItems(ctx context.Context, userID uint) (Inventories, error) {
+    db := database.DB()
+    return getInventoryItems(ctx, db, userID)
+}
+
+// Repository layer: Accept context and db connection
+func getInventoryItems(ctx context.Context, db *sql.DB, userID uint) (Inventories, error) {
+    query := `SELECT id, item_name, category, weight FROM inventory WHERE user_id = $1`
+
+    rows, err := db.QueryContext(ctx, query, userID)
     if err != nil {
-        return nil, fmt.Errorf("failed to query: %w", err)
+        return nil, fmt.Errorf("failed to query inventory: %w", err)
     }
     defer rows.Close()
 
-    // Process results
-    return result, nil
+    var items Inventories
+    for rows.Next() {
+        var item Inventory
+        if err := rows.Scan(&item.ID, &item.ItemName, &item.Category, &item.Weight); err != nil {
+            return nil, fmt.Errorf("failed to scan item: %w", err)
+        }
+        items = append(items, item)
+    }
+
+    return items, nil
 }
 ```
 
@@ -119,10 +408,24 @@ var (
     ErrUnauthorized     = errors.New("unauthorized access")
 )
 
-// Use in business functions
-func returnAccountByID(ctx context.Context, accountID uint) (*dataset.Account, error) {
-    var account dataset.Account
-    err := database.DB.QueryRowContext(ctx, query, accountID).Scan(&account.ID, &account.Username)
+// Use in service functions
+// pkg/accounts/accounts.go
+func GetAccountByID(ctx context.Context, accountID uint) (*Account, error) {
+    db := database.DB()
+    return getAccountByID(ctx, db, accountID)
+}
+
+func getAccountByID(ctx context.Context, db *sql.DB, accountID uint) (*Account, error) {
+    query := `SELECT id, username, email, firstname, lastname FROM account WHERE id = $1`
+
+    var account Account
+    err := db.QueryRowContext(ctx, query, accountID).Scan(
+        &account.ID,
+        &account.Username,
+        &account.Email,
+        &account.Firstname,
+        &account.Lastname,
+    )
     if err != nil {
         if errors.Is(err, sql.ErrNoRows) {
             return nil, ErrNoAccountFound
@@ -135,10 +438,10 @@ func returnAccountByID(ctx context.Context, accountID uint) (*dataset.Account, e
 // Check in handlers
 if err != nil {
     if errors.Is(err, ErrNoAccountFound) {
-        c.IndentedJSON(http.StatusNotFound, gin.H{"error": "account not found"})
+        c.JSON(http.StatusNotFound, apitypes.ErrorResponse{Error: "account not found"})
         return
     }
-    c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+    c.JSON(http.StatusInternalServerError, apitypes.ErrorResponse{Error: "internal server error"})
     return
 }
 ```
@@ -531,9 +834,9 @@ func returnPack(ctx context.Context, packID uint) (*dataset.Pack, error) {
 // @Tags Inventories
 // @Accept json
 // @Produce json
-// @Success 200 {object} dataset.Inventories "List of inventories"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 500 {object} dataset.ErrorResponse "Internal server error"
+// @Success 200 {object} inventories.Inventories "List of inventories"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal server error"
 // @Router /api/v1/inventories [get]
 func GetMyInventories(c *gin.Context) {
     // Implementation
@@ -545,11 +848,11 @@ func GetMyInventories(c *gin.Context) {
 // @Tags Inventories
 // @Accept json
 // @Produce json
-// @Param inventory body dataset.InventoryInput true "Inventory data"
-// @Success 201 {object} dataset.Inventory "Created inventory"
-// @Failure 400 {object} dataset.ErrorResponse "Bad request"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 500 {object} dataset.ErrorResponse "Internal server error"
+// @Param inventory body inventories.Inventory true "Inventory data"
+// @Success 201 {object} inventories.Inventory "Created inventory"
+// @Failure 400 {object} apitypes.ErrorResponse "Bad request"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal server error"
 // @Router /api/v1/inventories [post]
 func PostMyInventory(c *gin.Context) {
     // Implementation
@@ -565,10 +868,10 @@ func PostMyInventory(c *gin.Context) {
 // @Tags Public
 // @Accept json
 // @Produce json
-// @Param credentials body dataset.LoginInput true "Login credentials"
-// @Success 200 {object} dataset.LoginResponse "JWT token"
-// @Failure 400 {object} dataset.ErrorResponse "Bad request"
-// @Failure 401 {object} dataset.ErrorResponse "Invalid credentials"
+// @Param credentials body accounts.LoginInput true "Login credentials"
+// @Success 200 {object} accounts.Token "JWT token"
+// @Failure 400 {object} apitypes.ErrorResponse "Bad request"
+// @Failure 401 {object} apitypes.ErrorResponse "Invalid credentials"
 // @Router /api/login [post]
 func Login(c *gin.Context) {
     // Implementation
@@ -580,8 +883,8 @@ func Login(c *gin.Context) {
 // @Security Bearer
 // @Tags Internal
 // @Produce json
-// @Success 200 {object} dataset.Account "User profile"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
+// @Success 200 {object} accounts.Account "User profile"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
 // @Router /api/v1/profile [get]
 func GetMyProfile(c *gin.Context) {
     // Implementation
@@ -597,11 +900,23 @@ func GetMyProfile(c *gin.Context) {
 // Query parameter
 // @Param search query string false "Search term"
 
-// Body parameter
-// @Param pack body dataset.PackInput true "Pack data"
+// Body parameter (use domain-specific type with full package path)
+// @Param pack body packs.Pack true "Pack data"
 
 // Header parameter (usually for custom headers, JWT is handled by @Security)
 // @Param X-Custom-Header header string false "Custom header"
+```
+
+### Type References in Swagger
+
+When referencing types in Swagger comments, use the full package path:
+
+```go
+// @Success 200 {object} accounts.User "User object"
+// @Success 200 {object} packs.Packs "List of packs"
+// @Success 200 {object} inventories.Inventory "Inventory item"
+// @Success 200 {object} apitypes.OkResponse "Success response"
+// @Failure 400 {object} apitypes.ErrorResponse "Error response"
 ```
 
 ## Recurring Patterns Summary
