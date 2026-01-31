@@ -105,9 +105,15 @@ func ResizeImage(img image.Image) image.Image {
 	if width > height {
 		newWidth = MaxDimension
 		newHeight = (height * MaxDimension) / width
+		if newHeight < 1 {
+			newHeight = 1
+		}
 	} else {
 		newHeight = MaxDimension
 		newWidth = (width * MaxDimension) / height
+		if newWidth < 1 {
+			newWidth = 1
+		}
 	}
 
 	// Create new image

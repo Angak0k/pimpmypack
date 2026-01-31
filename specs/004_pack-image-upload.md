@@ -122,7 +122,7 @@ Currently, packs have no visual representation beyond their text metadata (name,
 
 ```sql
 CREATE TABLE pack_images (
-    pack_id INTEGER PRIMARY KEY REFERENCES packs(id) ON DELETE CASCADE,
+    pack_id INTEGER PRIMARY KEY REFERENCES pack(id) ON DELETE CASCADE,
     image_data BYTEA NOT NULL,
     mime_type VARCHAR(50) NOT NULL DEFAULT 'image/jpeg',
     file_size INTEGER NOT NULL,
@@ -148,7 +148,7 @@ CREATE TABLE pack_images (
 
 ```sql
 CREATE TABLE pack_images (
-    pack_id INTEGER PRIMARY KEY REFERENCES packs(id) ON DELETE CASCADE,
+    pack_id INTEGER PRIMARY KEY REFERENCES pack(id) ON DELETE CASCADE,
     image_data BYTEA NOT NULL,
     mime_type VARCHAR(50) NOT NULL DEFAULT 'image/jpeg',
     file_size INTEGER NOT NULL,
@@ -160,7 +160,6 @@ CREATE TABLE pack_images (
 
 **Down migration** (`000011_pack_images.down.sql`):
 ```sql
-DROP INDEX IF EXISTS idx_pack_images_uploaded_at;
 DROP TABLE IF EXISTS pack_images;
 ```
 

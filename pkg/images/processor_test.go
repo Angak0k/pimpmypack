@@ -3,6 +3,7 @@ package images
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -27,7 +28,9 @@ func createTestJPEG(width, height int) []byte {
 	}
 
 	var buf bytes.Buffer
-	_ = jpeg.Encode(&buf, img, &jpeg.Options{Quality: 90})
+	if err := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 90}); err != nil {
+		panic(fmt.Sprintf("failed to encode test JPEG: %v", err))
+	}
 	return buf.Bytes()
 }
 
@@ -43,7 +46,9 @@ func createTestPNG(width, height int) []byte {
 	}
 
 	var buf bytes.Buffer
-	_ = png.Encode(&buf, img)
+	if err := png.Encode(&buf, img); err != nil {
+		panic(fmt.Sprintf("failed to encode test PNG: %v", err))
+	}
 	return buf.Bytes()
 }
 

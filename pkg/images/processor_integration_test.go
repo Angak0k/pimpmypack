@@ -97,14 +97,13 @@ func TestProcessImage_RealLargeImage(t *testing.T) {
 	}
 }
 
-// TestProcessImage_RealTooLarge tests file size validation with real oversized file
+// TestProcessImage_RealTooLarge tests file size validation with an oversized payload
 func TestProcessImage_RealTooLarge(t *testing.T) {
-	data, err := os.ReadFile("testdata/too_large.jpg")
-	if err != nil {
-		t.Fatalf("Failed to read test file: %v", err)
-	}
+	// Create an in-memory payload that is larger than the maximum allowed size.
+	// Using a generated buffer avoids committing a large binary test asset.
+	data := make([]byte, 40*1024*1024) // 40MB
 
-	_, err = ProcessImage(data)
+	_, err := ProcessImage(data)
 	if err == nil {
 		t.Fatal("Expected error for too large image, got nil")
 	}

@@ -1,11 +1,9 @@
 package images
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
-	"time"
 
 	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/Angak0k/pimpmypack/pkg/packs"
@@ -14,6 +12,35 @@ import (
 )
 
 var storage ImageStorage = NewDBImageStorage()
+
+// processUploadedImage handles file validation and image processing
+func processUploadedImage(c *gin.Context) (*ProcessedImage, error) {
+	// Get file from form data
+	file, err := c.FormFile("image")
+	if err != nil {
+		return nil, errors.New("no image file provided")
+	}
+
+	// Check file size (5MB limit)
+	if file.Size > MaxUploadSize {
+		return nil, fmt.Errorf("file size exceeds maximum allowed (%d bytes)", MaxUploadSize)
+	}
+
+	// Open file
+	fileReader, err := file.Open()
+	if err != nil {
+		return nil, errors.New("failed to read uploaded file")
+	}
+	defer fileReader.Close()
+
+	// Process image
+	processed, err := ProcessImageFromReader(fileReader)
+	if err != nil {
+		return nil, err
+	}
+
+	return processed, nil
+}
 
 // UploadPackImage uploads or updates an image for a pack
 // @Summary Upload or update pack image
@@ -49,6 +76,17 @@ func UploadPackImage(c *gin.Context) {
 		return
 	}
 
+	// Check if pack exists
+	_, err = packs.FindPackByID(packID)
+	if err != nil {
+		if errors.Is(err, packs.ErrPackNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	// Check pack ownership
 	isOwner, err := packs.CheckPackOwnership(packID, userID)
 	if err != nil {
@@ -60,32 +98,10 @@ func UploadPackImage(c *gin.Context) {
 		return
 	}
 
-	// Get file from form data
-	file, err := c.FormFile("image")
+	// Process uploaded image
+	processed, err := processUploadedImage(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No image file provided"})
-		return
-	}
-
-	// Check file size (5MB limit)
-	if file.Size > MaxUploadSize {
-		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-			"error": fmt.Sprintf("File size exceeds maximum allowed (%d bytes)", MaxUploadSize),
-		})
-		return
-	}
-
-	// Open file
-	fileReader, err := file.Open()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to read uploaded file"})
-		return
-	}
-	defer fileReader.Close()
-
-	// Process image
-	processed, err := ProcessImageFromReader(fileReader)
-	if err != nil {
+		// Handle specific error types
 		if errors.Is(err, ErrInvalidFormat) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid image format. Only JPEG, PNG, and WebP are supported"})
 			return
@@ -96,6 +112,11 @@ func UploadPackImage(c *gin.Context) {
 		}
 		if errors.Is(err, ErrCorrupted) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Corrupted or invalid image file"})
+			return
+		}
+		// Generic file upload errors
+		if err.Error() == "no image file provided" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Failed to process image: %v", err)})
@@ -134,7 +155,7 @@ func UploadPackImage(c *gin.Context) {
 // @Failure 500 {string} string "Internal server error"
 // @Router /v1/packs/{id}/image [get]
 func GetPackImage(c *gin.Context) {
-	ctx := context.Background()
+	ctx := c.Request.Context()
 
 	// Parse pack ID from URL
 	packID, err := helper.StringToUint(c.Param("id"))
@@ -215,7 +236,7 @@ func GetPackImage(c *gin.Context) {
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /v1/mypack/{id}/image [delete]
 func DeletePackImage(c *gin.Context) {
-	ctx := context.Background()
+	ctx := c.Request.Context()
 
 	// Extract user ID from JWT
 	userID, err := security.ExtractTokenID(c)
@@ -228,6 +249,17 @@ func DeletePackImage(c *gin.Context) {
 	packID, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid pack ID format"})
+		return
+	}
+
+	// Check if pack exists
+	_, err = packs.FindPackByID(packID)
+	if err != nil {
+		if errors.Is(err, packs.ErrPackNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
