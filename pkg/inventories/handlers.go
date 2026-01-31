@@ -16,7 +16,7 @@ import (
 // @Security Bearer
 // @Tags Internal
 // @Produce json
-// @Success 200 {object} inventories.Inventory "List of Inventories"
+// @Success 200 {object} inventories.Inventories "List of Inventories"
 // @Failure 404 {object} apitypes.ErrorResponse
 // @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/inventories [get]
