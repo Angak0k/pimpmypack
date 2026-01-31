@@ -81,6 +81,8 @@ definitions:
     properties:
       created_at:
         type: string
+      has_image:
+        type: boolean
       id:
         type: integer
       pack_description:
@@ -179,6 +181,8 @@ definitions:
     properties:
       created_at:
         type: string
+      has_image:
+        type: boolean
       id:
         type: integer
       pack_description:
@@ -781,6 +785,123 @@ paths:
       summary: Update a pack by ID
       tags:
       - Packs
+  /v1/mypack/{id}/image:
+    delete:
+      description: Delete the image for a pack. Only the pack owner can delete images.
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Image deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid pack ID
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Pack does not belong to user
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Pack not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete pack image
+      tags:
+      - Pack Images
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload or update an image for a pack. Only the pack owner can upload
+        images.
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Image file (JPEG, PNG, or WebP, max 5MB)
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Image uploaded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or image
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Pack does not belong to user
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Pack not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "413":
+          description: Payload too large
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Upload or update pack image
+      tags:
+      - Pack Images
   /v1/mypack/{id}/packcontent/{item_id}:
     delete:
       description: Delete a pack content by ID
@@ -1062,6 +1183,45 @@ paths:
       summary: Update password
       tags:
       - Accounts
+  /v1/packs/{id}/image:
+    get:
+      description: Get the image for a pack. Public packs are accessible without authentication.
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - image/jpeg
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Invalid pack ID
+          schema:
+            type: string
+        "401":
+          description: Unauthorized (for private packs)
+          schema:
+            type: string
+        "403":
+          description: Forbidden (for private packs not owned by user)
+          schema:
+            type: string
+        "404":
+          description: Pack not found or has no image
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get pack image
+      tags:
+      - Pack Images
 schemes:
 - https
 swagger: "2.0"

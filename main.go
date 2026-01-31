@@ -7,6 +7,7 @@ import (
 	"github.com/Angak0k/pimpmypack/pkg/accounts"
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
+	"github.com/Angak0k/pimpmypack/pkg/images"
 	"github.com/Angak0k/pimpmypack/pkg/inventories"
 	"github.com/Angak0k/pimpmypack/pkg/packs"
 	"github.com/Angak0k/pimpmypack/pkg/security"
@@ -81,6 +82,7 @@ func setupPublicRoutes(router *gin.Engine) {
 	public.GET("/confirmemail", accounts.ConfirmEmail)
 	public.POST("/forgotpassword", accounts.ForgotPassword)
 	public.GET("/sharedlist/:sharing_code", packs.SharedList)
+	public.GET("/v1/packs/:id/image", images.GetPackImage)
 }
 
 func setupProtectedRoutes(router *gin.Engine) {
@@ -106,6 +108,8 @@ func setupProtectedRoutes(router *gin.Engine) {
 	protected.PUT("/myinventory/:id", inventories.PutMyInventoryByID)
 	protected.DELETE("/myinventory/:id", inventories.DeleteMyInventoryByID)
 	protected.POST("/importfromlighterpack", packs.ImportFromLighterPack)
+	protected.POST("/mypack/:id/image", images.UploadPackImage)
+	protected.DELETE("/mypack/:id/image", images.DeletePackImage)
 }
 
 func setupPrivateRoutes(router *gin.Engine) {

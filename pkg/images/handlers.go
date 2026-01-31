@@ -177,11 +177,11 @@ func GetPackImage(c *gin.Context) {
 	// Retrieve image from storage
 	img, err := storage.Get(ctx, packID)
 	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			c.String(http.StatusNotFound, "Pack has no image")
+			return
+		}
 		c.String(http.StatusInternalServerError, "Failed to retrieve image")
-		return
-	}
-	if img == nil {
-		c.String(http.StatusNotFound, "Pack has no image")
 		return
 	}
 

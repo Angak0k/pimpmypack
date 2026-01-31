@@ -21,6 +21,12 @@ const (
 	MaxDimension = 1920
 	// JPEGQuality is the quality setting for JPEG encoding (0-100)
 	JPEGQuality = 85
+	// MimeTypeJPEG is the MIME type for JPEG images
+	MimeTypeJPEG = "image/jpeg"
+	// MimeTypePNG is the MIME type for PNG images
+	MimeTypePNG = "image/png"
+	// MimeTypeWebP is the MIME type for WebP images
+	MimeTypeWebP = "image/webp"
 )
 
 var (
@@ -54,20 +60,20 @@ func ValidateImageFormat(data []byte) (string, error) {
 
 	// Check JPEG magic bytes (FF D8 FF)
 	if data[0] == 0xFF && data[1] == 0xD8 && data[2] == 0xFF {
-		return "image/jpeg", nil
+		return MimeTypeJPEG, nil
 	}
 
 	// Check PNG magic bytes (89 50 4E 47 0D 0A 1A 0A)
 	if data[0] == 0x89 && data[1] == 0x50 && data[2] == 0x4E && data[3] == 0x47 &&
 		data[4] == 0x0D && data[5] == 0x0A && data[6] == 0x1A && data[7] == 0x0A {
-		return "image/png", nil
+		return MimeTypePNG, nil
 	}
 
 	// Check WebP magic bytes (RIFF....WEBP)
 	if len(data) >= 12 &&
 		data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F' &&
 		data[8] == 'W' && data[9] == 'E' && data[10] == 'B' && data[11] == 'P' {
-		return "image/webp", nil
+		return MimeTypeWebP, nil
 	}
 
 	return "", ErrInvalidFormat
@@ -78,7 +84,7 @@ func DecodeImage(data []byte) (image.Image, error) {
 	reader := bytes.NewReader(data)
 	img, _, err := image.Decode(reader)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrCorrupted, err)
+		return nil, fmt.Errorf("%w: %w", ErrCorrupted, err)
 	}
 	return img, nil
 }
@@ -169,7 +175,7 @@ func ProcessImage(data []byte) (*ProcessedImage, error) {
 	return &ProcessedImage{
 		Data: processedData,
 		Metadata: ImageMetadata{
-			MimeType: "image/jpeg",
+			MimeType: MimeTypeJPEG,
 			FileSize: len(processedData),
 			Width:    bounds.Dx(),
 			Height:   bounds.Dy(),

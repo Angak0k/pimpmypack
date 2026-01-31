@@ -132,7 +132,7 @@ func sendConfirmationEmail(u dataset.User, code string) error {
 	mailRcpt := u.Email
 	mailSubject := "PimpMyPack - Confirm your email address"
 	mailBody := "Please confirm your email address by clicking on the following link: " +
-		config.Scheme + "://" + config.HostName + "/api/confirmemail?id=" +
+		config.Scheme + "://" + config.HostName + "/confirmemail.html?id=" +
 		strconv.FormatUint(uint64(u.ID), 10) + "&code=" + code
 
 	smtpClient := helper.SMTPClient{Server: config.MailServer}

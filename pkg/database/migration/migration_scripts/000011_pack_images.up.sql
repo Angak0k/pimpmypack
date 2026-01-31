@@ -1,5 +1,5 @@
 CREATE TABLE pack_images (
-    pack_id INTEGER PRIMARY KEY REFERENCES packs(id) ON DELETE CASCADE,
+    pack_id INTEGER PRIMARY KEY REFERENCES pack(id) ON DELETE CASCADE,
     image_data BYTEA NOT NULL,
     mime_type VARCHAR(50) NOT NULL DEFAULT 'image/jpeg',
     file_size INTEGER NOT NULL,

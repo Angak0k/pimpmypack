@@ -2,6 +2,12 @@ package images
 
 import (
 	"context"
+	"errors"
+)
+
+var (
+	// ErrNotFound is returned when an image is not found
+	ErrNotFound = errors.New("image not found")
 )
 
 // Image represents an image with its data and metadata
@@ -17,7 +23,7 @@ type ImageStorage interface {
 	Save(ctx context.Context, packID uint, data []byte, metadata ImageMetadata) error
 
 	// Get retrieves an image for a pack
-	// Returns nil, nil if the image doesn't exist
+	// Returns ErrNotFound if the image doesn't exist
 	Get(ctx context.Context, packID uint) (*Image, error)
 
 	// Delete removes an image for a pack

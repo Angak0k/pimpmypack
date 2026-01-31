@@ -2,6 +2,7 @@ package images
 
 import (
 	"bytes"
+	"errors"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -26,7 +27,7 @@ func createTestJPEG(width, height int) []byte {
 	}
 
 	var buf bytes.Buffer
-	jpeg.Encode(&buf, img, &jpeg.Options{Quality: 90})
+	_ = jpeg.Encode(&buf, img, &jpeg.Options{Quality: 90})
 	return buf.Bytes()
 }
 
@@ -42,7 +43,7 @@ func createTestPNG(width, height int) []byte {
 	}
 
 	var buf bytes.Buffer
-	png.Encode(&buf, img)
+	_ = png.Encode(&buf, img)
 	return buf.Bytes()
 }
 
@@ -212,12 +213,10 @@ func TestResizeImage(t *testing.T) {
 					t.Errorf("Aspect ratio not maintained: input=%.2f, output=%.2f",
 						inputAspect, outputAspect)
 				}
-			} else {
+			} else if bounds.Dx() != tt.inputWidth || bounds.Dy() != tt.inputHeight {
 				// Verify image was not resized
-				if bounds.Dx() != tt.inputWidth || bounds.Dy() != tt.inputHeight {
-					t.Errorf("Image was resized when it shouldn't be: %dx%d -> %dx%d",
-						tt.inputWidth, tt.inputHeight, bounds.Dx(), bounds.Dy())
-				}
+				t.Errorf("Image was resized when it shouldn't be: %dx%d -> %dx%d",
+					tt.inputWidth, tt.inputHeight, bounds.Dx(), bounds.Dy())
 			}
 		})
 	}
@@ -347,7 +346,7 @@ func TestProcessImage_InvalidFormat(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected error for invalid format")
 	}
-	if err != ErrInvalidFormat {
+	if !errors.Is(err, ErrInvalidFormat) {
 		t.Errorf("Expected ErrInvalidFormat, got: %v", err)
 	}
 }
@@ -364,8 +363,8 @@ func TestProcessImage_TooLarge(t *testing.T) {
 	}
 
 	// Check if error is about size
-	if err.Error() == "" || err == nil {
-		t.Errorf("Expected size error, got: %v", err)
+	if !errors.Is(err, ErrTooLarge) {
+		t.Errorf("Expected ErrTooLarge, got: %v", err)
 	}
 }
 

@@ -2,6 +2,7 @@ package images
 
 import (
 	"context"
+	"errors"
 	"log"
 	"os"
 	"testing"
@@ -10,7 +11,7 @@ import (
 	"github.com/Angak0k/pimpmypack/pkg/database"
 )
 
-var storage *DBImageStorage
+var testStorage *DBImageStorage
 
 func TestMain(m *testing.M) {
 	// Init env
@@ -31,20 +32,33 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Error migrating database: %v", err)
 	}
 
-	// Create storage instance
-	storage = NewDBImageStorage()
+	// Load test data
+	err = loadImageTestData()
+	if err != nil {
+		log.Fatalf("Error loading test data: %v", err)
+	}
 
+	// Create testStorage instance
+	testStorage = NewDBImageStorage()
+
+	// Run tests
 	ret := m.Run()
+
+	// Cleanup test data
+	if err := cleanupImageTestData(); err != nil {
+		log.Printf("Warning: failed to cleanup test data: %v", err)
+	}
+
 	os.Exit(ret)
 }
 
 func TestDBImageStorage_Save(t *testing.T) {
 	ctx := context.Background()
-	packID := uint(999)
+	packID := uint(999) // From testPacks[0]
 
-	// Clean up after test
+	// Clean up image after test (pack cleanup handled by TestMain)
 	defer func() {
-		_ = storage.Delete(ctx, packID)
+		_ = testStorage.Delete(ctx, packID)
 	}()
 
 	// Test data
@@ -57,13 +71,13 @@ func TestDBImageStorage_Save(t *testing.T) {
 	}
 
 	// Save image
-	err := storage.Save(ctx, packID, testData, testMetadata)
+	err := testStorage.Save(ctx, packID, testData, testMetadata)
 	if err != nil {
 		t.Fatalf("Failed to save image: %v", err)
 	}
 
 	// Verify image exists
-	exists, err := storage.Exists(ctx, packID)
+	exists, err := testStorage.Exists(ctx, packID)
 	if err != nil {
 		t.Fatalf("Failed to check existence: %v", err)
 	}
@@ -72,7 +86,7 @@ func TestDBImageStorage_Save(t *testing.T) {
 	}
 
 	// Retrieve and verify
-	img, err := storage.Get(ctx, packID)
+	img, err := testStorage.Get(ctx, packID)
 	if err != nil {
 		t.Fatalf("Failed to get image: %v", err)
 	}
@@ -89,11 +103,11 @@ func TestDBImageStorage_Save(t *testing.T) {
 
 func TestDBImageStorage_Update(t *testing.T) {
 	ctx := context.Background()
-	packID := uint(1000)
+	packID := uint(1000) // From testPacks[1]
 
-	// Clean up after test
+	// Clean up image after test (pack cleanup handled by TestMain)
 	defer func() {
-		_ = storage.Delete(ctx, packID)
+		_ = testStorage.Delete(ctx, packID)
 	}()
 
 	// Save initial image
@@ -105,7 +119,7 @@ func TestDBImageStorage_Update(t *testing.T) {
 		Height:   480,
 	}
 
-	err := storage.Save(ctx, packID, initialData, initialMetadata)
+	err := testStorage.Save(ctx, packID, initialData, initialMetadata)
 	if err != nil {
 		t.Fatalf("Failed to save initial image: %v", err)
 	}
@@ -119,13 +133,13 @@ func TestDBImageStorage_Update(t *testing.T) {
 		Height:   1080,
 	}
 
-	err = storage.Save(ctx, packID, updatedData, updatedMetadata)
+	err = testStorage.Save(ctx, packID, updatedData, updatedMetadata)
 	if err != nil {
 		t.Fatalf("Failed to update image: %v", err)
 	}
 
 	// Verify updated data
-	img, err := storage.Get(ctx, packID)
+	img, err := testStorage.Get(ctx, packID)
 	if err != nil {
 		t.Fatalf("Failed to get updated image: %v", err)
 	}
@@ -139,20 +153,23 @@ func TestDBImageStorage_Update(t *testing.T) {
 
 func TestDBImageStorage_Get(t *testing.T) {
 	ctx := context.Background()
-	packID := uint(1001)
+	packID := uint(1001) // From testPacks[2]
 
-	// Clean up after test
+	// Clean up image after test (pack cleanup handled by TestMain)
 	defer func() {
-		_ = storage.Delete(ctx, packID)
+		_ = testStorage.Delete(ctx, packID)
 	}()
 
 	// Test getting non-existent image
-	img, err := storage.Get(ctx, packID)
-	if err != nil {
-		t.Fatalf("Get should not error for non-existent image: %v", err)
+	img, err := testStorage.Get(ctx, packID)
+	if err == nil {
+		t.Fatal("Get should return ErrNotFound for non-existent image")
+	}
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("Expected ErrNotFound, got: %v", err)
 	}
 	if img != nil {
-		t.Error("Image should be nil for non-existent pack")
+		t.Error("Image should be nil when ErrNotFound is returned")
 	}
 
 	// Save image
@@ -164,13 +181,13 @@ func TestDBImageStorage_Get(t *testing.T) {
 		Height:   768,
 	}
 
-	err = storage.Save(ctx, packID, testData, testMetadata)
+	err = testStorage.Save(ctx, packID, testData, testMetadata)
 	if err != nil {
 		t.Fatalf("Failed to save image: %v", err)
 	}
 
 	// Get existing image
-	img, err = storage.Get(ctx, packID)
+	img, err = testStorage.Get(ctx, packID)
 	if err != nil {
 		t.Fatalf("Failed to get image: %v", err)
 	}
@@ -184,7 +201,9 @@ func TestDBImageStorage_Get(t *testing.T) {
 
 func TestDBImageStorage_Delete(t *testing.T) {
 	ctx := context.Background()
-	packID := uint(1002)
+	packID := uint(1002) // From testPacks[3]
+
+	// No cleanup needed - delete test verifies deletion (pack cleanup handled by TestMain)
 
 	// Save image
 	testData := []byte("test data for delete")
@@ -195,13 +214,13 @@ func TestDBImageStorage_Delete(t *testing.T) {
 		Height:   600,
 	}
 
-	err := storage.Save(ctx, packID, testData, testMetadata)
+	err := testStorage.Save(ctx, packID, testData, testMetadata)
 	if err != nil {
 		t.Fatalf("Failed to save image: %v", err)
 	}
 
 	// Verify it exists
-	exists, err := storage.Exists(ctx, packID)
+	exists, err := testStorage.Exists(ctx, packID)
 	if err != nil {
 		t.Fatalf("Failed to check existence: %v", err)
 	}
@@ -210,13 +229,13 @@ func TestDBImageStorage_Delete(t *testing.T) {
 	}
 
 	// Delete image
-	err = storage.Delete(ctx, packID)
+	err = testStorage.Delete(ctx, packID)
 	if err != nil {
 		t.Fatalf("Failed to delete image: %v", err)
 	}
 
 	// Verify it doesn't exist
-	exists, err = storage.Exists(ctx, packID)
+	exists, err = testStorage.Exists(ctx, packID)
 	if err != nil {
 		t.Fatalf("Failed to check existence after delete: %v", err)
 	}
@@ -225,7 +244,7 @@ func TestDBImageStorage_Delete(t *testing.T) {
 	}
 
 	// Test idempotency - delete again should not error
-	err = storage.Delete(ctx, packID)
+	err = testStorage.Delete(ctx, packID)
 	if err != nil {
 		t.Errorf("Delete should be idempotent: %v", err)
 	}
@@ -233,15 +252,15 @@ func TestDBImageStorage_Delete(t *testing.T) {
 
 func TestDBImageStorage_Exists(t *testing.T) {
 	ctx := context.Background()
-	packID := uint(1003)
+	packID := uint(1003) // From testPacks[4]
 
-	// Clean up after test
+	// Clean up image after test (pack cleanup handled by TestMain)
 	defer func() {
-		_ = storage.Delete(ctx, packID)
+		_ = testStorage.Delete(ctx, packID)
 	}()
 
 	// Check non-existent image
-	exists, err := storage.Exists(ctx, packID)
+	exists, err := testStorage.Exists(ctx, packID)
 	if err != nil {
 		t.Fatalf("Failed to check existence: %v", err)
 	}
@@ -258,13 +277,13 @@ func TestDBImageStorage_Exists(t *testing.T) {
 		Height:   600,
 	}
 
-	err = storage.Save(ctx, packID, testData, testMetadata)
+	err = testStorage.Save(ctx, packID, testData, testMetadata)
 	if err != nil {
 		t.Fatalf("Failed to save image: %v", err)
 	}
 
 	// Check existing image
-	exists, err = storage.Exists(ctx, packID)
+	exists, err = testStorage.Exists(ctx, packID)
 	if err != nil {
 		t.Fatalf("Failed to check existence: %v", err)
 	}

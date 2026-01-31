@@ -55,11 +55,13 @@ func returnPacks() (dataset.Packs, error) {
 	rows, err := database.DB().QueryContext(context.Background(),
 		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
 		COALESCE(SUM(pc.quantity), 0) as items_count,
-		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight
+		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight,
+		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image
 		FROM pack p
 		LEFT JOIN pack_content pc ON p.id = pc.pack_id
 		LEFT JOIN inventory i ON pc.item_id = i.id
-		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at
+		LEFT JOIN pack_images pi ON p.id = pi.pack_id
+		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at, pi.pack_id
 		ORDER BY p.id;`)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -81,6 +83,7 @@ func returnPacks() (dataset.Packs, error) {
 			&pack.UpdatedAt,
 			&pack.PackItemsCount,
 			&pack.PackWeight,
+			&pack.HasImage,
 		)
 		if err != nil {
 			return nil, err
@@ -191,12 +194,14 @@ func FindPackByID(id uint) (*dataset.Pack, error) {
 	row := database.DB().QueryRowContext(context.Background(),
 		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
 		COALESCE(SUM(pc.quantity), 0) as items_count,
-		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight
+		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight,
+		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image
 		FROM pack p
 		LEFT JOIN pack_content pc ON p.id = pc.pack_id
 		LEFT JOIN inventory i ON pc.item_id = i.id
+		LEFT JOIN pack_images pi ON p.id = pi.pack_id
 		WHERE p.id = $1
-		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at;`,
+		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at, pi.pack_id;`,
 		id)
 	err := row.Scan(
 		&pack.ID,
@@ -207,7 +212,8 @@ func FindPackByID(id uint) (*dataset.Pack, error) {
 		&pack.CreatedAt,
 		&pack.UpdatedAt,
 		&pack.PackItemsCount,
-		&pack.PackWeight)
+		&pack.PackWeight,
+		&pack.HasImage)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -1283,12 +1289,15 @@ func findPacksByUserID(id uint) (*dataset.Packs, error) {
 	rows, err := database.DB().QueryContext(context.Background(), `
 		SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
 		COALESCE(SUM(pc.quantity), 0) as items_count,
-		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight
+		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight,
+		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image
 		FROM pack p
 		LEFT JOIN pack_content pc ON p.id = pc.pack_id
 		LEFT JOIN inventory i ON pc.item_id = i.id
+		LEFT JOIN pack_images pi ON p.id = pi.pack_id
 		WHERE p.user_id = $1
-		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at;`, id)
+		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code,
+		         p.created_at, p.updated_at, pi.pack_id;`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -1305,7 +1314,8 @@ func findPacksByUserID(id uint) (*dataset.Packs, error) {
 			&pack.CreatedAt,
 			&pack.UpdatedAt,
 			&pack.PackItemsCount,
-			&pack.PackWeight)
+			&pack.PackWeight,
+			&pack.HasImage)
 		if err != nil {
 			return nil, err
 		}
@@ -1650,9 +1660,11 @@ func findPackIDBySharingCode(sharingCode string) (uint, error) {
 // Returns nil if pack not found or sharing_code is NULL.
 func returnPackInfoBySharingCode(ctx context.Context, sharingCode string) (*dataset.SharedPackInfo, error) {
 	query := `
-		SELECT id, pack_name, pack_description, created_at
-		FROM pack
-		WHERE sharing_code = $1 AND sharing_code IS NOT NULL
+		SELECT p.id, p.pack_name, p.pack_description, p.created_at,
+		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image
+		FROM pack p
+		LEFT JOIN pack_images pi ON p.id = pi.pack_id
+		WHERE p.sharing_code = $1 AND p.sharing_code IS NOT NULL
 	`
 
 	var packInfo dataset.SharedPackInfo
@@ -1661,6 +1673,7 @@ func returnPackInfoBySharingCode(ctx context.Context, sharingCode string) (*data
 		&packInfo.PackName,
 		&packInfo.PackDescription,
 		&packInfo.CreatedAt,
+		&packInfo.HasImage,
 	)
 
 	if err != nil {

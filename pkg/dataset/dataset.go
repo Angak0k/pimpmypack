@@ -44,6 +44,7 @@ type Pack struct {
 	PackWeight      int       `json:"pack_weight"`
 	PackItemsCount  int       `json:"pack_items_count"`
 	SharingCode     *string   `json:"sharing_code,omitempty"`
+	HasImage        bool      `json:"has_image"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
@@ -167,6 +168,7 @@ type SharedPackInfo struct {
 	ID              uint      `json:"id"`
 	PackName        string    `json:"pack_name"`
 	PackDescription string    `json:"pack_description"`
+	HasImage        bool      `json:"has_image"`
 	CreatedAt       time.Time `json:"created_at"`
 }
 

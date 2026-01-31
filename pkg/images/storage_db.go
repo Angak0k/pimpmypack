@@ -56,7 +56,7 @@ func (s *DBImageStorage) Save(ctx context.Context, packID uint, data []byte, met
 }
 
 // Get retrieves an image for a pack from the database
-// Returns nil, nil if the image doesn't exist
+// Returns ErrNotFound if the image doesn't exist
 func (s *DBImageStorage) Get(ctx context.Context, packID uint) (*Image, error) {
 	query := `
 		SELECT image_data, mime_type, file_size, width, height
@@ -75,7 +75,7 @@ func (s *DBImageStorage) Get(ctx context.Context, packID uint) (*Image, error) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil // Not found is not an error
+			return nil, ErrNotFound
 		}
 		return nil, fmt.Errorf("failed to get image: %w", err)
 	}
