@@ -455,6 +455,48 @@ For each phase, provide:
 - Status notes (blockers, pending items)
 - Deviations or decisions
 
+## 🌿 Branch Workflow
+
+### Before Starting Any Implementation
+
+**ALWAYS follow this workflow before beginning work on a new feature:**
+
+1. **Checkout main branch**:
+
+   ```bash
+   git checkout main
+   ```
+
+2. **Pull latest changes**:
+
+   ```bash
+   git pull origin main
+   ```
+
+3. **Create new feature branch from main**:
+
+   ```bash
+   git checkout -b feat/feature-name
+   ```
+
+### Branch Naming Conventions
+
+Use descriptive branch names with appropriate prefixes:
+
+- `feat/` - New features (e.g., `feat/pack-image-upload`)
+- `fix/` - Bug fixes (e.g., `fix/login-401-status`)
+- `docs/` - Documentation updates (e.g., `docs/api-endpoints`)
+- `refactor/` - Code refactoring (e.g., `refactor/pack-sharing`)
+- `test/` - Test additions or fixes (e.g., `test/inventory-dedup`)
+- `chore/` - Maintenance tasks (e.g., `chore/deps-update`)
+
+### Rationale
+
+- Ensures you're working from the latest code
+- Prevents merge conflicts and integration issues
+- Maintains clean git history
+- Follows standard Git workflow best practices
+
 ## 🚫 Git and Remote Operations Policy
 
 ### CRITICAL: Never Push Without Explicit Approval
