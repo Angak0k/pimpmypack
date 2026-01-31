@@ -178,7 +178,224 @@ Not as an afterthought:
 - Implement tests as you implement features
 - Update tests immediately when behavior changes
 
-#### 2. Test Data Management
+#### 2. Test Data Organization
+
+**Use centralized testdata.go files following project convention:**
+
+This project uses a consistent pattern for managing test data across all packages (accounts, inventories, packs, images, etc.).
+
+##### Pattern Structure
+
+```
+pkg/package_name/
+├── testdata.go              # Centralized test data management
+├── package_test.go          # Unit tests
+├── integration_test.go      # Integration tests (if needed)
+└── testdata/                # Static test files (images, CSVs, etc.)
+    ├── README.md            # Documentation of test files
+    └── ...                  # Test resource files
+```
+
+##### testdata.go Template
+
+```go
+package packagename
+
+import (
+    "context"
+    "database/sql"
+    "fmt"
+    "time"
+
+    "github.com/Angak0k/pimpmypack/pkg/database"
+    "github.com/Angak0k/pimpmypack/pkg/dataset"
+)
+
+// Test data structures
+var testRecords = []dataset.RecordType{
+    {
+        ID:          999,
+        UserID:      1,
+        Name:        "Test Record 1",
+        Description: "Test description",
+    },
+    {
+        ID:          1000,
+        UserID:      1,
+        Name:        "Test Record 2",
+        Description: "Another test",
+    },
+}
+
+// loadTestData creates test records in the database
+func loadTestData() error {
+    ctx := context.Background()
+
+    // Start transaction
+    tx, err := database.DB().BeginTx(ctx, nil)
+    if err != nil {
+        return fmt.Errorf("failed to begin transaction: %w", err)
+    }
+    defer func() {
+        if err != nil {
+            _ = tx.Rollback()
+        }
+    }()
+
+    println("-> Loading test data...")
+
+    // Insert test records
+    for i := range testRecords {
+        // Check if already exists
+        var existingID int
+        err := tx.QueryRowContext(ctx,
+            "SELECT id FROM table_name WHERE id = $1", testRecords[i].ID).Scan(&existingID)
+        if err == nil {
+            continue // Already exists
+        } else if err != sql.ErrNoRows {
+            return fmt.Errorf("failed to check existing record: %w", err)
+        }
+
+        // Insert new record
+        _, err = tx.ExecContext(ctx,
+            `INSERT INTO table_name (id, user_id, name, description, created_at, updated_at)
+            VALUES ($1, $2, $3, $4, $5, $6)`,
+            testRecords[i].ID,
+            testRecords[i].UserID,
+            testRecords[i].Name,
+            testRecords[i].Description,
+            time.Now().Truncate(time.Second),
+            time.Now().Truncate(time.Second))
+        if err != nil {
+            return fmt.Errorf("failed to insert record %d: %w", testRecords[i].ID, err)
+        }
+    }
+
+    // Commit transaction
+    if err := tx.Commit(); err != nil {
+        return fmt.Errorf("failed to commit: %w", err)
+    }
+
+    println("-> Test data loaded...")
+    return nil
+}
+
+// cleanupTestData removes test records
+func cleanupTestData() error {
+    ctx := context.Background()
+    println("-> Cleaning up test data...")
+
+    for _, record := range testRecords {
+        _, err := database.DB().ExecContext(ctx, "DELETE FROM table_name WHERE id = $1", record.ID)
+        if err != nil {
+            return fmt.Errorf("failed to delete record %d: %w", record.ID, err)
+        }
+    }
+
+    println("-> Test data cleaned up...")
+    return nil
+}
+```
+
+##### TestMain Integration
+
+```go
+func TestMain(m *testing.M) {
+    // Init environment
+    err := config.EnvInit("../../.env")
+    if err != nil {
+        log.Fatalf("Error loading .env: %v", err)
+    }
+
+    // Init database
+    err = database.Initialization()
+    if err != nil {
+        log.Fatalf("Error connecting database: %v", err)
+    }
+
+    // Run migrations
+    err = database.Migrate()
+    if err != nil {
+        log.Fatalf("Error migrating database: %v", err)
+    }
+
+    // Load test data ONCE for all tests
+    err = loadTestData()
+    if err != nil {
+        log.Fatalf("Error loading test data: %v", err)
+    }
+
+    // Run tests
+    ret := m.Run()
+
+    // Cleanup
+    if err := cleanupTestData(); err != nil {
+        log.Printf("Warning: failed to cleanup: %v", err)
+    }
+
+    os.Exit(ret)
+}
+```
+
+##### Test Usage
+
+```go
+func TestSomeFeature(t *testing.T) {
+    ctx := context.Background()
+    recordID := uint(999) // From testRecords[0]
+
+    // Clean up any side effects after test
+    defer func() {
+        // Only clean up test artifacts, not the test records themselves
+        database.DB().ExecContext(ctx, "DELETE FROM related_table WHERE record_id = $1", recordID)
+    }()
+
+    // Test logic uses pre-existing test records
+    result, err := someFunction(ctx, recordID)
+    if err != nil {
+        t.Fatalf("Failed: %v", err)
+    }
+    // Assertions...
+}
+```
+
+##### Benefits of This Pattern
+
+1. **Consistency**: Same pattern across all packages (accounts, packs, inventories, images)
+2. **DRY**: Eliminates repetitive setup/teardown in each test
+3. **Performance**: Test data created once, not per-test
+4. **Maintainability**: Centralized test data definition
+5. **Readability**: Tests focus on behavior, not boilerplate
+6. **Transactions**: Proper error handling with rollback support
+
+##### Real-World Examples in Codebase
+
+- `pkg/accounts/testdata.go` - User account test fixtures
+- `pkg/packs/testdata.go` - Pack and pack content fixtures with relationships
+- `pkg/inventories/testdata.go` - Inventory item fixtures
+- `pkg/images/testdata.go` - Test pack fixtures for image storage tests
+
+##### Static Test Files
+
+For packages that need static test resources (images, CSV files, etc.):
+
+1. Create `testdata/` directory
+2. Add `README.md` documenting each test file
+3. Include generation scripts if needed (e.g., `generate_test_images.go`)
+4. Reference files in tests: `os.ReadFile("testdata/file.jpg")`
+
+Example from images package:
+```
+pkg/images/testdata/
+├── README.md                    # Documents all test files
+├── generate_test_images.go      # Script to regenerate test images
+├── valid.jpg                    # Test JPEG (8KB)
+├── valid.png                    # Test PNG (2KB)
+├── large.jpg                    # Large image for resize testing
+└── invalid.txt                  # Invalid format for error testing
+```
+
+#### 3. Test Data Management
 
 Use consistent patterns for test data:
 
@@ -454,6 +671,48 @@ For each phase, provide:
 - Implementation details (files, functions)
 - Status notes (blockers, pending items)
 - Deviations or decisions
+
+## 🌿 Branch Workflow
+
+### Before Starting Any Implementation
+
+**ALWAYS follow this workflow before beginning work on a new feature:**
+
+1. **Checkout main branch**:
+
+   ```bash
+   git checkout main
+   ```
+
+2. **Pull latest changes**:
+
+   ```bash
+   git pull origin main
+   ```
+
+3. **Create new feature branch from main**:
+
+   ```bash
+   git checkout -b feat/feature-name
+   ```
+
+### Branch Naming Conventions
+
+Use descriptive branch names with appropriate prefixes:
+
+- `feat/` - New features (e.g., `feat/pack-image-upload`)
+- `fix/` - Bug fixes (e.g., `fix/login-401-status`)
+- `docs/` - Documentation updates (e.g., `docs/api-endpoints`)
+- `refactor/` - Code refactoring (e.g., `refactor/pack-sharing`)
+- `test/` - Test additions or fixes (e.g., `test/inventory-dedup`)
+- `chore/` - Maintenance tasks (e.g., `chore/deps-update`)
+
+### Rationale
+
+- Ensures you're working from the latest code
+- Prevents merge conflicts and integration issues
+- Maintains clean git history
+- Follows standard Git workflow best practices
 
 ## 🚫 Git and Remote Operations Policy
 

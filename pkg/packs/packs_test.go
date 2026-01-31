@@ -1111,7 +1111,7 @@ func TestCheckPackOwnership(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Call the function under test
-			test, err := checkPackOwnership(tc.packID, tc.userID)
+			test, err := CheckPackOwnership(tc.packID, tc.userID)
 			if err != nil {
 				t.Fatalf("Failed to check pack ownership: %v", err)
 			}

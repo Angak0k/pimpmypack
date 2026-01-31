@@ -158,6 +158,7 @@ type SharedPackInfo struct {
     ID              uint      `json:"id"`
     PackName        string    `json:"pack_name"`
     PackDescription string    `json:"pack_description"`
+    HasImage        bool      `json:"has_image"`
     CreatedAt       time.Time `json:"created_at"`
     // Note: UserID and SharingCode are intentionally NOT included
     // Note: Worn and Consumable are at item level (in PackContents), not pack level

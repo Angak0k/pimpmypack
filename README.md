@@ -29,8 +29,10 @@ docker run --name pmp_db \
     -d -p 5432:5432 \
     -e POSTGRES_PASSWORD=pmp1234 \
     -e POSTGRES_USER=pmp_user \
-    -e POSTGRES_DB=pmp_db postgres:14-alpine
+    -e POSTGRES_DB=pmp_db postgres:17
 ```
+
+**Note:** PostgreSQL 17 is required for this project.
 
 ### 4. Configure the environment
 
