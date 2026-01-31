@@ -67,12 +67,3 @@ type PasswordUpdateInput struct {
 type Token struct {
 	Token string `json:"token"`
 }
-
-// MailServer represents mail server configuration
-type MailServer struct {
-	MailServer   string `json:"mail_server"`
-	MailPort     int    `json:"mail_port"`
-	MailIdentity string `json:"mail_identity"`
-	MailUsername string `json:"mail_username"`
-	MailPassword string `json:"mail_password"`
-}

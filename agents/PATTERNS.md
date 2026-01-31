@@ -909,14 +909,28 @@ func GetMyProfile(c *gin.Context) {
 
 ### Type References in Swagger
 
-When referencing types in Swagger comments, use the full package path:
+When referencing types in Swagger comments:
+
+- **Same package**: Use just the type name (swaggo can resolve it automatically)
+- **Different package**: Use the full package path (e.g., `apitypes.ErrorResponse`)
 
 ```go
-// @Success 200 {object} accounts.User "User object"
-// @Success 200 {object} packs.Packs "List of packs"
-// @Success 200 {object} inventories.Inventory "Inventory item"
+// In pkg/packs/packs.go - types from same package, no prefix needed
+// @Success 200 {object} Pack "Single pack"
+// @Success 200 {object} Packs "List of packs"
+
+// Types from different packages need full path
 // @Success 200 {object} apitypes.OkResponse "Success response"
 // @Failure 400 {object} apitypes.ErrorResponse "Error response"
+```
+
+```go
+// In pkg/accounts/accounts.go - same package types
+// @Success 200 {object} Account "User account"
+// @Success 200 {object} Token "Authentication token"
+
+// Cross-package references
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
 ```
 
 ## Recurring Patterns Summary
