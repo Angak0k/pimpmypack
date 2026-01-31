@@ -503,18 +503,20 @@ testdata/
 
 **Status**: All image processing functionality implemented and tested. Magic bytes validation for JPEG/PNG/WebP, high-quality Catmull-Rom resize algorithm, JPEG encoding with quality 85, and EXIF stripping via re-encoding. All 12 unit tests passing.
 
-### Phase 3: Storage Layer
+### Phase 3: Storage Layer ✅ Completed (2026-01-31)
 
-- [ ] Define `ImageStorage` interface
-- [ ] Implement `DBImageStorage`
-- [ ] Write storage unit tests
-- [ ] Test CRUD operations
+- [x] Define `ImageStorage` interface
+- [x] Implement `DBImageStorage`
+- [x] Write storage unit tests
+- [x] Test CRUD operations
 
 **Files**:
 
-- `pkg/images/storage.go`
-- `pkg/images/storage_db.go`
-- `pkg/images/storage_test.go`
+- `pkg/images/storage.go` - ImageStorage interface for pluggable backends
+- `pkg/images/storage_db.go` - PostgreSQL implementation with UPSERT support
+- `pkg/images/storage_test.go` - Integration tests for CRUD operations (5 test cases)
+
+**Status**: Storage layer complete with interface-based design for future S3 migration. Database implementation uses UPSERT for idempotent saves and handles all CRUD operations. Integration tests verify Save, Update, Get, Delete, and Exists operations.
 
 ### Phase 4: HTTP Handlers
 
