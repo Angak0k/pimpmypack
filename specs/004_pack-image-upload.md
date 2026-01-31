@@ -122,11 +122,7 @@ Currently, packs have no visual representation beyond their text metadata (name,
 
 ```sql
 CREATE TABLE pack_images (
-<<<<<<< HEAD
     pack_id INTEGER PRIMARY KEY REFERENCES pack(id) ON DELETE CASCADE,
-=======
-    pack_id INTEGER PRIMARY KEY REFERENCES packs(id) ON DELETE CASCADE,
->>>>>>> 095513c (docs: add pack image upload specification)
     image_data BYTEA NOT NULL,
     mime_type VARCHAR(50) NOT NULL DEFAULT 'image/jpeg',
     file_size INTEGER NOT NULL,
@@ -152,11 +148,7 @@ CREATE TABLE pack_images (
 
 ```sql
 CREATE TABLE pack_images (
-<<<<<<< HEAD
     pack_id INTEGER PRIMARY KEY REFERENCES pack(id) ON DELETE CASCADE,
-=======
-    pack_id INTEGER PRIMARY KEY REFERENCES packs(id) ON DELETE CASCADE,
->>>>>>> 095513c (docs: add pack image upload specification)
     image_data BYTEA NOT NULL,
     mime_type VARCHAR(50) NOT NULL DEFAULT 'image/jpeg',
     file_size INTEGER NOT NULL,
@@ -168,10 +160,6 @@ CREATE TABLE pack_images (
 
 **Down migration** (`000011_pack_images.down.sql`):
 ```sql
-<<<<<<< HEAD
-=======
-DROP INDEX IF EXISTS idx_pack_images_uploaded_at;
->>>>>>> 095513c (docs: add pack image upload specification)
 DROP TABLE IF EXISTS pack_images;
 ```
 
@@ -486,26 +474,17 @@ testdata/
 
 ## 📝 Implementation Plan
 
-<<<<<<< HEAD
 ### Phase 1: Database Schema ✅ Completed (2026-01-31)
 
 - [x] Create migration files (up/down)
 - [x] Test migration on development database
 - [x] Verify CASCADE deletion works
-=======
-### Phase 1: Database Schema
-
-- [ ] Create migration files (up/down)
-- [ ] Test migration on development database
-- [ ] Verify CASCADE deletion works
->>>>>>> 095513c (docs: add pack image upload specification)
 
 **Files**:
 
 - `pkg/database/migration/migration_scripts/000011_pack_images.up.sql`
 - `pkg/database/migration/migration_scripts/000011_pack_images.down.sql`
 
-<<<<<<< HEAD
 **Status**: Migration files created. Migrations are embedded using `//go:embed` and will be automatically applied when application starts. CASCADE deletion is enforced by `ON DELETE CASCADE` constraint on pack_id foreign key.
 
 ### Phase 2: Image Processing ✅ Completed (2026-01-31)
@@ -642,78 +621,6 @@ The build succeeds with no errors.
 3. `DELETE /api/v1/mypack/{id}/image` - Delete pack image (authenticated)
 
 **Status**: Documentation complete. Swagger API documentation regenerated successfully. All three image endpoints are now available in the Swagger UI with full parameter descriptions, response schemas, and security requirements. The spec document serves as comprehensive reference for the feature.
-=======
-### Phase 2: Image Processing
-
-- [ ] Create `pkg/images` package
-- [ ] Implement image validation (format, size, MIME type)
-- [ ] Implement resize logic (maintain aspect ratio)
-- [ ] Implement JPEG conversion (quality 85)
-- [ ] Implement EXIF stripping
-- [ ] Write unit tests for all processing functions
-
-**Files**:
-
-- `pkg/images/processor.go`
-- `pkg/images/processor_test.go`
-
-### Phase 3: Storage Layer
-
-- [ ] Define `ImageStorage` interface
-- [ ] Implement `DBImageStorage`
-- [ ] Write storage unit tests
-- [ ] Test CRUD operations
-
-**Files**:
-
-- `pkg/images/storage.go`
-- `pkg/images/storage_db.go`
-- `pkg/images/storage_test.go`
-
-### Phase 4: HTTP Handlers
-
-- [ ] Implement POST `/api/v1/mypack/{id}/image` handler
-- [ ] Implement GET `/api/v1/packs/{id}/image` handler
-- [ ] Implement DELETE `/api/v1/mypack/{id}/image` handler
-- [ ] Add ownership verification
-- [ ] Add cache headers for GET
-- [ ] Write handler tests
-
-**Files**:
-
-- `pkg/images/handlers.go`
-- `pkg/images/handlers_test.go`
-
-### Phase 5: API Integration
-
-- [ ] Register routes in `main.go`
-- [ ] Apply authentication middleware
-- [ ] Update Swagger documentation
-- [ ] Add `has_image` field to Pack struct
-- [ ] Update pack handlers to populate `has_image`
-
-**Files**:
-
-- `main.go`
-- `pkg/dataset/dataset.go`
-- `pkg/packs/handlers.go` (for `has_image` field)
-
-### Phase 6: Testing
-
-- [ ] Create test images in `testdata/`
-- [ ] Run all unit tests
-- [ ] Run integration tests
-- [ ] Test with real images (various formats/sizes)
-- [ ] Verify cascade deletion
-- [ ] Performance test (image processing speed)
-
-### Phase 7: Documentation
-
-- [ ] Update API documentation
-- [ ] Add code comments
-- [ ] Document processing pipeline
-- [ ] Update README if needed
->>>>>>> 095513c (docs: add pack image upload specification)
 
 ---
 
