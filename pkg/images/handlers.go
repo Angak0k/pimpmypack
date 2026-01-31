@@ -185,11 +185,16 @@ func GetPackImage(c *gin.Context) {
 		return
 	}
 
-	// Set cache headers
-	etag := fmt.Sprintf(`"%d-%d"`, packID, time.Now().Unix())
-	c.Header("Cache-Control", "public, max-age=86400") // 24 hours
+	// Set cache headers based on stable metadata
+	isPrivate := pack.SharingCode == nil || *pack.SharingCode == ""
+	cacheControl := "public, max-age=86400" // 24 hours
+	if isPrivate {
+		cacheControl = "private, max-age=86400"
+	}
+	etag := fmt.Sprintf(`"%d-%d"`, packID, pack.UpdatedAt.Unix())
+	c.Header("Cache-Control", cacheControl)
 	c.Header("ETag", etag)
-	c.Header("Last-Modified", time.Now().UTC().Format(http.TimeFormat))
+	c.Header("Last-Modified", pack.UpdatedAt.UTC().Format(http.TimeFormat))
 
 	// Return image binary
 	c.Data(http.StatusOK, img.Metadata.MimeType, img.Data)
