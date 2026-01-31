@@ -79,6 +79,12 @@ type LighterPackItem struct {
 // LighterPack represents a collection of LighterPack items
 type LighterPack []LighterPackItem
 
+// ImportLighterPackResponse represents the response when importing from LighterPack
+type ImportLighterPackResponse struct {
+	Message string `json:"message"`
+	PackID  uint   `json:"pack_id"`
+}
+
 // SharedPackResponse represents the response structure for shared pack endpoint
 type SharedPackResponse struct {
 	Pack     SharedPackInfo       `json:"pack"`
