@@ -8,7 +8,27 @@ import (
 var (
 	// ErrNotFound is returned when an image is not found
 	ErrNotFound = errors.New("image not found")
+	// ErrInvalidFormat is returned when the image format is not supported
+	ErrInvalidFormat = errors.New("invalid image format")
+	// ErrTooLarge is returned when the image exceeds size limits
+	ErrTooLarge = errors.New("image too large")
+	// ErrCorrupted is returned when the image is corrupted
+	ErrCorrupted = errors.New("image corrupted")
 )
+
+// ImageMetadata contains metadata about a processed image
+type ImageMetadata struct {
+	MimeType string
+	FileSize int
+	Width    int
+	Height   int
+}
+
+// ProcessedImage contains the processed image data and metadata
+type ProcessedImage struct {
+	Data     []byte
+	Metadata ImageMetadata
+}
 
 // Image represents an image with its data and metadata
 type Image struct {

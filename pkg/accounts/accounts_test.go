@@ -15,7 +15,6 @@ import (
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/gin-gonic/gin"
 	"github.com/gruntwork-io/terratest/modules/random"
@@ -63,7 +62,7 @@ func TestGetAccounts(t *testing.T) {
 	router.GET("/accounts", GetAccounts)
 
 	t.Run("Account List Retrieved", func(t *testing.T) {
-		var getAccounts dataset.Accounts
+		var getAccounts Accounts
 		// Create a mock HTTP request to the /accounts endpoint
 		req, err := http.NewRequest(http.MethodGet, "/accounts", nil)
 		if err != nil {
@@ -127,7 +126,7 @@ func TestGetAccountByID(t *testing.T) {
 		}
 
 		// Unmarshal the response body into an account struct
-		var receivedAccount dataset.Account
+		var receivedAccount Account
 		if err := json.Unmarshal(w.Body.Bytes(), &receivedAccount); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
@@ -187,7 +186,7 @@ func TestPostAccount(t *testing.T) {
 }
 
 func testInsertValidAccount(t *testing.T, router *gin.Engine) {
-	newAccount := dataset.Account{
+	newAccount := Account{
 		Username:  "Jane",
 		Email:     "jane.doe@example.com",
 		Firstname: "Jane",
@@ -210,7 +209,7 @@ func testInsertValidAccount(t *testing.T, router *gin.Engine) {
 }
 
 func testInsertAccountWithBadEmail(t *testing.T, router *gin.Engine) {
-	badAccount := dataset.Account{
+	badAccount := Account{
 		Username:  "Jules",
 		Email:     "jules.doe@example",
 		Firstname: "Jules",
@@ -241,7 +240,7 @@ func TestPutAccountByID(t *testing.T) {
 	router.PUT("/accounts/:id", PutAccountByID)
 
 	// Sample account data (with the third user in the dataset)
-	testUpdatedAccount := dataset.Account{
+	testUpdatedAccount := Account{
 		ID:        users[2].ID,
 		Username:  users[2].Username,
 		Email:     "joseph.doe@example.com",
@@ -277,7 +276,7 @@ func TestPutAccountByID(t *testing.T) {
 		}
 
 		// Query the database to get the inserted account
-		var updatedAccount dataset.Account
+		var updatedAccount Account
 		row := database.DB().QueryRow(
 			`SELECT id,username, email, firstname, lastname, role, status, created_at, updated_at 
 			FROM account 
@@ -372,7 +371,7 @@ func TestRegisterOK(t *testing.T) {
 
 	t.Run("Register account", func(t *testing.T) {
 		// Sample account data
-		newAccount := dataset.RegisterInput{
+		newAccount := RegisterInput{
 			Username:  "user-" + random.UniqueId(),
 			Password:  "password",
 			Email:     "jane.doe@exemple.com",
@@ -402,7 +401,7 @@ func TestRegisterOK(t *testing.T) {
 		}
 
 		// Query the database to get the inserted account
-		var insertedUser dataset.User
+		var insertedUser User
 		row := database.DB().QueryRow(
 			`SELECT a.username, a.email, a.firstname, a.lastname, a.role, a.status, p.password, a.preferred_currency, 
 			    a.preferred_unit_system, a.created_at, a.updated_at 
@@ -465,7 +464,7 @@ func TestRegisterKO(t *testing.T) {
 	router.POST("/register", Register)
 	t.Run("Register account with bad email", func(t *testing.T) {
 		// Sample account data
-		newAccount := dataset.RegisterInput{
+		newAccount := RegisterInput{
 			Username:  "user-" + random.UniqueId(),
 			Password:  "password",
 			Email:     "jane.doe@exemple",
@@ -498,7 +497,7 @@ func TestRegisterKO(t *testing.T) {
 
 func testLoginWithInvalidUsername(t *testing.T, router *gin.Engine) {
 	// Try to login with a username that doesn't exist
-	invalidLogin := dataset.LoginInput{
+	invalidLogin := LoginInput{
 		Username: "nonexistent-user-" + random.UniqueId(),
 		Password: "anypassword",
 	}
@@ -547,7 +546,7 @@ func testLoginWithIncorrectPassword(t *testing.T, router *gin.Engine, username s
 	}
 
 	// Try to login with wrong password
-	wrongPasswordLogin := dataset.LoginInput{
+	wrongPasswordLogin := LoginInput{
 		Username: username,
 		Password: "wrong-password-123",
 	}
@@ -593,7 +592,7 @@ func TestLogin(t *testing.T) {
 	router.POST("/login", Login)
 
 	// Sample account data
-	newUser := dataset.User{
+	newUser := User{
 		Username:  "user-" + random.UniqueId(),
 		Password:  "password2",
 		Email:     "newuser2@pmp.com",
@@ -604,7 +603,7 @@ func TestLogin(t *testing.T) {
 		CreatedAt: time.Now().Truncate(time.Second),
 		UpdatedAt: time.Now().Truncate(time.Second),
 	}
-	userLogin := dataset.LoginInput{
+	userLogin := LoginInput{
 		Username: newUser.Username,
 		Password: newUser.Password,
 	}
@@ -667,7 +666,7 @@ func TestLogin(t *testing.T) {
 		}
 
 		// Unmarshal the response body into an token struct
-		var receivedToken dataset.Token
+		var receivedToken Token
 		if err := json.Unmarshal(w.Body.Bytes(), &receivedToken); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
@@ -731,7 +730,7 @@ func TestPutMyPassword(t *testing.T) {
 
 	// Test: Incorrect current password
 	t.Run("Incorrect current password", func(t *testing.T) {
-		input := dataset.PasswordUpdateInput{
+		input := PasswordUpdateInput{
 			CurrentPassword: "wrongpassword",
 			NewPassword:     "newpassword",
 		}
@@ -750,7 +749,7 @@ func TestPutMyPassword(t *testing.T) {
 
 	// Test: Same password
 	t.Run("Same password", func(t *testing.T) {
-		input := dataset.PasswordUpdateInput{
+		input := PasswordUpdateInput{
 			CurrentPassword: testUser.Password,
 			NewPassword:     testUser.Password,
 		}
@@ -780,7 +779,7 @@ func TestPutMyPassword(t *testing.T) {
 
 	// Test: Correct current password
 	t.Run("Correct current password", func(t *testing.T) {
-		input := dataset.PasswordUpdateInput{
+		input := PasswordUpdateInput{
 			CurrentPassword: testUser.Password,
 			NewPassword:     "newpassword",
 		}

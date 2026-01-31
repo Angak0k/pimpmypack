@@ -2,7 +2,6 @@ package images
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"image"
 	"image/jpeg"
@@ -28,29 +27,6 @@ const (
 	// MimeTypeWebP is the MIME type for WebP images
 	MimeTypeWebP = "image/webp"
 )
-
-var (
-	// ErrInvalidFormat is returned when the image format is not supported
-	ErrInvalidFormat = errors.New("unsupported image format")
-	// ErrTooLarge is returned when the image size exceeds limits
-	ErrTooLarge = errors.New("image size exceeds maximum allowed")
-	// ErrCorrupted is returned when the image cannot be decoded
-	ErrCorrupted = errors.New("corrupted or invalid image data")
-)
-
-// ImageMetadata contains metadata about a processed image
-type ImageMetadata struct {
-	MimeType string
-	FileSize int
-	Width    int
-	Height   int
-}
-
-// ProcessedImage contains the processed image data and metadata
-type ProcessedImage struct {
-	Data     []byte
-	Metadata ImageMetadata
-}
 
 // ValidateImageFormat checks if the image format is supported by examining magic bytes
 func ValidateImageFormat(data []byte) (string, error) {

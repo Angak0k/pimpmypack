@@ -1,6 +1,6 @@
 basePath: /api
 definitions:
-  dataset.Account:
+  accounts.Account:
     properties:
       created_at:
         type: string
@@ -25,19 +25,68 @@ definitions:
       username:
         type: string
     type: object
-  dataset.ErrorResponse:
-    properties:
-      error:
-        type: string
-    type: object
-  dataset.ForgotPasswordInput:
+  accounts.ForgotPasswordInput:
     properties:
       email:
         type: string
     required:
     - email
     type: object
-  dataset.Inventory:
+  accounts.LoginInput:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  accounts.PasswordUpdateInput:
+    properties:
+      current_password:
+        type: string
+      new_password:
+        type: string
+    required:
+    - current_password
+    - new_password
+    type: object
+  accounts.RegisterInput:
+    properties:
+      email:
+        type: string
+      firstname:
+        type: string
+      lastname:
+        type: string
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - email
+    - firstname
+    - lastname
+    - password
+    - username
+    type: object
+  accounts.Token:
+    properties:
+      token:
+        type: string
+    type: object
+  apitypes.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
+  apitypes.OkResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  inventories.Inventory:
     properties:
       category:
         type: string
@@ -62,22 +111,7 @@ definitions:
       weight:
         type: integer
     type: object
-  dataset.LoginInput:
-    properties:
-      password:
-        type: string
-      username:
-        type: string
-    required:
-    - password
-    - username
-    type: object
-  dataset.OkResponse:
-    properties:
-      message:
-        type: string
-    type: object
-  dataset.Pack:
+  packs.Pack:
     properties:
       created_at:
         type: string
@@ -100,7 +134,7 @@ definitions:
       user_id:
         type: integer
     type: object
-  dataset.PackContent:
+  packs.PackContent:
     properties:
       consumable:
         type: boolean
@@ -119,7 +153,7 @@ definitions:
       worn:
         type: boolean
     type: object
-  dataset.PackContentWithItem:
+  packs.PackContentWithItem:
     properties:
       category:
         type: string
@@ -148,36 +182,7 @@ definitions:
       worn:
         type: boolean
     type: object
-  dataset.PasswordUpdateInput:
-    properties:
-      current_password:
-        type: string
-      new_password:
-        type: string
-    required:
-    - current_password
-    - new_password
-    type: object
-  dataset.RegisterInput:
-    properties:
-      email:
-        type: string
-      firstname:
-        type: string
-      lastname:
-        type: string
-      password:
-        type: string
-      username:
-        type: string
-    required:
-    - email
-    - firstname
-    - lastname
-    - password
-    - username
-    type: object
-  dataset.SharedPackInfo:
+  packs.SharedPackInfo:
     properties:
       created_at:
         type: string
@@ -190,19 +195,14 @@ definitions:
       pack_name:
         type: string
     type: object
-  dataset.SharedPackResponse:
+  packs.SharedPackResponse:
     properties:
       contents:
         items:
-          $ref: '#/definitions/dataset.PackContentWithItem'
+          $ref: '#/definitions/packs.PackContentWithItem'
         type: array
       pack:
-        $ref: '#/definitions/dataset.SharedPackInfo'
-    type: object
-  dataset.Token:
-    properties:
-      token:
-        type: string
+        $ref: '#/definitions/packs.SharedPackInfo'
     type: object
 host: pmp-dev.alki.earth
 info:
@@ -220,15 +220,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dataset.OkResponse'
+            $ref: '#/definitions/apitypes.OkResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       summary: Confirm email address
       tags:
       - Public
@@ -243,22 +243,22 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/dataset.ForgotPasswordInput'
+          $ref: '#/definitions/accounts.ForgotPasswordInput'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dataset.OkResponse'
+            $ref: '#/definitions/apitypes.OkResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       summary: Reset password
       tags:
       - Public
@@ -271,18 +271,18 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/dataset.LoginInput'
+          $ref: '#/definitions/accounts.LoginInput'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dataset.Token'
+            $ref: '#/definitions/accounts.Token'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       summary: User login
       tags:
       - Public
@@ -298,18 +298,18 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/dataset.RegisterInput'
+          $ref: '#/definitions/accounts.RegisterInput'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dataset.OkResponse'
+            $ref: '#/definitions/apitypes.OkResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       summary: Register new user
       tags:
       - Public
@@ -330,15 +330,15 @@ paths:
         "200":
           description: Shared pack with metadata and contents
           schema:
-            $ref: '#/definitions/dataset.SharedPackResponse'
+            $ref: '#/definitions/packs.SharedPackResponse'
         "404":
           description: Pack not found or not shared
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       summary: Get shared pack with metadata
       tags:
       - Public
@@ -359,19 +359,19 @@ paths:
         "200":
           description: CSV data imported successfully
           schema:
-            $ref: '#/definitions/dataset.OkResponse'
+            $ref: '#/definitions/apitypes.OkResponse'
         "400":
           description: Invalid CSV format
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Import from lighterpack csv pack file
@@ -386,19 +386,19 @@ paths:
         "200":
           description: Account Information
           schema:
-            $ref: '#/definitions/dataset.Account'
+            $ref: '#/definitions/accounts.Account'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "404":
           description: Account not found
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Get account info
@@ -414,26 +414,26 @@ paths:
         name: input
         required: true
         schema:
-          $ref: '#/definitions/dataset.Account'
+          $ref: '#/definitions/accounts.Account'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dataset.Account'
+            $ref: '#/definitions/accounts.Account'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Update account info
@@ -449,20 +449,20 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/dataset.Inventory'
+              $ref: '#/definitions/inventories.Inventory'
             type: array
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "404":
           description: No Inventory Found
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Get all inventories of the user
@@ -478,32 +478,68 @@ paths:
         name: inventory
         required: true
         schema:
-          $ref: '#/definitions/dataset.Inventory'
+          $ref: '#/definitions/inventories.Inventory'
       produces:
       - application/json
       responses:
         "201":
           description: Inventory Updated
           schema:
-            $ref: '#/definitions/dataset.Inventory'
+            $ref: '#/definitions/inventories.Inventory'
         "400":
           description: Invalid payload
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Create an inventory
       tags:
       - Inventories
   /v1/myinventory/{id}:
+    delete:
+      description: Deletes an inventory by ID
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory deleted
+          schema:
+            $ref: '#/definitions/apitypes.OkResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "403":
+          description: This item does not belong to you
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Delete an inventory by ID
+      tags:
+      - Inventories
     get:
       description: Retrieves an inventory by ID
       parameters:
@@ -518,23 +554,23 @@ paths:
         "200":
           description: Inventory
           schema:
-            $ref: '#/definitions/dataset.Inventory'
+            $ref: '#/definitions/inventories.Inventory'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "403":
           description: This item does not belong to you
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "404":
           description: Inventory not found
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Get an inventory by ID
@@ -555,14 +591,14 @@ paths:
         name: inventory
         required: true
         schema:
-          $ref: '#/definitions/dataset.Inventory'
+          $ref: '#/definitions/inventories.Inventory'
       produces:
       - application/json
       responses:
         "200":
           description: Inventory Updated
           schema:
-            $ref: '#/definitions/dataset.Inventory'
+            $ref: '#/definitions/inventories.Inventory'
         "400":
           description: Invalid payload
           schema:
@@ -599,26 +635,26 @@ paths:
         name: pack
         required: true
         schema:
-          $ref: '#/definitions/dataset.Pack'
+          $ref: '#/definitions/packs.Pack'
       produces:
       - application/json
       responses:
         "201":
           description: Pack created
           schema:
-            $ref: '#/definitions/dataset.Pack'
+            $ref: '#/definitions/packs.Pack'
         "400":
           description: Invalid Body format
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Create a new pack
@@ -635,30 +671,30 @@ paths:
         name: packcontent
         required: true
         schema:
-          $ref: '#/definitions/dataset.PackContent'
+          $ref: '#/definitions/packs.PackContent'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/dataset.PackContent'
+            $ref: '#/definitions/packs.PackContent'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Create a new pack content
@@ -679,23 +715,23 @@ paths:
         "200":
           description: Pack deleted
           schema:
-            $ref: '#/definitions/dataset.OkResponse'
+            $ref: '#/definitions/apitypes.OkResponse'
         "400":
           description: Invalid ID format
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "403":
           description: This pack does not belong to you
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Delete a pack by ID
@@ -715,27 +751,27 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dataset.Pack'
+            $ref: '#/definitions/packs.Pack'
         "400":
           description: Invalid ID format
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "403":
           description: This pack does not belong to you
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "404":
           description: Pack not found
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Get My pack by ID
@@ -756,30 +792,30 @@ paths:
         name: pack
         required: true
         schema:
-          $ref: '#/definitions/dataset.Pack'
+          $ref: '#/definitions/packs.Pack'
       produces:
       - application/json
       responses:
         "200":
           description: Pack updated
           schema:
-            $ref: '#/definitions/dataset.Pack'
+            $ref: '#/definitions/packs.Pack'
         "400":
           description: Invalid Payload
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "403":
           description: This pack does not belong to you
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Update a pack by ID
@@ -922,23 +958,23 @@ paths:
         "200":
           description: Pack Item deleted
           schema:
-            $ref: '#/definitions/dataset.OkResponse'
+            $ref: '#/definitions/apitypes.OkResponse'
         "400":
           description: Invalid ID format
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "403":
           description: This pack does not belong to you
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Delete a pack content by ID
@@ -964,30 +1000,30 @@ paths:
         name: packcontent
         required: true
         schema:
-          $ref: '#/definitions/dataset.PackContent'
+          $ref: '#/definitions/packs.PackContent'
       produces:
       - application/json
       responses:
         "200":
           description: Pack Content updated
           schema:
-            $ref: '#/definitions/dataset.PackContent'
+            $ref: '#/definitions/packs.PackContent'
         "400":
           description: Invalid Body format
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "403":
           description: This pack does not belong to you
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Update My pack content ID by Pack ID
@@ -1008,27 +1044,27 @@ paths:
         "200":
           description: Pack Item
           schema:
-            $ref: '#/definitions/dataset.PackContent'
+            $ref: '#/definitions/packs.PackContent'
         "400":
           description: Invalid ID format
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "403":
           description: This pack does not belong to you
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "404":
           description: Pack not found
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Get pack content by ID
@@ -1049,27 +1085,27 @@ paths:
         "200":
           description: Pack unshared successfully
           schema:
-            $ref: '#/definitions/dataset.OkResponse'
+            $ref: '#/definitions/apitypes.OkResponse'
         "400":
           description: Invalid ID format
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "403":
           description: This pack does not belong to you
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "404":
           description: Pack not found
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Unshare a pack by ID
@@ -1096,23 +1132,23 @@ paths:
         "400":
           description: Invalid ID format
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "403":
           description: This pack does not belong to you
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "404":
           description: Pack not found
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Share a pack by ID
@@ -1128,20 +1164,20 @@ paths:
           description: Packs
           schema:
             items:
-              $ref: '#/definitions/dataset.Pack'
+              $ref: '#/definitions/packs.Pack'
             type: array
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "404":
           description: No pack found
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Get My Packs
@@ -1158,26 +1194,26 @@ paths:
         name: password
         required: true
         schema:
-          $ref: '#/definitions/dataset.PasswordUpdateInput'
+          $ref: '#/definitions/accounts.PasswordUpdateInput'
       produces:
       - application/json
       responses:
         "200":
           description: Password updated
           schema:
-            $ref: '#/definitions/dataset.OkResponse'
+            $ref: '#/definitions/apitypes.OkResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/dataset.ErrorResponse'
+            $ref: '#/definitions/apitypes.ErrorResponse'
       security:
       - Bearer: []
       summary: Update password

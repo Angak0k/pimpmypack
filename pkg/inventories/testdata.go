@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Angak0k/pimpmypack/pkg/accounts"
 	"github.com/Angak0k/pimpmypack/pkg/database"
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
-	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
-var users = []dataset.User{
+var users = []accounts.User{
 	{
 		Username:     "user-" + random.UniqueId(),
 		Email:        "user-" + random.UniqueId() + "@exemple.com",
@@ -35,7 +34,7 @@ var users = []dataset.User{
 	},
 }
 
-var inventories = dataset.Inventories{
+var inventories = Inventories{
 	{
 		UserID:   1,
 		ItemName: "Backpack",
@@ -134,9 +133,9 @@ func loadingInventoryDataset() error {
 	for i := range inventories {
 		switch inventories[i].UserID {
 		case 1:
-			inventories[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
+			inventories[i].UserID = accounts.FindUserIDByUsername(users, users[0].Username)
 		case 2:
-			inventories[i].UserID = helper.FindUserIDByUsername(users, users[1].Username)
+			inventories[i].UserID = accounts.FindUserIDByUsername(users, users[1].Username)
 		}
 	}
 

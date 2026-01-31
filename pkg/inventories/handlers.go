@@ -1,31 +1,24 @@
 package inventories
 
 import (
-	"context"
-	"database/sql"
 	"errors"
 	"net/http"
 	"time"
 
-	"github.com/Angak0k/pimpmypack/pkg/database"
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
 	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/gin-gonic/gin"
 )
 
-// ErrNoItemFound is returned when no item is found for a given request.
-var ErrNoItemFound = errors.New("no item found")
-
 // GetInventories gets all inventories
 // @Summary [ADMIN] Get all inventories
-// @Description Retrieves a list of all inventories -  for admin use only
+// @Description Retrieves a list of all inventories - for admin use only
 // @Security Bearer
 // @Tags Internal
 // @Produce json
-// @Success 200 {object} dataset.Inventory "List of Inventories"
-// @Failure 404 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Success 200 {object} inventories.Inventories "List of Inventories"
+// @Failure 404 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/inventories [get]
 func GetInventories(c *gin.Context) {
 	inventories, err := returnInventories(c.Request.Context())
@@ -46,67 +39,16 @@ func GetInventories(c *gin.Context) {
 	}
 }
 
-func returnInventories(ctx context.Context) (*dataset.Inventories, error) {
-	var inventories dataset.Inventories
-
-	rows, err := database.DB().QueryContext(ctx,
-		`SELECT id, 
-			user_id, 
-			item_name, 
-			category, 
-			description, 
-			weight, 
-			url, 
-			price, 
-			currency, 
-			created_at, 
-			updated_at 
-		FROM inventory;`)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNoItemFound
-		}
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var inventory dataset.Inventory
-		err := rows.Scan(
-			&inventory.ID,
-			&inventory.UserID,
-			&inventory.ItemName,
-			&inventory.Category,
-			&inventory.Description,
-			&inventory.Weight,
-			&inventory.URL,
-			&inventory.Price,
-			&inventory.Currency,
-			&inventory.CreatedAt,
-			&inventory.UpdatedAt)
-		if err != nil {
-			return nil, err
-		}
-		inventories = append(inventories, inventory)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return &inventories, nil
-}
-
-// GetMyInventories gets all inventories of the user
+// GetMyInventory gets all inventories of the user
 // @Summary Get all inventories of the user
 // @Description Retrieves a list of all inventories of the user
 // @Security Bearer
 // @Tags Inventories
 // @Produce json
-// @Success 200 {object} dataset.Inventories
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 404 {object} dataset.ErrorResponse "No Inventory Found"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Success 200 {object} inventories.Inventories
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 404 {object} apitypes.ErrorResponse "No Inventory Found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/myinventory [get]
 func GetMyInventory(c *gin.Context) {
 	userID, err := security.ExtractTokenID(c)
@@ -130,66 +72,17 @@ func GetMyInventory(c *gin.Context) {
 	}
 }
 
-func returnInventoriesByUserID(ctx context.Context, userID uint) (*dataset.Inventories, error) {
-	var inventories dataset.Inventories
-
-	rows, err := database.DB().QueryContext(ctx,
-		`SELECT id, 
-			user_id, 
-			item_name, 
-			category, 
-			description, 
-			weight, 
-			url, 
-			price, 
-			currency, 
-			created_at, 
-			updated_at 
-		FROM inventory WHERE user_id = $1 ORDER BY category;`,
-		userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var inventory dataset.Inventory
-		err := rows.Scan(
-			&inventory.ID,
-			&inventory.UserID,
-			&inventory.ItemName,
-			&inventory.Category,
-			&inventory.Description,
-			&inventory.Weight,
-			&inventory.URL,
-			&inventory.Price,
-			&inventory.Currency,
-			&inventory.CreatedAt,
-			&inventory.UpdatedAt)
-		if err != nil {
-			return nil, err
-		}
-		inventories = append(inventories, inventory)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return &inventories, nil
-}
-
 // GetInventoryByID gets an inventory by ID
 // @Summary [ADMIN] Get an inventory by ID
-// @Description Retrieves an inventory by ID -  for admin use only
+// @Description Retrieves an inventory by ID - for admin use only
 // @Security Bearer
 // @Tags Internal
 // @Produce json
 // @Param id path int true "Inventory ID"
-// @Success 200 {object} dataset.Inventory
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 404 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Success 200 {object} inventories.Inventory
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 404 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/inventories/{id} [get]
 func GetInventoryByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
@@ -224,11 +117,11 @@ func GetInventoryByID(c *gin.Context) {
 // @Tags Inventories
 // @Produce json
 // @Param id path int true "Inventory ID"
-// @Success 200 {object} dataset.Inventory "Inventory"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 403 {object} dataset.ErrorResponse "This item does not belong to you"
-// @Failure 404 {object} dataset.ErrorResponse "Inventory not found"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Success 200 {object} inventories.Inventory "Inventory"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This item does not belong to you"
+// @Failure 404 {object} apitypes.ErrorResponse "Inventory not found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/myinventory/{id} [get]
 func GetMyInventoryByID(c *gin.Context) {
 	userID, err := security.ExtractTokenID(c)
@@ -265,110 +158,20 @@ func GetMyInventoryByID(c *gin.Context) {
 	}
 }
 
-func findInventoryByID(ctx context.Context, id uint) (*dataset.Inventory, error) {
-	var inventory dataset.Inventory
-
-	row := database.DB().QueryRowContext(ctx,
-		`SELECT id, 
-			user_id, 
-			item_name, 
-			category, 
-			description, 
-			weight, 
-			url, 
-			price, 
-			currency, 
-			created_at, 
-			updated_at 
-		FROM inventory WHERE id = $1;`,
-		id)
-	err := row.Scan(
-		&inventory.ID,
-		&inventory.UserID,
-		&inventory.ItemName,
-		&inventory.Category,
-		&inventory.Description,
-		&inventory.Weight,
-		&inventory.URL,
-		&inventory.Price,
-		&inventory.Currency,
-		&inventory.CreatedAt,
-		&inventory.UpdatedAt)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNoItemFound
-		}
-		return nil, err
-	}
-
-	return &inventory, nil
-}
-
-// FindInventoryItemByAttributes finds an existing inventory item for a user
-// by exact match on item_name, category, and description.
-// Returns the item if found, nil with ErrNoItemFound if not found, or error if query fails.
-func FindInventoryItemByAttributes(
-	ctx context.Context,
-	userID uint,
-	itemName, category, description string,
-) (*dataset.Inventory, error) {
-	var inventory dataset.Inventory
-
-	query := `
-		SELECT id,
-			user_id,
-			item_name,
-			category,
-			description,
-			weight,
-			url,
-			price,
-			currency,
-			created_at,
-			updated_at
-		FROM inventory
-		WHERE user_id = $1 AND item_name = $2 AND category = $3 AND description = $4
-		LIMIT 1`
-
-	row := database.DB().QueryRowContext(ctx, query, userID, itemName, category, description)
-	err := row.Scan(
-		&inventory.ID,
-		&inventory.UserID,
-		&inventory.ItemName,
-		&inventory.Category,
-		&inventory.Description,
-		&inventory.Weight,
-		&inventory.URL,
-		&inventory.Price,
-		&inventory.Currency,
-		&inventory.CreatedAt,
-		&inventory.UpdatedAt)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNoItemFound
-		}
-		return nil, err
-	}
-
-	return &inventory, nil
-}
-
 // PostInventory creates an inventory
 // @Summary [ADMIN] Create an inventory
-// @Description Creates an inventory -  for admin use only
+// @Description Creates an inventory - for admin use only
 // @Security Bearer
 // @Tags Internal
 // @Accept json
 // @Produce json
-// @Param inventory body dataset.Inventory true "Inventory"
-// @Success 201 {object} dataset.Inventory
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Param inventory body inventories.Inventory true "Inventory"
+// @Success 201 {object} inventories.Inventory
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/inventories [post]
 func PostInventory(c *gin.Context) {
-	var newInventory dataset.Inventory
+	var newInventory Inventory
 
 	if err := c.BindJSON(&newInventory); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -390,14 +193,14 @@ func PostInventory(c *gin.Context) {
 // @Tags Inventories
 // @Accept json
 // @Produce json
-// @Param inventory body dataset.Inventory true "Inventory"
-// @Success 201 {object} dataset.Inventory "Inventory Updated"
-// @Failure 400 {object} dataset.ErrorResponse "Invalid payload"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Param inventory body inventories.Inventory true "Inventory"
+// @Success 201 {object} inventories.Inventory "Inventory Updated"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid payload"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/myinventory [post]
 func PostMyInventory(c *gin.Context) {
-	var newInventory dataset.Inventory
+	var newInventory Inventory
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -422,54 +225,22 @@ func PostMyInventory(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, newInventory)
 }
 
-func InsertInventory(ctx context.Context, i *dataset.Inventory) error {
-	if i == nil {
-		return errors.New("payload is empty")
-	}
-
-	i.CreatedAt = time.Now().Truncate(time.Second)
-	i.UpdatedAt = time.Now().Truncate(time.Second)
-
-	//nolint:execinquery
-	err := database.DB().QueryRowContext(ctx,
-		`INSERT INTO inventory 
-		(user_id, item_name, category, description, weight, url, price, currency, created_at, updated_at) 
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) 
-		RETURNING id;`,
-		i.UserID,
-		i.ItemName,
-		i.Category,
-		i.Description,
-		i.Weight,
-		i.URL,
-		i.Price,
-		i.Currency,
-		i.CreatedAt,
-		i.UpdatedAt).Scan(&i.ID)
-
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // PutInventoryByID updates an inventory by ID
 // @Summary [ADMIN] Update an inventory by ID
-// @Description Updates an inventory by ID -  for admin use only
+// @Description Updates an inventory by ID - for admin use only
 // @Security Bearer
 // @Tags Internal
 // @Accept json
 // @Produce json
 // @Param id path int true "Inventory ID"
-// @Param inventory body dataset.Inventory true "Inventory"
-// @Success 200 {object} dataset.Inventory
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Param inventory body inventories.Inventory true "Inventory"
+// @Success 200 {object} inventories.Inventory
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/inventories/{id} [put]
 func PutInventoryByID(c *gin.Context) {
-	var updatedInventory dataset.Inventory
+	var updatedInventory Inventory
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
@@ -483,6 +254,7 @@ func PutInventoryByID(c *gin.Context) {
 	}
 
 	updatedInventory.ID = id
+	updatedInventory.UpdatedAt = time.Now().Truncate(time.Second)
 
 	err = updateInventoryByID(c.Request.Context(), id, &updatedInventory)
 	if err != nil {
@@ -501,8 +273,8 @@ func PutInventoryByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Inventory ID"
-// @Param inventory body dataset.Inventory true "Inventory"
-// @Success 200 {object} dataset.Inventory "Inventory Updated"
+// @Param inventory body inventories.Inventory true "Inventory"
+// @Success 200 {object} inventories.Inventory "Inventory Updated"
 // @Failure 400 {object} map[string]interface{} "Invalid ID format"
 // @Failure 400 {object} map[string]interface{} "Invalid payload"
 // @Failure 401 {object} map[string]interface{} "Unauthorized"
@@ -510,7 +282,7 @@ func PutInventoryByID(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /v1/myinventory/{id} [put]
 func PutMyInventoryByID(c *gin.Context) {
-	var updatedInventory dataset.Inventory
+	var updatedInventory Inventory
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -536,6 +308,7 @@ func PutMyInventoryByID(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+		updatedInventory.UpdatedAt = time.Now().Truncate(time.Second)
 		err = updateInventoryByID(c.Request.Context(), id, &updatedInventory)
 		if err != nil {
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -547,58 +320,16 @@ func PutMyInventoryByID(c *gin.Context) {
 	}
 }
 
-func updateInventoryByID(ctx context.Context, id uint, i *dataset.Inventory) error {
-	if i == nil {
-		return errors.New("payload is empty")
-	}
-
-	i.UpdatedAt = time.Now().Truncate(time.Second)
-	statement, err := database.DB().PrepareContext(ctx,
-		`UPDATE inventory 
-		SET user_id=$1, 
-			item_name=$2, 
-			category=$3, 
-			description=$4, 
-			weight=$5, 
-			url=$6, 
-			price=$7, 
-			currency=$8, 
-			updated_at=$9 
-		WHERE id=$10;`)
-	if err != nil {
-		return err
-	}
-
-	defer statement.Close()
-
-	_, err = statement.ExecContext(ctx,
-		i.UserID,
-		i.ItemName,
-		i.Category,
-		i.Description,
-		i.Weight,
-		i.URL,
-		i.Price,
-		i.Currency,
-		i.UpdatedAt,
-		id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // DeleteInventoryByID deletes an inventory by ID
 // @Summary [ADMIN] Delete an inventory by ID
-// @Description Deletes an inventory by ID -  for admin use only
+// @Description Deletes an inventory by ID - for admin use only
 // @Security Bearer
 // @Tags Internal
 // @Produce json
 // @Param id path int true "Inventory ID"
-// @Success 200 {object} dataset.OkResponse "Inventory deleted"
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Success 200 {object} apitypes.OkResponse "Inventory deleted"
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/inventories/{id} [delete]
 func DeleteInventoryByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
@@ -616,6 +347,19 @@ func DeleteInventoryByID(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, gin.H{"message": "Inventory deleted"})
 }
 
+// DeleteMyInventoryByID deletes an inventory by ID
+// @Summary Delete an inventory by ID
+// @Description Deletes an inventory by ID
+// @Security Bearer
+// @Tags Inventories
+// @Produce json
+// @Param id path int true "Inventory ID"
+// @Success 200 {object} apitypes.OkResponse "Inventory deleted"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This item does not belong to you"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
+// @Router /v1/myinventory/{id} [delete]
 func DeleteMyInventoryByID(c *gin.Context) {
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -645,37 +389,4 @@ func DeleteMyInventoryByID(c *gin.Context) {
 	} else {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
 	}
-}
-
-func deleteInventoryByID(ctx context.Context, id uint) error {
-	statement, err := database.DB().PrepareContext(ctx, "DELETE FROM inventory WHERE id=$1;")
-	if err != nil {
-		return err
-	}
-
-	defer statement.Close()
-
-	_, err = statement.ExecContext(ctx, id)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func checkInventoryOwnership(ctx context.Context, id uint, userID uint) (bool, error) {
-	var rows int
-
-	row := database.DB().QueryRowContext(ctx,
-		"SELECT COUNT(id) FROM inventory WHERE id = $1 AND user_id = $2;", id, userID)
-	err := row.Scan(&rows)
-	if err != nil {
-		return false, err
-	}
-
-	if rows == 0 {
-		return false, nil
-	}
-
-	return true, nil
 }

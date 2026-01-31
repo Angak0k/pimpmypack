@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
+	"github.com/Angak0k/pimpmypack/pkg/config"
 )
 
 func StringToUint(s string) (uint, error) {
@@ -42,36 +42,6 @@ func ConvertWeightUnit(unit string) string {
 	return "METRIC"
 }
 
-func FindUserIDByUsername(users []dataset.User, username string) uint {
-	// Find a user ID by username
-	for _, user := range users {
-		if user.Username == username {
-			return user.ID
-		}
-	}
-	return 0
-}
-
-func FindPackIDByPackName(packs dataset.Packs, packname string) uint {
-	// Find a pack ID by packname
-	for _, pack := range packs {
-		if pack.PackName == packname {
-			return pack.ID
-		}
-	}
-	return 0
-}
-
-func FindItemIDByItemName(inventories dataset.Inventories, itemname string) uint {
-	// Find an item ID by itemname
-	for _, item := range inventories {
-		if item.ItemName == itemname {
-			return item.ID
-		}
-	}
-	return 0
-}
-
 func GenerateRandomCode(length int) (string, error) {
 	const charset = "pimpMyPackIsBetterThanLighterPack"
 	var builder strings.Builder
@@ -98,7 +68,7 @@ type EmailSender interface {
 
 // SMTPClient struct implements EmailSender interface.
 type SMTPClient struct {
-	Server dataset.MailServer
+	Server config.MailServer
 }
 
 // SendMail sends an email using the SMTP protocol.

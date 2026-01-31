@@ -15,7 +15,6 @@ import (
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/gin-gonic/gin"
 	"github.com/google/go-cmp/cmp"
@@ -86,7 +85,7 @@ func TestGetInventories(t *testing.T) {
 		}
 
 		// Unmarshal the response body into a slice of inventories struct
-		var getInventories dataset.Inventories
+		var getInventories Inventories
 		if err := json.Unmarshal(w.Body.Bytes(), &getInventories); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
@@ -112,9 +111,9 @@ func TestGetInventories(t *testing.T) {
 }
 
 // validateInventory checks if the expected inventory exists in the response and validates its fields
-func validateInventory(t *testing.T, responseInventories dataset.Inventories, expectedInventory dataset.Inventory) {
+func validateInventory(t *testing.T, responseInventories Inventories, expectedInventory Inventory) {
 	// Find the matching inventory in the response by both UserID and ItemName
-	var foundInventory *dataset.Inventory
+	var foundInventory *Inventory
 	for _, inv := range responseInventories {
 		if inv.ItemName == expectedInventory.ItemName && inv.UserID == expectedInventory.UserID {
 			foundInventory = &inv
@@ -133,7 +132,7 @@ func validateInventory(t *testing.T, responseInventories dataset.Inventories, ex
 }
 
 // compareInventoryFields compares all fields between the found and expected inventory
-func compareInventoryFields(t *testing.T, found, expected *dataset.Inventory) {
+func compareInventoryFields(t *testing.T, found, expected *Inventory) {
 	switch {
 	case !cmp.Equal(found.UserID, expected.UserID):
 		t.Errorf("Expected UserID %v but got %v", expected.UserID, found.UserID)
@@ -198,7 +197,7 @@ func TestGetMyInventory(t *testing.T) {
 		}
 
 		// Unmarshal the response body into a slice of inventories struct
-		var myInventories dataset.Inventories
+		var myInventories Inventories
 		if err := json.Unmarshal(w.Body.Bytes(), &myInventories); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
@@ -262,7 +261,7 @@ func TestGetInventoryByID(t *testing.T) {
 		}
 
 		// Unmarshal the response body into an inventory struct
-		var receivedInventory dataset.Inventory
+		var receivedInventory Inventory
 		if err := json.Unmarshal(w.Body.Bytes(), &receivedInventory); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
@@ -315,7 +314,7 @@ func TestPostInventory(t *testing.T) {
 	router.POST("/inventories", PostInventory)
 
 	// Sample inventory data
-	newInventory := dataset.Inventory{
+	newInventory := Inventory{
 		UserID:      users[0].ID,
 		ItemName:    "Light",
 		Category:    "Outdoor Gear",
@@ -349,7 +348,7 @@ func TestPostInventory(t *testing.T) {
 		}
 
 		// Query the database to get the inserted inventory
-		var insertedInventory dataset.Inventory
+		var insertedInventory Inventory
 		row := database.DB().QueryRow("SELECT * FROM inventory WHERE item_name = $1;", newInventory.ItemName)
 		err = row.Scan(
 			&insertedInventory.ID,
@@ -371,7 +370,7 @@ func TestPostInventory(t *testing.T) {
 		}
 
 		// Unmarshal the response body into an inventory struct
-		var receivedInventory dataset.Inventory
+		var receivedInventory Inventory
 		if err := json.Unmarshal(w.Body.Bytes(), &receivedInventory); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
@@ -411,7 +410,7 @@ func TestPutInventoryByID(t *testing.T) {
 	router.PUT("/inventories/:id", PutInventoryByID)
 
 	// Sample inventory data (with the first user of the dataset and the second inventory of the dataset)
-	testUpdatedInventory := dataset.Inventory{
+	testUpdatedInventory := Inventory{
 		ID:          inventories[1].ID,
 		UserID:      users[0].ID,
 		ItemName:    "Tent",
@@ -447,7 +446,7 @@ func TestPutInventoryByID(t *testing.T) {
 		}
 
 		// Query the database to get the updated inventories
-		var updatedInventory dataset.Inventory
+		var updatedInventory Inventory
 		row := database.DB().QueryRow("SELECT * FROM inventory WHERE id = $1;", testUpdatedInventory.ID)
 		err = row.Scan(
 			&updatedInventory.ID,
@@ -587,7 +586,7 @@ func TestGetMyInventoryByID(t *testing.T) {
 		}
 
 		// Unmarshal the response body into an inventory struct
-		var receivedInventory dataset.Inventory
+		var receivedInventory Inventory
 		if err := json.Unmarshal(w.Body.Bytes(), &receivedInventory); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
@@ -689,7 +688,7 @@ func testItemNotFound(
 }
 
 func testFindEmptyDescription(ctx context.Context, t *testing.T) {
-	var testItem dataset.Inventory
+	var testItem Inventory
 	testItem.UserID = users[0].ID
 	testItem.ItemName = "Test Item Empty Desc"
 	testItem.Category = "Test Category"

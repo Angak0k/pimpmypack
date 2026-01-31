@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/Angak0k/pimpmypack/pkg/database"
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
 	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/Angak0k/pimpmypack/pkg/inventories"
 	"github.com/Angak0k/pimpmypack/pkg/security"
@@ -31,8 +30,8 @@ var ErrPackContentNotFound = errors.New("pack content not found")
 // @Security Bearer
 // @Tags Internal
 // @Produce  json
-// @Success 200 {object} dataset.Packs
-// @Failure 500 {object} dataset.ErrorResponse
+// @Success 200 {object} Packs
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packs [get]
 func GetPacks(c *gin.Context) {
 	packs, err := returnPacks()
@@ -49,8 +48,8 @@ func GetPacks(c *gin.Context) {
 	}
 }
 
-func returnPacks() (dataset.Packs, error) {
-	var packs dataset.Packs
+func returnPacks() (Packs, error) {
+	var packs Packs
 
 	rows, err := database.DB().QueryContext(context.Background(),
 		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
@@ -72,7 +71,7 @@ func returnPacks() (dataset.Packs, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var pack dataset.Pack
+		var pack Pack
 		err := rows.Scan(
 			&pack.ID,
 			&pack.UserID,
@@ -105,10 +104,10 @@ func returnPacks() (dataset.Packs, error) {
 // @Tags Internal
 // @Produce  json
 // @Param id path int true "Pack ID"
-// @Success 200 {object} dataset.Pack
-// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
-// @Failure 404 {object} dataset.ErrorResponse "Pack not found"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Success 200 {object} Pack
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 404 {object} apitypes.ErrorResponse "Pack not found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /admin/packs/{id} [get]
 func GetPackByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
@@ -143,12 +142,12 @@ func GetPackByID(c *gin.Context) {
 // @Tags Packs
 // @Produce  json
 // @Param id path int true "Pack ID"
-// @Success 200 {object} dataset.Pack
-// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
-// @Failure 404 {object} dataset.ErrorResponse "Pack not found"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Success 200 {object} Pack
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This pack does not belong to you"
+// @Failure 404 {object} apitypes.ErrorResponse "Pack not found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id} [get]
 func GetMyPackByID(c *gin.Context) {
 	userID, err := security.ExtractTokenID(c)
@@ -188,8 +187,8 @@ func GetMyPackByID(c *gin.Context) {
 }
 
 // FindPackByID finds a pack by its ID
-func FindPackByID(id uint) (*dataset.Pack, error) {
-	var pack dataset.Pack
+func FindPackByID(id uint) (*Pack, error) {
+	var pack Pack
 
 	row := database.DB().QueryRowContext(context.Background(),
 		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
@@ -232,13 +231,13 @@ func FindPackByID(id uint) (*dataset.Pack, error) {
 // @Tags Internal
 // @Accept  json
 // @Produce  json
-// @Param pack body dataset.Pack true "Pack"
-// @Success 201 {object} dataset.Pack
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Param pack body Pack true "Pack"
+// @Success 201 {object} Pack
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packs [post]
 func PostPack(c *gin.Context) {
-	var newPack dataset.Pack
+	var newPack Pack
 
 	if err := c.BindJSON(&newPack); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -261,14 +260,14 @@ func PostPack(c *gin.Context) {
 // @Tags Packs
 // @Accept  json
 // @Produce  json
-// @Param pack body dataset.Pack true "Pack"
-// @Success 201 {object} dataset.Pack "Pack created"
-// @Failure 400 {object} dataset.ErrorResponse "Invalid Body format"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Param pack body Pack true "Pack"
+// @Success 201 {object} Pack "Pack created"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid Body format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack [post]
 func PostMyPack(c *gin.Context) {
-	var newPack dataset.Pack
+	var newPack Pack
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -292,7 +291,7 @@ func PostMyPack(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, newPack)
 }
 
-func insertPack(p *dataset.Pack) error {
+func insertPack(p *Pack) error {
 	if p == nil {
 		return errors.New("payload is empty")
 	}
@@ -326,13 +325,13 @@ func insertPack(p *dataset.Pack) error {
 // @Accept  json
 // @Produce  json
 // @Param id path int true "Pack ID"
-// @Param pack body dataset.Pack true "Pack"
-// @Success 200 {object} dataset.Pack
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Param pack body Pack true "Pack"
+// @Success 200 {object} Pack
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packs/{id} [put]
 func PutPackByID(c *gin.Context) {
-	var updatedPack dataset.Pack
+	var updatedPack Pack
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
@@ -361,16 +360,16 @@ func PutPackByID(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Param id path int true "Pack ID"
-// @Param pack body dataset.Pack true "Pack"
-// @Success 200 {object} dataset.Pack "Pack updated"
-// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
-// @Failure 400 {object} dataset.ErrorResponse "Invalid Payload"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Param pack body Pack true "Pack"
+// @Success 200 {object} Pack "Pack updated"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid Payload"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This pack does not belong to you"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id} [put]
 func PutMyPackByID(c *gin.Context) {
-	var updatedPack dataset.Pack
+	var updatedPack Pack
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
@@ -409,7 +408,7 @@ func PutMyPackByID(c *gin.Context) {
 	}
 }
 
-func updatePackByID(id uint, p *dataset.Pack) error {
+func updatePackByID(id uint, p *Pack) error {
 	if p == nil {
 		return errors.New("payload is empty")
 	}
@@ -439,9 +438,9 @@ func updatePackByID(id uint, p *dataset.Pack) error {
 // @Tags Internal
 // @Produce  json
 // @Param id path int true "Pack ID"
-// @Success 200 {object} dataset.OkResponse
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Success 200 {object} apitypes.OkResponse
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packs/{id} [delete]
 
 func DeletePackByID(c *gin.Context) {
@@ -467,11 +466,11 @@ func DeletePackByID(c *gin.Context) {
 // @Tags Packs
 // @Produce  json
 // @Param id path int true "Pack ID"
-// @Success 200 {object} dataset.OkResponse "Pack deleted"
-// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Success 200 {object} apitypes.OkResponse "Pack deleted"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This pack does not belong to you"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id} [delete]
 func DeleteMyPackByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
@@ -529,11 +528,11 @@ func deletePackByID(id uint) error {
 // @Produce  json
 // @Param id path int true "Pack ID"
 // @Success 200 {object} map[string]string "Pack shared successfully"
-// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
-// @Failure 404 {object} dataset.ErrorResponse "Pack not found"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This pack does not belong to you"
+// @Failure 404 {object} apitypes.ErrorResponse "Pack not found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id}/share [post]
 func ShareMyPack(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
@@ -583,12 +582,12 @@ func ShareMyPack(c *gin.Context) {
 // @Tags Packs
 // @Produce  json
 // @Param id path int true "Pack ID"
-// @Success 200 {object} dataset.OkResponse "Pack unshared successfully"
-// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
-// @Failure 404 {object} dataset.ErrorResponse "Pack not found"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Success 200 {object} apitypes.OkResponse "Pack unshared successfully"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This pack does not belong to you"
+// @Failure 404 {object} apitypes.ErrorResponse "Pack not found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id}/share [delete]
 func UnshareMyPack(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
@@ -634,8 +633,8 @@ func UnshareMyPack(c *gin.Context) {
 // @Security Bearer
 // @Tags Internal
 // @Produce  json
-// @Success 200 {object} dataset.PackContents
-// @Failure 500 {object} dataset.ErrorResponse
+// @Success 200 {object} PackContents
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packcontents [get]
 func GetPackContents(c *gin.Context) {
 	packContents, err := returnPackContents()
@@ -647,8 +646,8 @@ func GetPackContents(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, packContents)
 }
 
-func returnPackContents() (*dataset.PackContents, error) {
-	var packContents dataset.PackContents
+func returnPackContents() (*PackContents, error) {
+	var packContents PackContents
 
 	rows, err := database.DB().QueryContext(context.Background(),
 		`SELECT id, pack_id, item_id, quantity, worn, consumable, created_at, updated_at 
@@ -659,7 +658,7 @@ func returnPackContents() (*dataset.PackContents, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var packContent dataset.PackContent
+		var packContent PackContent
 		err := rows.Scan(
 			&packContent.ID,
 			&packContent.PackID,
@@ -689,10 +688,10 @@ func returnPackContents() (*dataset.PackContents, error) {
 // @Tags Internal
 // @Produce  json
 // @Param id path int true "Pack Content ID"
-// @Success 200 {object} dataset.PackContent
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 404 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Success 200 {object} PackContent
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 404 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packcontents/{id} [get]
 func GetPackContentByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
@@ -719,8 +718,8 @@ func GetPackContentByID(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, *packcontent)
 }
 
-func findPackContentByID(id uint) (*dataset.PackContent, error) {
-	var packcontent dataset.PackContent
+func findPackContentByID(id uint) (*PackContent, error) {
+	var packcontent PackContent
 
 	row := database.DB().QueryRowContext(context.Background(),
 		`SELECT id, pack_id, item_id, quantity, worn, consumable, created_at, updated_at 
@@ -754,13 +753,13 @@ func findPackContentByID(id uint) (*dataset.PackContent, error) {
 // @Tags Internal
 // @Accept  json
 // @Produce  json
-// @Param packcontent body dataset.PackContent true "Pack Content"
-// @Success 201 {object} dataset.PackContent
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Param packcontent body PackContent true "Pack Content"
+// @Success 201 {object} PackContent
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packcontents [post]
 func PostPackContent(c *gin.Context) {
-	var newPackContent dataset.PackContent
+	var newPackContent PackContent
 
 	if err := c.BindJSON(&newPackContent); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Body format"})
@@ -783,16 +782,16 @@ func PostPackContent(c *gin.Context) {
 // @Tags Packs
 // @Accept  json
 // @Produce  json
-// @Param packcontent body dataset.PackContent true "Pack Content"
-// @Success 201 {object} dataset.PackContent
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 401 {object} dataset.ErrorResponse
-// @Failure 403 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Param packcontent body PackContent true "Pack Content"
+// @Success 201 {object} PackContent
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 401 {object} apitypes.ErrorResponse
+// @Failure 403 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /v1/mypack/:id/packcontent [post]
 func PostMyPackContent(c *gin.Context) {
-	var requestData dataset.PackContentRequest
-	var newPackContent dataset.PackContent
+	var requestData PackContentRequest
+	var newPackContent PackContent
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
@@ -838,7 +837,7 @@ func PostMyPackContent(c *gin.Context) {
 	}
 }
 
-func insertPackContent(pc *dataset.PackContent) error {
+func insertPackContent(pc *PackContent) error {
 	if pc == nil {
 		return errors.New("payload is empty")
 	}
@@ -873,13 +872,13 @@ func insertPackContent(pc *dataset.PackContent) error {
 // @Accept  json
 // @Produce  json
 // @Param id path int true "Pack Content ID"
-// @Param packcontent body dataset.PackContent true "Pack Content"
-// @Success 200 {object} dataset.PackContent
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Param packcontent body PackContent true "Pack Content"
+// @Success 200 {object} PackContent
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packcontents/{id} [put]
 func PutPackContentByID(c *gin.Context) {
-	var updatedPackContent dataset.PackContent
+	var updatedPackContent PackContent
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
@@ -910,16 +909,16 @@ func PutPackContentByID(c *gin.Context) {
 // @Produce  json
 // @Param id path int true "Pack ID"
 // @Param item_id path int true "Item ID"
-// @Param packcontent body dataset.PackContent true "Pack Content"
-// @Success 200 {object} dataset.PackContent "Pack Content updated"
-// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
-// @Failure 400 {object} dataset.ErrorResponse "Invalid Body format"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Param packcontent body PackContent true "Pack Content"
+// @Success 200 {object} PackContent "Pack Content updated"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid Body format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This pack does not belong to you"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id}/packcontent/{item_id} [put]
 func PutMyPackContentByID(c *gin.Context) {
-	var updatedPackContent dataset.PackContent
+	var updatedPackContent PackContent
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
@@ -964,7 +963,7 @@ func PutMyPackContentByID(c *gin.Context) {
 	}
 }
 
-func updatePackContentByID(id uint, pc *dataset.PackContent) error {
+func updatePackContentByID(id uint, pc *PackContent) error {
 	if pc == nil {
 		return errors.New("payload is empty")
 	}
@@ -996,8 +995,8 @@ func updatePackContentByID(id uint, pc *dataset.PackContent) error {
 // @Produce  json
 // @Param id path int true "Pack Content ID"
 // @Success 200 {object} map[string]string "message"
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packcontents/{id} [delete]
 func DeletePackContentByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
@@ -1023,11 +1022,11 @@ func DeletePackContentByID(c *gin.Context) {
 // @Produce  json
 // @Param id path int true "Pack ID"
 // @Param item_id path int true "Item ID"
-// @Success 200 {object} dataset.OkResponse "Pack Item deleted"
-// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Success 200 {object} apitypes.OkResponse "Pack Item deleted"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This pack does not belong to you"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id}/packcontent/{item_id} [delete]
 func DeleteMyPackContentByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
@@ -1088,10 +1087,10 @@ func deletePackContentByID(id uint) error {
 // @Security Bearer
 // @Tags Internal
 // @Produce  json
-// @Success 200 {object} dataset.PackContents
-// @Failure 400 {object} dataset.ErrorResponse
-// @Failure 404 {object} dataset.ErrorResponse
-// @Failure 500 {object} dataset.ErrorResponse
+// @Success 200 {object} PackContents
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 404 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packs/:id/packcontents [get]
 func GetPackContentsByPackID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
@@ -1124,15 +1123,15 @@ func GetPackContentsByPackID(c *gin.Context) {
 // @Tags Packs
 // @Produce  json
 // @Param id path int true "Pack Content ID"
-// @Success 200 {object} dataset.PackContent "Pack Item"
-// @Failure 400 {object} dataset.ErrorResponse "Invalid ID format"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 403 {object} dataset.ErrorResponse "This pack does not belong to you"
-// @Failure 404 {object} dataset.ErrorResponse "Pack not found"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Success 200 {object} PackContent "Pack Item"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This pack does not belong to you"
+// @Failure 404 {object} apitypes.ErrorResponse "Pack not found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id}/packcontents [get]
 func GetMyPackContentsByPackID(c *gin.Context) {
-	var packContents *dataset.PackContentWithItems
+	var packContents *PackContentWithItems
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
@@ -1170,7 +1169,7 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 	}
 }
 
-func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) {
+func returnPackContentsByPackID(id uint) (*PackContentWithItems, error) {
 	// First, check if the pack exists in the database
 	packExists, err := checkPackExists(id)
 	if err != nil {
@@ -1181,7 +1180,7 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 	}
 
 	// Pack exists, continue with fetching its contents
-	var packWithItems dataset.PackContentWithItems
+	var packWithItems PackContentWithItems
 
 	rows, err := database.DB().QueryContext(context.Background(),
 		`SELECT pc.id AS pack_content_id, 
@@ -1207,7 +1206,7 @@ func returnPackContentsByPackID(id uint) (*dataset.PackContentWithItems, error) 
 	defer rows.Close()
 
 	for rows.Next() {
-		var item dataset.PackContentWithItem
+		var item PackContentWithItem
 		err := rows.Scan(
 			&item.PackContentID,
 			&item.PackID,
@@ -1251,10 +1250,10 @@ func checkPackExists(id uint) (bool, error) {
 // @Security Bearer
 // @Tags Packs
 // @Produce  json
-// @Success 200 {object} dataset.Packs "Packs"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 404 {object} dataset.ErrorResponse "No pack found"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Success 200 {object} Packs "Packs"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 404 {object} apitypes.ErrorResponse "No pack found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypacks [get]
 func GetMyPacks(c *gin.Context) {
 	userID, err := security.ExtractTokenID(c)
@@ -1283,8 +1282,8 @@ func GetMyPacks(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, *packs)
 }
 
-func findPacksByUserID(id uint) (*dataset.Packs, error) {
-	var packs dataset.Packs
+func findPacksByUserID(id uint) (*Packs, error) {
+	var packs Packs
 
 	rows, err := database.DB().QueryContext(context.Background(), `
 		SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
@@ -1304,7 +1303,7 @@ func findPacksByUserID(id uint) (*dataset.Packs, error) {
 	defer rows.Close()
 
 	for rows.Next() {
-		var pack dataset.Pack
+		var pack Pack
 		err := rows.Scan(
 			&pack.ID,
 			&pack.UserID,
@@ -1432,13 +1431,13 @@ func unsharePackByID(ctx context.Context, packID uint, userID uint) error {
 // @Accept  multipart/form-data
 // @Produce  json
 // @Param file formData file true "CSV file"
-// @Success 200 {object} dataset.OkResponse "CSV data imported successfully"
-// @Failure 400 {object} dataset.ErrorResponse "Invalid CSV format"
-// @Failure 401 {object} dataset.ErrorResponse "Unauthorized"
-// @Failure 500 {object} dataset.ErrorResponse "Internal Server Error"
+// @Success 200 {object} apitypes.OkResponse "CSV data imported successfully"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid CSV format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/importfromlighterpack [post]
 func ImportFromLighterPack(c *gin.Context) {
-	var lighterPack dataset.LighterPack
+	var lighterPack LighterPack
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -1470,7 +1469,7 @@ func ImportFromLighterPack(c *gin.Context) {
 
 	// Iterate through CSV records and process them
 	for {
-		var lighterPackItem dataset.LighterPackItem
+		var lighterPackItem LighterPackItem
 		record, err := reader.Read()
 		if errors.Is(err, io.EOF) {
 			break
@@ -1505,8 +1504,8 @@ func ImportFromLighterPack(c *gin.Context) {
 }
 
 // Take a record from csv.Newreder and return a LighterPackItem
-func readLineFromCSV(record []string) (dataset.LighterPackItem, error) {
-	var lighterPackItem dataset.LighterPackItem
+func readLineFromCSV(record []string) (LighterPackItem, error) {
+	var lighterPackItem LighterPackItem
 
 	lighterPackItem.ItemName = record[0]
 	lighterPackItem.Category = record[1]
@@ -1546,13 +1545,13 @@ func readLineFromCSV(record []string) (dataset.LighterPackItem, error) {
 	return lighterPackItem, nil
 }
 
-func insertLighterPack(lp *dataset.LighterPack, userID uint) error {
+func insertLighterPack(lp *LighterPack, userID uint) error {
 	if lp == nil {
 		return errors.New("payload is empty")
 	}
 
 	// Create new pack
-	var newPack dataset.Pack
+	var newPack Pack
 	newPack.UserID = userID
 	newPack.PackName = "LighterPack Import"
 	newPack.PackDescription = "LighterPack Import"
@@ -1584,7 +1583,7 @@ func insertLighterPack(lp *dataset.LighterPack, userID uint) error {
 			itemID = existingItem.ID
 		} else {
 			// Item doesn't exist, create it
-			var i dataset.Inventory
+			var i inventories.Inventory
 			i.UserID = userID
 			i.ItemName = item.ItemName
 			i.Category = item.Category
@@ -1601,7 +1600,7 @@ func insertLighterPack(lp *dataset.LighterPack, userID uint) error {
 		}
 
 		// Create PackContent with the item (existing or new)
-		var pc dataset.PackContent
+		var pc PackContent
 		pc.PackID = newPack.ID
 		pc.ItemID = itemID
 		pc.Quantity = item.Qty
@@ -1622,9 +1621,9 @@ func insertLighterPack(lp *dataset.LighterPack, userID uint) error {
 // @Accept json
 // @Produce json
 // @Param sharing_code path string true "Pack sharing code"
-// @Success 200 {object} dataset.SharedPackResponse "Shared pack with metadata and contents"
-// @Failure 404 {object} dataset.ErrorResponse "Pack not found or not shared"
-// @Failure 500 {object} dataset.ErrorResponse "Internal server error"
+// @Success 200 {object} SharedPackResponse "Shared pack with metadata and contents"
+// @Failure 404 {object} apitypes.ErrorResponse "Pack not found or not shared"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal server error"
 // @Router /sharedlist/{sharing_code} [get]
 func SharedList(c *gin.Context) {
 	sharingCode := c.Param("sharing_code")
@@ -1658,7 +1657,7 @@ func findPackIDBySharingCode(sharingCode string) (uint, error) {
 
 // returnPackInfoBySharingCode retrieves pack metadata using sharing code.
 // Returns nil if pack not found or sharing_code is NULL.
-func returnPackInfoBySharingCode(ctx context.Context, sharingCode string) (*dataset.SharedPackInfo, error) {
+func returnPackInfoBySharingCode(ctx context.Context, sharingCode string) (*SharedPackInfo, error) {
 	query := `
 		SELECT p.id, p.pack_name, p.pack_description, p.created_at,
 		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image
@@ -1667,7 +1666,7 @@ func returnPackInfoBySharingCode(ctx context.Context, sharingCode string) (*data
 		WHERE p.sharing_code = $1 AND p.sharing_code IS NOT NULL
 	`
 
-	var packInfo dataset.SharedPackInfo
+	var packInfo SharedPackInfo
 	err := database.DB().QueryRowContext(ctx, query, sharingCode).Scan(
 		&packInfo.ID,
 		&packInfo.PackName,
@@ -1688,7 +1687,7 @@ func returnPackInfoBySharingCode(ctx context.Context, sharingCode string) (*data
 
 // returnSharedPack retrieves both pack metadata and contents for a shared pack.
 // This function is used by the public shared pack endpoint.
-func returnSharedPack(ctx context.Context, sharingCode string) (*dataset.SharedPackResponse, error) {
+func returnSharedPack(ctx context.Context, sharingCode string) (*SharedPackResponse, error) {
 	// Get pack metadata
 	packInfo, err := returnPackInfoBySharingCode(ctx, sharingCode)
 	if err != nil {
@@ -1700,9 +1699,9 @@ func returnSharedPack(ctx context.Context, sharingCode string) (*dataset.SharedP
 	if err != nil {
 		if errors.Is(err, ErrPackContentNotFound) {
 			// Pack exists but has no contents - return empty array
-			return &dataset.SharedPackResponse{
+			return &SharedPackResponse{
 				Pack:     *packInfo,
-				Contents: dataset.PackContentWithItems{},
+				Contents: PackContentWithItems{},
 			}, nil
 		}
 		return nil, fmt.Errorf("failed to fetch pack contents: %w", err)
@@ -1710,11 +1709,22 @@ func returnSharedPack(ctx context.Context, sharingCode string) (*dataset.SharedP
 
 	// Handle nil contents as empty array
 	if packContents == nil {
-		packContents = &dataset.PackContentWithItems{}
+		packContents = &PackContentWithItems{}
 	}
 
-	return &dataset.SharedPackResponse{
+	return &SharedPackResponse{
 		Pack:     *packInfo,
 		Contents: *packContents,
 	}, nil
+}
+
+// FindPackIDByPackName finds a pack ID by its name
+// Returns 0 if not found
+func FindPackIDByPackName(packs Packs, packname string) uint {
+	for _, pack := range packs {
+		if pack.PackName == packname {
+			return pack.ID
+		}
+	}
+	return 0
 }

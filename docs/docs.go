@@ -29,19 +29,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dataset.OkResponse"
+                            "$ref": "#/definitions/apitypes.OkResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -67,7 +67,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dataset.ForgotPasswordInput"
+                            "$ref": "#/definitions/accounts.ForgotPasswordInput"
                         }
                     }
                 ],
@@ -75,19 +75,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dataset.OkResponse"
+                            "$ref": "#/definitions/apitypes.OkResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -110,7 +110,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dataset.LoginInput"
+                            "$ref": "#/definitions/accounts.LoginInput"
                         }
                     }
                 ],
@@ -118,13 +118,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dataset.Token"
+                            "$ref": "#/definitions/accounts.Token"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -150,7 +150,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dataset.RegisterInput"
+                            "$ref": "#/definitions/accounts.RegisterInput"
                         }
                     }
                 ],
@@ -158,13 +158,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dataset.OkResponse"
+                            "$ref": "#/definitions/apitypes.OkResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -196,19 +196,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Shared pack with metadata and contents",
                         "schema": {
-                            "$ref": "#/definitions/dataset.SharedPackResponse"
+                            "$ref": "#/definitions/packs.SharedPackResponse"
                         }
                     },
                     "404": {
                         "description": "Pack not found or not shared",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -245,25 +245,25 @@ const docTemplate = `{
                     "200": {
                         "description": "CSV data imported successfully",
                         "schema": {
-                            "$ref": "#/definitions/dataset.OkResponse"
+                            "$ref": "#/definitions/apitypes.OkResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid CSV format",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -288,25 +288,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Account Information",
                         "schema": {
-                            "$ref": "#/definitions/dataset.Account"
+                            "$ref": "#/definitions/accounts.Account"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Account not found",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -335,7 +335,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dataset.Account"
+                            "$ref": "#/definitions/accounts.Account"
                         }
                     }
                 ],
@@ -343,25 +343,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dataset.Account"
+                            "$ref": "#/definitions/accounts.Account"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -388,26 +388,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dataset.Inventory"
+                                "$ref": "#/definitions/inventories.Inventory"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "No Inventory Found",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -436,7 +436,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dataset.Inventory"
+                            "$ref": "#/definitions/inventories.Inventory"
                         }
                     }
                 ],
@@ -444,25 +444,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Inventory Updated",
                         "schema": {
-                            "$ref": "#/definitions/dataset.Inventory"
+                            "$ref": "#/definitions/inventories.Inventory"
                         }
                     },
                     "400": {
                         "description": "Invalid payload",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -496,31 +496,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Inventory",
                         "schema": {
-                            "$ref": "#/definitions/dataset.Inventory"
+                            "$ref": "#/definitions/inventories.Inventory"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "This item does not belong to you",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Inventory not found",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -556,7 +556,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dataset.Inventory"
+                            "$ref": "#/definitions/inventories.Inventory"
                         }
                     }
                 ],
@@ -564,7 +564,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Inventory Updated",
                         "schema": {
-                            "$ref": "#/definitions/dataset.Inventory"
+                            "$ref": "#/definitions/inventories.Inventory"
                         }
                     },
                     "400": {
@@ -596,6 +596,62 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Deletes an inventory by ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Inventories"
+                ],
+                "summary": "Delete an inventory by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Inventory ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Inventory deleted",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.OkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "This item does not belong to you",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    }
+                }
             }
         },
         "/v1/mypack": {
@@ -623,7 +679,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dataset.Pack"
+                            "$ref": "#/definitions/packs.Pack"
                         }
                     }
                 ],
@@ -631,25 +687,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Pack created",
                         "schema": {
-                            "$ref": "#/definitions/dataset.Pack"
+                            "$ref": "#/definitions/packs.Pack"
                         }
                     },
                     "400": {
                         "description": "Invalid Body format",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -680,7 +736,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dataset.PackContent"
+                            "$ref": "#/definitions/packs.PackContent"
                         }
                     }
                 ],
@@ -688,31 +744,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/dataset.PackContent"
+                            "$ref": "#/definitions/packs.PackContent"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -746,37 +802,37 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dataset.Pack"
+                            "$ref": "#/definitions/packs.Pack"
                         }
                     },
                     "400": {
                         "description": "Invalid ID format",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "This pack does not belong to you",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Pack not found",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -812,7 +868,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dataset.Pack"
+                            "$ref": "#/definitions/packs.Pack"
                         }
                     }
                 ],
@@ -820,31 +876,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Pack updated",
                         "schema": {
-                            "$ref": "#/definitions/dataset.Pack"
+                            "$ref": "#/definitions/packs.Pack"
                         }
                     },
                     "400": {
                         "description": "Invalid Payload",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "This pack does not belong to you",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -876,31 +932,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Pack deleted",
                         "schema": {
-                            "$ref": "#/definitions/dataset.OkResponse"
+                            "$ref": "#/definitions/apitypes.OkResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid ID format",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "This pack does not belong to you",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -1122,7 +1178,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dataset.PackContent"
+                            "$ref": "#/definitions/packs.PackContent"
                         }
                     }
                 ],
@@ -1130,31 +1186,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Pack Content updated",
                         "schema": {
-                            "$ref": "#/definitions/dataset.PackContent"
+                            "$ref": "#/definitions/packs.PackContent"
                         }
                     },
                     "400": {
                         "description": "Invalid Body format",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "This pack does not belong to you",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -1193,31 +1249,31 @@ const docTemplate = `{
                     "200": {
                         "description": "Pack Item deleted",
                         "schema": {
-                            "$ref": "#/definitions/dataset.OkResponse"
+                            "$ref": "#/definitions/apitypes.OkResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid ID format",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "This pack does not belong to you",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -1251,37 +1307,37 @@ const docTemplate = `{
                     "200": {
                         "description": "Pack Item",
                         "schema": {
-                            "$ref": "#/definitions/dataset.PackContent"
+                            "$ref": "#/definitions/packs.PackContent"
                         }
                     },
                     "400": {
                         "description": "Invalid ID format",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "This pack does not belong to you",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Pack not found",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -1324,31 +1380,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid ID format",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "This pack does not belong to you",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Pack not found",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -1380,37 +1436,37 @@ const docTemplate = `{
                     "200": {
                         "description": "Pack unshared successfully",
                         "schema": {
-                            "$ref": "#/definitions/dataset.OkResponse"
+                            "$ref": "#/definitions/apitypes.OkResponse"
                         }
                     },
                     "400": {
                         "description": "Invalid ID format",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "This pack does not belong to you",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Pack not found",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -1437,26 +1493,26 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/dataset.Pack"
+                                "$ref": "#/definitions/packs.Pack"
                             }
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "No pack found",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -1487,7 +1543,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/dataset.PasswordUpdateInput"
+                            "$ref": "#/definitions/accounts.PasswordUpdateInput"
                         }
                     }
                 ],
@@ -1495,25 +1551,25 @@ const docTemplate = `{
                     "200": {
                         "description": "Password updated",
                         "schema": {
-                            "$ref": "#/definitions/dataset.OkResponse"
+                            "$ref": "#/definitions/apitypes.OkResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/dataset.ErrorResponse"
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     }
                 }
@@ -1580,7 +1636,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "dataset.Account": {
+        "accounts.Account": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1618,15 +1674,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dataset.ErrorResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string"
-                }
-            }
-        },
-        "dataset.ForgotPasswordInput": {
+        "accounts.ForgotPasswordInput": {
             "type": "object",
             "required": [
                 "email"
@@ -1637,7 +1685,88 @@ const docTemplate = `{
                 }
             }
         },
-        "dataset.Inventory": {
+        "accounts.LoginInput": {
+            "type": "object",
+            "required": [
+                "password",
+                "username"
+            ],
+            "properties": {
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "accounts.PasswordUpdateInput": {
+            "type": "object",
+            "required": [
+                "current_password",
+                "new_password"
+            ],
+            "properties": {
+                "current_password": {
+                    "type": "string"
+                },
+                "new_password": {
+                    "type": "string"
+                }
+            }
+        },
+        "accounts.RegisterInput": {
+            "type": "object",
+            "required": [
+                "email",
+                "firstname",
+                "lastname",
+                "password",
+                "username"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "firstname": {
+                    "type": "string"
+                },
+                "lastname": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                },
+                "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "accounts.Token": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string"
+                }
+            }
+        },
+        "apitypes.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                }
+            }
+        },
+        "apitypes.OkResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "inventories.Inventory": {
             "type": "object",
             "properties": {
                 "category": {
@@ -1675,30 +1804,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dataset.LoginInput": {
-            "type": "object",
-            "required": [
-                "password",
-                "username"
-            ],
-            "properties": {
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "dataset.OkResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
-        "dataset.Pack": {
+        "packs.Pack": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1733,7 +1839,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dataset.PackContent": {
+        "packs.PackContent": {
             "type": "object",
             "properties": {
                 "consumable": {
@@ -1762,7 +1868,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dataset.PackContentWithItem": {
+        "packs.PackContentWithItem": {
             "type": "object",
             "properties": {
                 "category": {
@@ -1806,49 +1912,7 @@ const docTemplate = `{
                 }
             }
         },
-        "dataset.PasswordUpdateInput": {
-            "type": "object",
-            "required": [
-                "current_password",
-                "new_password"
-            ],
-            "properties": {
-                "current_password": {
-                    "type": "string"
-                },
-                "new_password": {
-                    "type": "string"
-                }
-            }
-        },
-        "dataset.RegisterInput": {
-            "type": "object",
-            "required": [
-                "email",
-                "firstname",
-                "lastname",
-                "password",
-                "username"
-            ],
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "firstname": {
-                    "type": "string"
-                },
-                "lastname": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                },
-                "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "dataset.SharedPackInfo": {
+        "packs.SharedPackInfo": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -1868,25 +1932,17 @@ const docTemplate = `{
                 }
             }
         },
-        "dataset.SharedPackResponse": {
+        "packs.SharedPackResponse": {
             "type": "object",
             "properties": {
                 "contents": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/dataset.PackContentWithItem"
+                        "$ref": "#/definitions/packs.PackContentWithItem"
                     }
                 },
                 "pack": {
-                    "$ref": "#/definitions/dataset.SharedPackInfo"
-                }
-            }
-        },
-        "dataset.Token": {
-            "type": "object",
-            "properties": {
-                "token": {
-                    "type": "string"
+                    "$ref": "#/definitions/packs.SharedPackInfo"
                 }
             }
         }

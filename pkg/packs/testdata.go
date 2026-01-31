@@ -7,14 +7,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Angak0k/pimpmypack/pkg/accounts"
 	"github.com/Angak0k/pimpmypack/pkg/database"
-	"github.com/Angak0k/pimpmypack/pkg/dataset"
-	"github.com/Angak0k/pimpmypack/pkg/helper"
+	"github.com/Angak0k/pimpmypack/pkg/inventories"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
-var users = []dataset.User{
+var users = []accounts.User{
 	{
 		Username:     "user-" + random.UniqueId(),
 		Email:        "user-" + random.UniqueId() + "@exemple.com",
@@ -37,7 +37,7 @@ var users = []dataset.User{
 	},
 }
 
-var inventoriesUserPack1 = dataset.Inventories{
+var inventoriesUserPack1 = inventories.Inventories{
 	{
 		UserID:      1,
 		ItemName:    "Backpack",
@@ -76,7 +76,7 @@ var (
 	sharingCode3 = "share3-" + random.UniqueId()
 )
 
-var packs = dataset.Packs{
+var packs = Packs{
 	{
 		UserID:          1,
 		PackName:        "First Pack",
@@ -103,7 +103,7 @@ var packs = dataset.Packs{
 	},
 }
 
-var packItems = dataset.PackContents{
+var packItems = PackContents{
 	{
 		PackID:     1,
 		ItemID:     1,
@@ -148,7 +148,7 @@ var packItems = dataset.PackContents{
 	},
 }
 
-var packWithItems = dataset.PackContentWithItems{
+var packWithItems = PackContentWithItems{
 	{
 		PackContentID:   1,
 		PackID:          4,
@@ -267,9 +267,9 @@ func transformInventories() {
 	for i := range inventoriesUserPack1 {
 		switch inventoriesUserPack1[i].UserID {
 		case 1:
-			inventoriesUserPack1[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
+			inventoriesUserPack1[i].UserID = accounts.FindUserIDByUsername(users, users[0].Username)
 		case 2:
-			inventoriesUserPack1[i].UserID = helper.FindUserIDByUsername(users, users[1].Username)
+			inventoriesUserPack1[i].UserID = accounts.FindUserIDByUsername(users, users[1].Username)
 		}
 	}
 
@@ -277,9 +277,9 @@ func transformInventories() {
 	for i := range packs {
 		switch packs[i].UserID {
 		case 1:
-			packs[i].UserID = helper.FindUserIDByUsername(users, users[0].Username)
+			packs[i].UserID = accounts.FindUserIDByUsername(users, users[0].Username)
 		case 2:
-			packs[i].UserID = helper.FindUserIDByUsername(users, users[1].Username)
+			packs[i].UserID = accounts.FindUserIDByUsername(users, users[1].Username)
 		}
 	}
 }
@@ -367,34 +367,34 @@ func transformPackContents() {
 	for i := range packItems {
 		switch packItems[i].PackID {
 		case 1:
-			packItems[i].PackID = helper.FindPackIDByPackName(packs, "First Pack")
+			packItems[i].PackID = FindPackIDByPackName(packs, "First Pack")
 		case 2:
-			packItems[i].PackID = helper.FindPackIDByPackName(packs, "Second Pack")
+			packItems[i].PackID = FindPackIDByPackName(packs, "Second Pack")
 		case 3:
-			packItems[i].PackID = helper.FindPackIDByPackName(packs, "Third Pack")
+			packItems[i].PackID = FindPackIDByPackName(packs, "Third Pack")
 		case 4:
-			packItems[i].PackID = helper.FindPackIDByPackName(packs, "Special Pack")
+			packItems[i].PackID = FindPackIDByPackName(packs, "Special Pack")
 		}
 		switch packItems[i].ItemID {
 		case 1:
-			packItems[i].ItemID = helper.FindItemIDByItemName(inventoriesUserPack1, "Backpack")
+			packItems[i].ItemID = inventories.FindItemIDByItemName(inventoriesUserPack1, "Backpack")
 		case 2:
-			packItems[i].ItemID = helper.FindItemIDByItemName(inventoriesUserPack1, "Tent")
+			packItems[i].ItemID = inventories.FindItemIDByItemName(inventoriesUserPack1, "Tent")
 		case 3:
-			packItems[i].ItemID = helper.FindItemIDByItemName(inventoriesUserPack1, "Sleeping Bag")
+			packItems[i].ItemID = inventories.FindItemIDByItemName(inventoriesUserPack1, "Sleeping Bag")
 		}
 	}
 
 	for i := range packWithItems {
 		switch packWithItems[i].PackID {
 		case 1:
-			packWithItems[i].PackID = helper.FindPackIDByPackName(packs, "First Pack")
+			packWithItems[i].PackID = FindPackIDByPackName(packs, "First Pack")
 		case 2:
-			packWithItems[i].PackID = helper.FindPackIDByPackName(packs, "Second Pack")
+			packWithItems[i].PackID = FindPackIDByPackName(packs, "Second Pack")
 		case 3:
-			packWithItems[i].PackID = helper.FindPackIDByPackName(packs, "Third Pack")
+			packWithItems[i].PackID = FindPackIDByPackName(packs, "Third Pack")
 		case 4:
-			packWithItems[i].PackID = helper.FindPackIDByPackName(packs, "Special Pack")
+			packWithItems[i].PackID = FindPackIDByPackName(packs, "Special Pack")
 		}
 	}
 }
