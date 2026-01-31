@@ -60,6 +60,76 @@ var testPacks = []packs.Pack{
 	},
 }
 
+// createOrFindTestUser creates or finds the test user in the database
+func createOrFindTestUser(ctx context.Context, tx *sql.Tx) error {
+	var existingID int
+	err := tx.QueryRowContext(ctx,
+		"SELECT id FROM account WHERE username = $1", testUser.Username).Scan(&existingID)
+
+	switch {
+	case err == nil:
+		// User exists, use existing ID
+		if existingID < 0 {
+			return fmt.Errorf("invalid user ID: negative value %d for user %s", existingID, testUser.Username)
+		}
+		testUser.ID = uint(existingID)
+		return nil
+
+	case errors.Is(err, sql.ErrNoRows):
+		// User doesn't exist, create them
+		return createTestUser(ctx, tx)
+
+	default:
+		return fmt.Errorf("failed to check existing user: %w", err)
+	}
+}
+
+// createTestUser creates a new test user with password
+func createTestUser(ctx context.Context, tx *sql.Tx) error {
+	println("-> Creating test user for image tests...")
+
+	err := tx.QueryRowContext(ctx,
+		`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+		RETURNING id;`,
+		testUser.Username,
+		testUser.Email,
+		testUser.Firstname,
+		testUser.Lastname,
+		testUser.Role,
+		testUser.Status,
+		time.Now().Truncate(time.Second),
+		time.Now().Truncate(time.Second)).Scan(&testUser.ID)
+	if err != nil {
+		return fmt.Errorf("failed to insert test user: %w", err)
+	}
+
+	// Create password for test user
+	hashedPassword, err := security.HashPassword(testUser.Password)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	hashedLastPassword, err := security.HashPassword(testUser.LastPassword)
+	if err != nil {
+		return fmt.Errorf("failed to hash last password: %w", err)
+	}
+
+	var passwordID uint
+	err = tx.QueryRowContext(ctx,
+		`INSERT INTO password (user_id, password, last_password, updated_at) VALUES ($1,$2,$3,$4)
+		RETURNING id;`,
+		testUser.ID,
+		hashedPassword,
+		hashedLastPassword,
+		time.Now().Truncate(time.Second)).Scan(&passwordID)
+	if err != nil {
+		return fmt.Errorf("failed to insert password for test user: %w", err)
+	}
+
+	return nil
+}
+
 // loadImageTestData loads test packs for image storage tests
 func loadImageTestData() error {
 	ctx := context.Background()
@@ -78,58 +148,8 @@ func loadImageTestData() error {
 	println("-> Loading image test data...")
 
 	// Create or find test user
-	var existingID int
-	err = tx.QueryRowContext(ctx,
-		"SELECT id FROM account WHERE username = $1", testUser.Username).Scan(&existingID)
-	if err == nil {
-		// User exists, use existing ID
-		if existingID < 0 {
-			return fmt.Errorf("invalid user ID: negative value %d for user %s", existingID, testUser.Username)
-		}
-		testUser.ID = uint(existingID)
-	} else if errors.Is(err, sql.ErrNoRows) {
-		// User doesn't exist, create them
-		println("-> Creating test user for image tests...")
-		err = tx.QueryRowContext(ctx,
-			`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-			RETURNING id;`,
-			testUser.Username,
-			testUser.Email,
-			testUser.Firstname,
-			testUser.Lastname,
-			testUser.Role,
-			testUser.Status,
-			time.Now().Truncate(time.Second),
-			time.Now().Truncate(time.Second)).Scan(&testUser.ID)
-		if err != nil {
-			return fmt.Errorf("failed to insert test user: %w", err)
-		}
-
-		// Create password for test user
-		hashedPassword, err := security.HashPassword(testUser.Password)
-		if err != nil {
-			return fmt.Errorf("failed to hash password: %w", err)
-		}
-
-		hashedLastPassword, err := security.HashPassword(testUser.LastPassword)
-		if err != nil {
-			return fmt.Errorf("failed to hash last password: %w", err)
-		}
-
-		var passwordID uint
-		err = tx.QueryRowContext(ctx,
-			`INSERT INTO password (user_id, password, last_password, updated_at) VALUES ($1,$2,$3,$4)
-			RETURNING id;`,
-			testUser.ID,
-			hashedPassword,
-			hashedLastPassword,
-			time.Now().Truncate(time.Second)).Scan(&passwordID)
-		if err != nil {
-			return fmt.Errorf("failed to insert password for test user: %w", err)
-		}
-	} else {
-		return fmt.Errorf("failed to check existing user: %w", err)
+	if err := createOrFindTestUser(ctx, tx); err != nil {
+		return err
 	}
 
 	println("-> Loading image test packs...")
@@ -141,29 +161,8 @@ func loadImageTestData() error {
 
 	// Insert test packs
 	for i := range testPacks {
-		// Check if pack already exists
-		var existingPackID int
-		err := tx.QueryRowContext(ctx,
-			"SELECT id FROM pack WHERE id = $1", testPacks[i].ID).Scan(&existingPackID)
-		if err == nil {
-			// Pack exists, skip
-			continue
-		} else if !errors.Is(err, sql.ErrNoRows) {
-			return fmt.Errorf("failed to check existing pack %d: %w", testPacks[i].ID, err)
-		}
-
-		// Pack doesn't exist, create it
-		_, err = tx.ExecContext(ctx,
-			`INSERT INTO pack (id, user_id, pack_name, pack_description, created_at, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6)`,
-			testPacks[i].ID,
-			testPacks[i].UserID,
-			testPacks[i].PackName,
-			testPacks[i].PackDescription,
-			time.Now().Truncate(time.Second),
-			time.Now().Truncate(time.Second))
-		if err != nil {
-			return fmt.Errorf("failed to insert pack %d: %w", testPacks[i].ID, err)
+		if err := insertTestPack(ctx, tx, &testPacks[i]); err != nil {
+			return err
 		}
 	}
 
@@ -173,6 +172,37 @@ func loadImageTestData() error {
 	}
 
 	println("-> Image test data loaded...")
+	return nil
+}
+
+// insertTestPack inserts a test pack if it doesn't already exist
+func insertTestPack(ctx context.Context, tx *sql.Tx, pack *packs.Pack) error {
+	// Check if pack already exists
+	var existingPackID int
+	err := tx.QueryRowContext(ctx,
+		"SELECT id FROM pack WHERE id = $1", pack.ID).Scan(&existingPackID)
+	if err == nil {
+		// Pack exists, skip
+		return nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return fmt.Errorf("failed to check existing pack %d: %w", pack.ID, err)
+	}
+
+	// Pack doesn't exist, create it
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO pack (id, user_id, pack_name, pack_description, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		pack.ID,
+		pack.UserID,
+		pack.PackName,
+		pack.PackDescription,
+		time.Now().Truncate(time.Second),
+		time.Now().Truncate(time.Second))
+	if err != nil {
+		return fmt.Errorf("failed to insert pack %d: %w", pack.ID, err)
+	}
+
 	return nil
 }
 
