@@ -29,31 +29,31 @@ var testUser = accounts.User{
 // Test packs for image storage tests
 var testPacks = []packs.Pack{
 	{
-		ID:              999,
+		ID:              9999,
 		UserID:          0, // Will be set dynamically
 		PackName:        "Image Test Pack 1",
 		PackDescription: "Pack for testing image save operations",
 	},
 	{
-		ID:              1000,
+		ID:              10000,
 		UserID:          0, // Will be set dynamically
 		PackName:        "Image Test Pack 2",
 		PackDescription: "Pack for testing image update operations",
 	},
 	{
-		ID:              1001,
+		ID:              10001,
 		UserID:          0, // Will be set dynamically
 		PackName:        "Image Test Pack 3",
 		PackDescription: "Pack for testing image get operations",
 	},
 	{
-		ID:              1002,
+		ID:              10002,
 		UserID:          0, // Will be set dynamically
 		PackName:        "Image Test Pack 4",
 		PackDescription: "Pack for testing image delete operations",
 	},
 	{
-		ID:              1003,
+		ID:              10003,
 		UserID:          0, // Will be set dynamically
 		PackName:        "Image Test Pack 5",
 		PackDescription: "Pack for testing image exists operations",
