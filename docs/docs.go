@@ -243,9 +243,9 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "CSV data imported successfully",
+                        "description": "CSV data imported successfully with pack ID",
                         "schema": {
-                            "$ref": "#/definitions/apitypes.OkResponse"
+                            "$ref": "#/definitions/packs.ImportLighterPackResponse"
                         }
                     },
                     "400": {
@@ -1800,6 +1800,17 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "weight": {
+                    "type": "integer"
+                }
+            }
+        },
+        "packs.ImportLighterPackResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "pack_id": {
                     "type": "integer"
                 }
             }

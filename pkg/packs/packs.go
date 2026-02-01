@@ -1431,7 +1431,7 @@ func unsharePackByID(ctx context.Context, packID uint, userID uint) error {
 // @Accept  multipart/form-data
 // @Produce  json
 // @Param file formData file true "CSV file"
-// @Success 200 {object} apitypes.OkResponse "CSV data imported successfully"
+// @Success 200 {object} ImportLighterPackResponse "CSV data imported successfully with pack ID"
 // @Failure 400 {object} apitypes.ErrorResponse "Invalid CSV format"
 // @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
 // @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
@@ -1495,12 +1495,15 @@ func ImportFromLighterPack(c *gin.Context) {
 	}
 
 	// Perform database insertion
-	err = insertLighterPack(&lighterPack, userID)
+	packID, err := insertLighterPack(&lighterPack, userID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "CSV data imported successfully"})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "CSV data imported successfully",
+		"pack_id": packID,
+	})
 }
 
 // Take a record from csv.Newreder and return a LighterPackItem
@@ -1545,9 +1548,9 @@ func readLineFromCSV(record []string) (LighterPackItem, error) {
 	return lighterPackItem, nil
 }
 
-func insertLighterPack(lp *LighterPack, userID uint) error {
-	if lp == nil {
-		return errors.New("payload is empty")
+func insertLighterPack(lp *LighterPack, userID uint) (uint, error) {
+	if lp == nil || len(*lp) == 0 {
+		return 0, errors.New("payload is empty")
 	}
 
 	// Create new pack
@@ -1557,7 +1560,7 @@ func insertLighterPack(lp *LighterPack, userID uint) error {
 	newPack.PackDescription = "LighterPack Import"
 	err := insertPack(&newPack)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	ctx := context.Background()
@@ -1575,7 +1578,7 @@ func insertLighterPack(lp *LighterPack, userID uint) error {
 			item.Desc,
 		)
 		if err != nil && !errors.Is(err, inventories.ErrNoItemFound) {
-			return fmt.Errorf("failed to check for existing item: %w", err)
+			return 0, fmt.Errorf("failed to check for existing item: %w", err)
 		}
 
 		if existingItem != nil {
@@ -1594,7 +1597,7 @@ func insertLighterPack(lp *LighterPack, userID uint) error {
 			i.Currency = "USD"
 			err := inventories.InsertInventory(ctx, &i)
 			if err != nil {
-				return err
+				return 0, err
 			}
 			itemID = i.ID
 		}
@@ -1608,10 +1611,10 @@ func insertLighterPack(lp *LighterPack, userID uint) error {
 		pc.Consumable = item.Consumable
 		err = insertPackContent(&pc)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
-	return nil
+	return newPack.ID, nil
 }
 
 // SharedList gets pack metadata and contents for a shared pack

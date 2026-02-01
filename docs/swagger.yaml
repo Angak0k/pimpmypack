@@ -111,6 +111,13 @@ definitions:
       weight:
         type: integer
     type: object
+  packs.ImportLighterPackResponse:
+    properties:
+      message:
+        type: string
+      pack_id:
+        type: integer
+    type: object
   packs.Pack:
     properties:
       created_at:
@@ -357,9 +364,9 @@ paths:
       - application/json
       responses:
         "200":
-          description: CSV data imported successfully
+          description: CSV data imported successfully with pack ID
           schema:
-            $ref: '#/definitions/apitypes.OkResponse'
+            $ref: '#/definitions/packs.ImportLighterPackResponse'
         "400":
           description: Invalid CSV format
           schema:
