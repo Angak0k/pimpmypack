@@ -911,7 +911,39 @@ item2,category2,description2,2,150,g,http://example2.com,20,,consumable`
 				// Print response body for debugging
 				t.Logf("Response body: %s", w.Body.String())
 			}
+
+			// For successful imports, verify pack_id is returned
+			if w.Code == http.StatusOK {
+				verifyImportResponse(t, w.Body.Bytes())
+			}
 		})
+	}
+}
+
+// verifyImportResponse checks that a successful import response contains a valid pack_id
+func verifyImportResponse(t *testing.T, responseBody []byte) {
+	t.Helper()
+
+	var response ImportLighterPackResponse
+	if err := json.Unmarshal(responseBody, &response); err != nil {
+		t.Fatalf("Failed to parse response JSON: %v", err)
+	}
+
+	if response.PackID == 0 {
+		t.Error("expected non-zero pack_id in response")
+	}
+
+	// Verify the pack exists in database
+	var packExists bool
+	err := database.DB().QueryRow(
+		"SELECT EXISTS(SELECT 1 FROM pack WHERE id = $1)",
+		response.PackID,
+	).Scan(&packExists)
+	if err != nil {
+		t.Fatalf("Failed to check pack existence: %v", err)
+	}
+	if !packExists {
+		t.Errorf("pack with id %d does not exist in database", response.PackID)
 	}
 }
 

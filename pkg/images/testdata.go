@@ -148,7 +148,8 @@ func loadImageTestData() error {
 	println("-> Loading image test data...")
 
 	// Create or find test user
-	if err := createOrFindTestUser(ctx, tx); err != nil {
+	err = createOrFindTestUser(ctx, tx)
+	if err != nil {
 		return err
 	}
 
@@ -161,13 +162,15 @@ func loadImageTestData() error {
 
 	// Insert test packs
 	for i := range testPacks {
-		if err := insertTestPack(ctx, tx, &testPacks[i]); err != nil {
+		err = insertTestPack(ctx, tx, &testPacks[i])
+		if err != nil {
 			return err
 		}
 	}
 
 	// Commit the transaction
-	if err := tx.Commit(); err != nil {
+	err = tx.Commit()
+	if err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
 	}
 

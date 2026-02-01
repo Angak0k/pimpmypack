@@ -1549,7 +1549,7 @@ func readLineFromCSV(record []string) (LighterPackItem, error) {
 }
 
 func insertLighterPack(lp *LighterPack, userID uint) (uint, error) {
-	if lp == nil {
+	if lp == nil || len(*lp) == 0 {
 		return 0, errors.New("payload is empty")
 	}
 
