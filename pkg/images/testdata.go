@@ -29,31 +29,26 @@ var testUser = accounts.User{
 // Test packs for image storage tests
 var testPacks = []packs.Pack{
 	{
-		ID:              9999,
 		UserID:          0, // Will be set dynamically
 		PackName:        "Image Test Pack 1",
 		PackDescription: "Pack for testing image save operations",
 	},
 	{
-		ID:              10000,
 		UserID:          0, // Will be set dynamically
 		PackName:        "Image Test Pack 2",
 		PackDescription: "Pack for testing image update operations",
 	},
 	{
-		ID:              10001,
 		UserID:          0, // Will be set dynamically
 		PackName:        "Image Test Pack 3",
 		PackDescription: "Pack for testing image get operations",
 	},
 	{
-		ID:              10002,
 		UserID:          0, // Will be set dynamically
 		PackName:        "Image Test Pack 4",
 		PackDescription: "Pack for testing image delete operations",
 	},
 	{
-		ID:              10003,
 		UserID:          0, // Will be set dynamically
 		PackName:        "Image Test Pack 5",
 		PackDescription: "Pack for testing image exists operations",
@@ -178,32 +173,19 @@ func loadImageTestData() error {
 	return nil
 }
 
-// insertTestPack inserts a test pack if it doesn't already exist
+// insertTestPack inserts a test pack and returns the auto-generated ID
 func insertTestPack(ctx context.Context, tx *sql.Tx, pack *packs.Pack) error {
-	// Check if pack already exists
-	var existingPackID int
 	err := tx.QueryRowContext(ctx,
-		"SELECT id FROM pack WHERE id = $1", pack.ID).Scan(&existingPackID)
-	if err == nil {
-		// Pack exists, skip
-		return nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("failed to check existing pack %d: %w", pack.ID, err)
-	}
-
-	// Pack doesn't exist, create it
-	_, err = tx.ExecContext(ctx,
-		`INSERT INTO pack (id, user_id, pack_name, pack_description, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6)`,
-		pack.ID,
+		`INSERT INTO pack (user_id, pack_name, pack_description, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id`,
 		pack.UserID,
 		pack.PackName,
 		pack.PackDescription,
 		time.Now().Truncate(time.Second),
-		time.Now().Truncate(time.Second))
+		time.Now().Truncate(time.Second)).Scan(&pack.ID)
 	if err != nil {
-		return fmt.Errorf("failed to insert pack %d: %w", pack.ID, err)
+		return fmt.Errorf("failed to insert pack: %w", err)
 	}
 
 	return nil

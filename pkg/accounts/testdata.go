@@ -113,3 +113,23 @@ func loadingAccountDataset() error {
 
 	return nil
 }
+
+// cleanupAccountDataset removes all test data created by loadingAccountDataset
+func cleanupAccountDataset() error {
+	ctx := context.Background()
+
+	println("-> Cleaning up account test data...")
+
+	// Delete users (passwords will cascade delete)
+	for _, user := range users {
+		if user.ID != 0 {
+			_, err := database.DB().ExecContext(ctx, "DELETE FROM account WHERE id = $1", user.ID)
+			if err != nil {
+				return fmt.Errorf("failed to delete user %d: %w", user.ID, err)
+			}
+		}
+	}
+
+	println("-> Account test data cleaned up...")
+	return nil
+}

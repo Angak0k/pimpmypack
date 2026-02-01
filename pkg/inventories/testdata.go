@@ -170,3 +170,33 @@ func loadingInventoryDataset() error {
 
 	return nil
 }
+
+// cleanupInventoryDataset removes all test data created by loadingInventoryDataset
+func cleanupInventoryDataset() error {
+	ctx := context.Background()
+
+	println("-> Cleaning up inventory test data...")
+
+	// Delete inventories first
+	for _, inv := range inventories {
+		if inv.ID != 0 {
+			_, err := database.DB().ExecContext(ctx, "DELETE FROM inventory WHERE id = $1", inv.ID)
+			if err != nil {
+				return fmt.Errorf("failed to delete inventory %d: %w", inv.ID, err)
+			}
+		}
+	}
+
+	// Delete users (passwords will cascade delete)
+	for _, user := range users {
+		if user.ID != 0 {
+			_, err := database.DB().ExecContext(ctx, "DELETE FROM account WHERE id = $1", user.ID)
+			if err != nil {
+				return fmt.Errorf("failed to delete user %d: %w", user.ID, err)
+			}
+		}
+	}
+
+	println("-> Inventory test data cleaned up...")
+	return nil
+}
