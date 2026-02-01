@@ -50,7 +50,17 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Error loading dataset : %v", err)
 	}
 	println("Dataset loaded...")
+
+	// Run tests
 	ret := m.Run()
+
+	// Cleanup test data
+	println("Cleaning up test data...")
+	err = cleanupPackDataset()
+	if err != nil {
+		log.Printf("Warning: Error cleaning up dataset : %v", err)
+	}
+
 	os.Exit(ret)
 }
 

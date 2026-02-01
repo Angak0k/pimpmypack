@@ -54,7 +54,7 @@ func TestMain(m *testing.M) {
 
 func TestDBImageStorage_Save(t *testing.T) {
 	ctx := context.Background()
-	packID := uint(999) // From testPacks[0]
+	packID := testPacks[0].ID // From testPacks[0]
 
 	// Clean up image after test (pack cleanup handled by TestMain)
 	defer func() {
@@ -103,7 +103,7 @@ func TestDBImageStorage_Save(t *testing.T) {
 
 func TestDBImageStorage_Update(t *testing.T) {
 	ctx := context.Background()
-	packID := uint(1000) // From testPacks[1]
+	packID := testPacks[1].ID // From testPacks[1]
 
 	// Clean up image after test (pack cleanup handled by TestMain)
 	defer func() {
@@ -153,7 +153,7 @@ func TestDBImageStorage_Update(t *testing.T) {
 
 func TestDBImageStorage_Get(t *testing.T) {
 	ctx := context.Background()
-	packID := uint(1001) // From testPacks[2]
+	packID := testPacks[2].ID // From testPacks[2]
 
 	// Clean up image after test (pack cleanup handled by TestMain)
 	defer func() {
@@ -201,7 +201,7 @@ func TestDBImageStorage_Get(t *testing.T) {
 
 func TestDBImageStorage_Delete(t *testing.T) {
 	ctx := context.Background()
-	packID := uint(1002) // From testPacks[3]
+	packID := testPacks[3].ID // From testPacks[3]
 
 	// No cleanup needed - delete test verifies deletion (pack cleanup handled by TestMain)
 
@@ -252,7 +252,7 @@ func TestDBImageStorage_Delete(t *testing.T) {
 
 func TestDBImageStorage_Exists(t *testing.T) {
 	ctx := context.Background()
-	packID := uint(1003) // From testPacks[4]
+	packID := testPacks[4].ID // From testPacks[4]
 
 	// Clean up image after test (pack cleanup handled by TestMain)
 	defer func() {

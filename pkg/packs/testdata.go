@@ -246,14 +246,15 @@ func loadAccounts(tx *sql.Tx) error {
 			return fmt.Errorf("failed to hash last password for user %s: %w", users[i].Username, err)
 		}
 
+		var passwordID uint
 		//nolint:execinquery
 		err = tx.QueryRowContext(context.Background(),
-			`INSERT INTO password (user_id, password, last_password, updated_at) VALUES ($1,$2,$3,$4) 
+			`INSERT INTO password (user_id, password, last_password, updated_at) VALUES ($1,$2,$3,$4)
 			RETURNING id;`,
 			users[i].ID,
 			hashedPassword,
 			hashedLastPassword,
-			time.Now().Truncate(time.Second)).Scan(&users[i].ID)
+			time.Now().Truncate(time.Second)).Scan(&passwordID)
 		if err != nil {
 			return fmt.Errorf("failed to insert password for user %s (ID: %d): %w", users[i].Username, users[i].ID, err)
 		}
@@ -445,5 +446,80 @@ func loadPackContents(tx *sql.Tx) error {
 		}
 	}
 	println("-> Pack Contents Loaded...")
+	return nil
+}
+
+// cleanupPackDataset removes all test data created by loadingPackDataset
+func cleanupPackDataset() error {
+	ctx := context.Background()
+
+	println("-> Cleaning up pack test data...")
+
+	// Delete in reverse order of creation due to foreign key constraints
+	if err := deletePackContents(ctx); err != nil {
+		return err
+	}
+
+	if err := deletePacks(ctx); err != nil {
+		return err
+	}
+
+	if err := deleteInventories(ctx); err != nil {
+		return err
+	}
+
+	if err := deleteUsers(ctx); err != nil {
+		return err
+	}
+
+	println("-> Pack test data cleaned up...")
+	return nil
+}
+
+func deletePackContents(ctx context.Context) error {
+	for _, packItem := range packItems {
+		if packItem.ID != 0 {
+			_, err := database.DB().ExecContext(ctx, "DELETE FROM pack_content WHERE id = $1", packItem.ID)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("failed to delete pack content %d: %w", packItem.ID, err)
+			}
+		}
+	}
+	return nil
+}
+
+func deletePacks(ctx context.Context) error {
+	for _, pack := range packs {
+		if pack.ID != 0 {
+			_, err := database.DB().ExecContext(ctx, "DELETE FROM pack WHERE id = $1", pack.ID)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("failed to delete pack %d: %w", pack.ID, err)
+			}
+		}
+	}
+	return nil
+}
+
+func deleteInventories(ctx context.Context) error {
+	for _, inv := range inventoriesUserPack1 {
+		if inv.ID != 0 {
+			_, err := database.DB().ExecContext(ctx, "DELETE FROM inventory WHERE id = $1", inv.ID)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("failed to delete inventory %d: %w", inv.ID, err)
+			}
+		}
+	}
+	return nil
+}
+
+func deleteUsers(ctx context.Context) error {
+	for _, user := range users {
+		if user.ID != 0 {
+			_, err := database.DB().ExecContext(ctx, "DELETE FROM account WHERE id = $1", user.ID)
+			if err != nil && !errors.Is(err, sql.ErrNoRows) {
+				return fmt.Errorf("failed to delete user %d: %w", user.ID, err)
+			}
+		}
+	}
 	return nil
 }
