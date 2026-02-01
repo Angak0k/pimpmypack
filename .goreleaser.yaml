@@ -1,4 +1,4 @@
-version: 1
+version: 2
 
 before:
   hooks:
@@ -14,8 +14,7 @@ builds:
         - darwin
 
 archives:
-  - format: tar.gz
-    name_template: >-
+  - name_template: >-
       {{ .ProjectName }}_
       {{- title .Os }}_
       {{- if eq .Arch "amd64" }}x86_64
@@ -23,15 +22,26 @@ archives:
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
 
+docker_manifests:
+  - name_template: "ghcr.io/angak0k/pimpmypack:{{ .Tag }}"
+    image_templates:
+      - "ghcr.io/angak0k/pimpmypack:{{ .Tag }}-amd64"
+  - name_template: "ghcr.io/angak0k/pimpmypack:latest"
+    image_templates:
+      - "ghcr.io/angak0k/pimpmypack:latest-amd64"
+
 dockers:
   - image_templates:
-      - "ghcr.io/angak0k/pimpmypack:{{ .Tag }}"
-      - "ghcr.io/angak0k/pimpmypack:latest"
+      - "ghcr.io/angak0k/pimpmypack:{{ .Tag }}-amd64"
+      - "ghcr.io/angak0k/pimpmypack:latest-amd64"
+    use: buildx
     goos: linux
     goarch: amd64
     ids:
       - pimpmypack
     dockerfile: Dockerfile
+    build_flag_templates:
+      - "--platform=linux/amd64"
 
 changelog:
   sort: asc
