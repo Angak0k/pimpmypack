@@ -36,6 +36,9 @@ definitions:
     properties:
       password:
         type: string
+      remember_me:
+        description: optional, defaults to false
+        type: boolean
       username:
         type: string
     required:
@@ -70,11 +73,6 @@ definitions:
     - lastname
     - password
     - username
-    type: object
-  accounts.Token:
-    properties:
-      token:
-        type: string
     type: object
   apitypes.ErrorResponse:
     properties:
@@ -211,6 +209,34 @@ definitions:
       pack:
         $ref: '#/definitions/packs.SharedPackInfo'
     type: object
+  security.RefreshResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+    type: object
+  security.RefreshTokenInput:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  security.TokenPairResponse:
+    properties:
+      access_expires_in:
+        type: integer
+      access_token:
+        type: string
+      refresh_expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      token:
+        description: Backward compatibility - same as AccessToken
+        type: string
+    type: object
 host: pmp-dev.alki.earth
 info:
   contact: {}
@@ -218,6 +244,40 @@ info:
   title: PimpMyPack API
   version: "1.0"
 paths:
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Exchange a valid refresh token for a new access token
+      parameters:
+      - description: Refresh Token
+        in: body
+        name: refresh_token
+        required: true
+        schema:
+          $ref: '#/definitions/security.RefreshTokenInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/security.RefreshResponse'
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "401":
+          description: Invalid or expired refresh token
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      summary: Refresh access token
+      tags:
+      - authentication
   /confirmemail:
     get:
       description: Confirm email address by providing username and email
@@ -271,7 +331,12 @@ paths:
       - Public
   /login:
     post:
-      description: Log in a user by providing username and password
+      consumes:
+      - application/json
+      description: |-
+        Log in a user by providing username and password
+        Returns access token (short-lived) and refresh token (long-lived)
+        Use remember_me to extend refresh token lifetime
       parameters:
       - description: Credentials Info
         in: body
@@ -283,11 +348,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Login successful with access and refresh tokens
           schema:
-            $ref: '#/definitions/accounts.Token'
+            $ref: '#/definitions/security.TokenPairResponse'
+        "400":
+          description: Bad request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
         "401":
-          description: Unauthorized
+          description: Invalid credentials or account not confirmed
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal server error
           schema:
             $ref: '#/definitions/apitypes.ErrorResponse'
       summary: User login

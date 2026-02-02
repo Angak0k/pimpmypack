@@ -15,6 +15,58 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/refresh": {
+            "post": {
+                "description": "Exchange a valid refresh token for a new access token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "authentication"
+                ],
+                "summary": "Refresh access token",
+                "parameters": [
+                    {
+                        "description": "Refresh Token",
+                        "name": "refresh_token",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/security.RefreshTokenInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/security.RefreshResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid or expired refresh token",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/confirmemail": {
             "get": {
                 "description": "Confirm email address by providing username and email",
@@ -95,7 +147,10 @@ const docTemplate = `{
         },
         "/login": {
             "post": {
-                "description": "Log in a user by providing username and password",
+                "description": "Log in a user by providing username and password\nReturns access token (short-lived) and refresh token (long-lived)\nUse remember_me to extend refresh token lifetime",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -116,13 +171,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Login successful with access and refresh tokens",
                         "schema": {
-                            "$ref": "#/definitions/accounts.Token"
+                            "$ref": "#/definitions/security.TokenPairResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "Invalid credentials or account not confirmed",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
@@ -1695,6 +1762,10 @@ const docTemplate = `{
                 "password": {
                     "type": "string"
                 },
+                "remember_me": {
+                    "description": "optional, defaults to false",
+                    "type": "boolean"
+                },
                 "username": {
                     "type": "string"
                 }
@@ -1738,14 +1809,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
-                    "type": "string"
-                }
-            }
-        },
-        "accounts.Token": {
-            "type": "object",
-            "properties": {
-                "token": {
                     "type": "string"
                 }
             }
@@ -1954,6 +2017,49 @@ const docTemplate = `{
                 },
                 "pack": {
                     "$ref": "#/definitions/packs.SharedPackInfo"
+                }
+            }
+        },
+        "security.RefreshResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "type": "integer"
+                }
+            }
+        },
+        "security.RefreshTokenInput": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "security.TokenPairResponse": {
+            "type": "object",
+            "properties": {
+                "access_expires_in": {
+                    "type": "integer"
+                },
+                "access_token": {
+                    "type": "string"
+                },
+                "refresh_expires_in": {
+                    "type": "integer"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "token": {
+                    "description": "Backward compatibility - same as AccessToken",
+                    "type": "string"
                 }
             }
         }

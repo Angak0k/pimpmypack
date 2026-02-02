@@ -11,7 +11,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
@@ -590,73 +589,31 @@ func testLoginWithIncorrectPassword(t *testing.T, router *gin.Engine, username s
 	}
 }
 
+// validateTokenPairResponse validates the token pair response format
+func validateTokenPairResponse(t *testing.T, response map[string]interface{}) {
+	t.Helper()
+
+	// Verify new fields
+	if response["access_token"] == nil || response["access_token"] == "" {
+		t.Errorf("Expected access_token but got nil or empty")
+	}
+	if response["refresh_token"] == nil || response["refresh_token"] == "" {
+		t.Errorf("Expected refresh_token but got nil or empty")
+	}
+
+	// Verify backward compatibility - old 'token' field should exist
+	if response["token"] == nil || response["token"] == "" {
+		t.Errorf("Expected token (backward compatibility) but got nil or empty")
+	}
+
+	// Verify token and access_token have the same value
+	if response["token"] != response["access_token"] {
+		t.Errorf("Expected token and access_token to have the same value")
+	}
+}
+
 func TestLogin(t *testing.T) {
-	// Set Gin to test mode
-	gin.SetMode(gin.TestMode)
-
-	// Create a Gin router instance
-	router := gin.Default()
-
-	// Define the endpoint for Login handler
-	router.POST("/login", Login)
-
-	// Sample account data
-	newUser := User{
-		Username:  "user-" + random.UniqueId(),
-		Password:  "password2",
-		Email:     "newuser2@pmp.com",
-		Firstname: "Jules",
-		Lastname:  "Doe",
-		Role:      "standard",
-		Status:    "active",
-		CreatedAt: time.Now().Truncate(time.Second),
-		UpdatedAt: time.Now().Truncate(time.Second),
-	}
-	userLogin := LoginInput{
-		Username: newUser.Username,
-		Password: newUser.Password,
-	}
-
-	// insert account in database
-	var id int
-
-	err := database.DB().QueryRow(
-		`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
-		RETURNING id;`,
-		newUser.Username,
-		newUser.Email,
-		newUser.Firstname,
-		newUser.Lastname,
-		newUser.Role,
-		newUser.Status,
-		newUser.CreatedAt,
-		newUser.UpdatedAt).Scan(&id)
-	if err != nil {
-		t.Fatalf("failed to insert user: %v", err)
-	}
-
-	hashedPassword, err := security.HashPassword(newUser.Password)
-	if err != nil {
-		t.Fatalf("failed to hash password: %v", err)
-	}
-
-	err = database.DB().QueryRow(
-		`INSERT INTO password (user_id, password, updated_at) 
-		VALUES ($1,$2,$3) 
-		RETURNING id;`,
-		id,
-		hashedPassword,
-		newUser.UpdatedAt).Scan(&id)
-	if err != nil {
-		t.Fatalf("failed to insert password: %v", err)
-	}
-
-	// Convert user data to JSON
-	jsonData, err := json.Marshal(userLogin)
-	if err != nil {
-		t.Fatalf("Failed to marshal login data: %v", err)
-	}
+	router, newUser, jsonData := setupLoginTestData(t)
 
 	t.Run("Login user", func(t *testing.T) {
 		// Set up a test scenario: sending a POST request with JSON data
@@ -674,15 +631,13 @@ func TestLogin(t *testing.T) {
 			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
 		}
 
-		// Unmarshal the response body into an token struct
-		var receivedToken Token
-		if err := json.Unmarshal(w.Body.Bytes(), &receivedToken); err != nil {
+		// Unmarshal the response body into token pair response
+		var response map[string]interface{}
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
 
-		if receivedToken.Token == "" {
-			t.Errorf("Expected token but got nil")
-		}
+		validateTokenPairResponse(t, response)
 	})
 	t.Run("Login pending user", func(t *testing.T) {
 		// set status to pending in DB

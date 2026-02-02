@@ -1,7 +1,10 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"time"
 
 	_ "github.com/Angak0k/pimpmypack/docs"
 	"github.com/Angak0k/pimpmypack/pkg/accounts"
@@ -65,6 +68,25 @@ func main() {
 
 	setupRoutes(router)
 
+	// Start refresh token cleanup job
+	go func() {
+		cleanupInterval := time.Hour * time.Duration(config.RefreshTokenCleanupIntervalHours)
+		ticker := time.NewTicker(cleanupInterval)
+		defer ticker.Stop()
+
+		for range ticker.C {
+			ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+			deleted, err := security.CleanupExpiredTokens(ctx)
+			cancel()
+
+			if err != nil {
+				log.Printf("Error cleaning up expired tokens: %v", err)
+			} else if deleted > 0 {
+				log.Printf("Cleaned up %d expired refresh tokens", deleted)
+			}
+		}
+	}()
+
 	startServer(router)
 }
 
@@ -79,6 +101,7 @@ func setupPublicRoutes(router *gin.Engine) {
 	public := router.Group("/api")
 	public.POST("/register", accounts.Register)
 	public.POST("/login", accounts.Login)
+	public.POST("/auth/refresh", security.RefreshTokenHandler)
 	public.GET("/confirmemail", accounts.ConfirmEmail)
 	public.POST("/forgotpassword", accounts.ForgotPassword)
 	public.GET("/sharedlist/:sharing_code", packs.SharedList)

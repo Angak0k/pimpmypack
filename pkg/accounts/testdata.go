@@ -2,11 +2,14 @@ package accounts
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"testing"
 	"time"
 
 	"github.com/Angak0k/pimpmypack/pkg/database"
 	"github.com/Angak0k/pimpmypack/pkg/security"
+	"github.com/gin-gonic/gin"
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
@@ -132,4 +135,59 @@ func cleanupAccountDataset() error {
 
 	println("-> Account test data cleaned up...")
 	return nil
+}
+
+// setupLoginTestData creates a test user and returns router, user, and marshaled login JSON
+func setupLoginTestData(t *testing.T) (*gin.Engine, User, []byte) {
+	t.Helper()
+
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.POST("/login", Login)
+
+	newUser := User{
+		Username:  "user-" + random.UniqueId(),
+		Password:  "password2",
+		Email:     "newuser2@pmp.com",
+		Firstname: "Jules",
+		Lastname:  "Doe",
+		Role:      "standard",
+		Status:    "active",
+		CreatedAt: time.Now().Truncate(time.Second),
+		UpdatedAt: time.Now().Truncate(time.Second),
+	}
+
+	ctx := context.Background()
+	var id int
+	err := database.DB().QueryRowContext(ctx,
+		`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id;`,
+		newUser.Username, newUser.Email, newUser.Firstname, newUser.Lastname,
+		newUser.Role, newUser.Status, newUser.CreatedAt, newUser.UpdatedAt).Scan(&id)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	hashedPassword, err := security.HashPassword(newUser.Password)
+	if err != nil {
+		t.Fatalf("failed to hash password: %v", err)
+	}
+
+	err = database.DB().QueryRowContext(ctx,
+		`INSERT INTO password (user_id, password, updated_at) VALUES ($1,$2,$3) RETURNING id;`,
+		id, hashedPassword, newUser.UpdatedAt).Scan(&id)
+	if err != nil {
+		t.Fatalf("failed to insert password: %v", err)
+	}
+
+	userLogin := LoginInput{
+		Username: newUser.Username,
+		Password: newUser.Password,
+	}
+	jsonData, err := json.Marshal(userLogin)
+	if err != nil {
+		t.Fatalf("Failed to marshal login data: %v", err)
+	}
+
+	return router, newUser, jsonData
 }

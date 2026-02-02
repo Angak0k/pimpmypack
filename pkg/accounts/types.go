@@ -48,8 +48,9 @@ type RegisterInput struct {
 
 // LoginInput represents the data required to login
 type LoginInput struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username   string `json:"username" binding:"required"`
+	Password   string `json:"password" binding:"required"`
+	RememberMe bool   `json:"remember_me"` // optional, defaults to false
 }
 
 // ForgotPasswordInput represents the data required to reset a password
