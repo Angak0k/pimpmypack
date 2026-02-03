@@ -79,6 +79,25 @@ Token lifetimes can be configured via environment variables in `.env`:
 - `REFRESH_TOKEN_DAYS`: Refresh token lifetime (default: 1 day)
 - `REFRESH_TOKEN_REMEMBER_ME_DAYS`: Refresh token lifetime with "remember me" (default: 30 days)
 - `REFRESH_TOKEN_CLEANUP_INTERVAL_HOURS`: Cleanup interval for expired tokens (default: 24 hours)
+- `REFRESH_RATE_LIMIT_REQUESTS`: Rate limit for refresh endpoint (default: 10 requests/minute)
+- `REFRESH_RATE_LIMIT_WINDOW_MINUTES`: Rate limit window (default: 1 minute)
+
+### For Frontend Developers
+
+See our comprehensive [Frontend Integration Guide](docs/frontend-integration.md) for:
+- Automatic token refresh implementation
+- Storage strategies (memory, sessionStorage, httpOnly cookies)
+- React hooks and Vue composables examples
+- Error handling and retry logic
+- Security best practices
+
+### Security Features
+
+- **Rate Limiting**: 10 refresh requests/minute per IP address
+- **Audit Logging**: All authentication events logged with structured data
+- **Automatic Cleanup**: Expired tokens removed automatically
+- **Error Sanitization**: No internal errors exposed to clients
+- **Short-lived Access Tokens**: 15-minute lifetime reduces exposure window
 
 ## Setup for local development
 

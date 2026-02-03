@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	_ "github.com/Angak0k/pimpmypack/docs"
+	_ "github.com/Angak0k/pimpmypack/api-doc"
 	"github.com/Angak0k/pimpmypack/pkg/accounts"
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
@@ -168,7 +168,9 @@ func setupPrivateRoutes(router *gin.Engine) {
 
 func setupSwaggerRoutes(router *gin.Engine) {
 	if config.Stage == envDev || config.Stage == envLocal {
-		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+		// Explicitly set the Swagger JSON URL to the new package location
+		url := ginSwagger.URL("/swagger/doc.json")
+		router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url))
 	}
 }
 

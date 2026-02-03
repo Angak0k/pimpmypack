@@ -12,7 +12,7 @@ import (
 // RefreshTokenHandler handles POST /auth/refresh
 // @Summary Refresh access token
 // @Description Exchange a valid refresh token for a new access token
-// @Tags authentication
+// @Tags Authentication
 // @Accept json
 // @Produce json
 // @Param refresh_token body RefreshTokenInput true "Refresh Token"

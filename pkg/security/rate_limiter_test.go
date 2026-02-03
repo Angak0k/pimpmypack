@@ -21,7 +21,7 @@ func TestRefreshRateLimiter_AllowsUnderLimit(t *testing.T) {
 
 	// Make 9 requests - all should succeed
 	for i := 0; i < 9; i++ {
-		req := httptest.NewRequest("POST", "/test", nil)
+		req := httptest.NewRequest(http.MethodPost, "/test", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -40,7 +40,7 @@ func TestRefreshRateLimiter_BlocksOverLimit(t *testing.T) {
 
 	// Make 10 requests - all should succeed
 	for i := 0; i < 10; i++ {
-		req := httptest.NewRequest("POST", "/test", nil)
+		req := httptest.NewRequest(http.MethodPost, "/test", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -48,7 +48,7 @@ func TestRefreshRateLimiter_BlocksOverLimit(t *testing.T) {
 	}
 
 	// 11th request should be rate limited
-	req := httptest.NewRequest("POST", "/test", nil)
+	req := httptest.NewRequest(http.MethodPost, "/test", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -68,7 +68,7 @@ func TestRefreshRateLimiter_DifferentIPsIndependent(t *testing.T) {
 
 	// Make 5 requests from IP 1
 	for i := 0; i < 5; i++ {
-		req := httptest.NewRequest("POST", "/test", nil)
+		req := httptest.NewRequest(http.MethodPost, "/test", nil)
 		req.RemoteAddr = "192.168.1.1:1234"
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
@@ -77,7 +77,7 @@ func TestRefreshRateLimiter_DifferentIPsIndependent(t *testing.T) {
 	}
 
 	// 6th request from IP 1 should be blocked
-	req1 := httptest.NewRequest("POST", "/test", nil)
+	req1 := httptest.NewRequest(http.MethodPost, "/test", nil)
 	req1.RemoteAddr = "192.168.1.1:1234"
 	w1 := httptest.NewRecorder()
 	router.ServeHTTP(w1, req1)
@@ -85,7 +85,7 @@ func TestRefreshRateLimiter_DifferentIPsIndependent(t *testing.T) {
 	assert.Equal(t, http.StatusTooManyRequests, w1.Code, "6th request from IP 1 should be blocked")
 
 	// Request from different IP should succeed
-	req2 := httptest.NewRequest("POST", "/test", nil)
+	req2 := httptest.NewRequest(http.MethodPost, "/test", nil)
 	req2.RemoteAddr = "192.168.1.2:5678"
 	w2 := httptest.NewRecorder()
 	router.ServeHTTP(w2, req2)
@@ -104,7 +104,7 @@ func TestRefreshRateLimiter_ResetAfterWindow(t *testing.T) {
 
 	// Make 2 requests - should succeed
 	for i := 0; i < 2; i++ {
-		req := httptest.NewRequest("POST", "/test", nil)
+		req := httptest.NewRequest(http.MethodPost, "/test", nil)
 		w := httptest.NewRecorder()
 		router.ServeHTTP(w, req)
 
@@ -112,7 +112,7 @@ func TestRefreshRateLimiter_ResetAfterWindow(t *testing.T) {
 	}
 
 	// 3rd request should be blocked
-	req1 := httptest.NewRequest("POST", "/test", nil)
+	req1 := httptest.NewRequest(http.MethodPost, "/test", nil)
 	w1 := httptest.NewRecorder()
 	router.ServeHTTP(w1, req1)
 
@@ -122,7 +122,7 @@ func TestRefreshRateLimiter_ResetAfterWindow(t *testing.T) {
 	time.Sleep(60 * time.Millisecond)
 
 	// Request should now succeed
-	req2 := httptest.NewRequest("POST", "/test", nil)
+	req2 := httptest.NewRequest(http.MethodPost, "/test", nil)
 	w2 := httptest.NewRecorder()
 	router.ServeHTTP(w2, req2)
 

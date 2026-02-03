@@ -13,11 +13,11 @@ type AuditEventType string
 
 const (
 	// Authentication events
-	EventLoginSuccess  AuditEventType = "login_success"
-	EventLoginFailed   AuditEventType = "login_failed"
-	EventRefreshSuccess AuditEventType = "refresh_success"
-	EventRefreshFailed  AuditEventType = "refresh_failed"
-	EventLogout        AuditEventType = "logout"
+	EventLoginSuccess      AuditEventType = "login_success"
+	EventLoginFailed       AuditEventType = "login_failed"
+	EventRefreshSuccess    AuditEventType = "refresh_success"
+	EventRefreshFailed     AuditEventType = "refresh_failed"
+	EventLogout            AuditEventType = "logout"
 	EventRateLimitExceeded AuditEventType = "rate_limit_exceeded"
 )
 

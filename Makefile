@@ -35,7 +35,7 @@ test: start-db
 	@$(MAKE) clean-db
 
 api-doc:
-	swag init --tags \!Internal
+	swag init --output api-doc --generalInfo main.go --tags \!Internal
 
 build: test
 	go build

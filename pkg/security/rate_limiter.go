@@ -32,7 +32,12 @@ func (rl *IPRateLimiter) GetLimiter(ip string) *rate.Limiter {
 		limiter = rate.NewLimiter(rl.rate, rl.burst)
 		rl.limiters.Store(ip, limiter)
 	}
-	return limiter.(*rate.Limiter)
+	rateLimiter, ok := limiter.(*rate.Limiter)
+	if !ok {
+		// This should never happen as we always store *rate.Limiter
+		rateLimiter = rate.NewLimiter(rl.rate, rl.burst)
+	}
+	return rateLimiter
 }
 
 // RefreshRateLimiter creates a rate limiting middleware for /auth/refresh endpoint
