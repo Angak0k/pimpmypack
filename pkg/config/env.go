@@ -40,6 +40,8 @@ var (
 	RefreshTokenDays                 int
 	RefreshTokenRememberMeDays       int
 	RefreshTokenCleanupIntervalHours int
+	RefreshRateLimitRequests         int
+	RefreshRateLimitWindowMinutes    int
 	MailServerConfig                 MailServer
 )
 
@@ -54,6 +56,8 @@ type Config struct {
 	RefreshTokenDays                 int
 	RefreshTokenRememberMeDays       int
 	RefreshTokenCleanupIntervalHours int
+	RefreshRateLimitRequests         int
+	RefreshRateLimitWindowMinutes    int
 	MailServer                       MailServer
 }
 
@@ -77,6 +81,8 @@ func EnvInit(envFilePath string) error {
 	RefreshTokenDays = newConfig.RefreshTokenDays
 	RefreshTokenRememberMeDays = newConfig.RefreshTokenRememberMeDays
 	RefreshTokenCleanupIntervalHours = newConfig.RefreshTokenCleanupIntervalHours
+	RefreshRateLimitRequests = newConfig.RefreshRateLimitRequests
+	RefreshRateLimitWindowMinutes = newConfig.RefreshRateLimitWindowMinutes
 	MailServerConfig = newConfig.MailServer
 
 	return nil
@@ -116,6 +122,8 @@ func newConfig() Config {
 		RefreshTokenDays:                 1,
 		RefreshTokenRememberMeDays:       30,
 		RefreshTokenCleanupIntervalHours: 24,
+		RefreshRateLimitRequests:         10,
+		RefreshRateLimitWindowMinutes:    1,
 		APISecret:                        "defaultApiSecret",
 		Stage:                            "local",
 		HostName:                         "localhost",
@@ -147,6 +155,10 @@ func setEnvVars(cfg *Config) {
 		ifEnvEmpty(os.Getenv("REFRESH_TOKEN_REMEMBER_ME_DAYS"), strconv.Itoa(cfg.RefreshTokenRememberMeDays)))
 	cfg.RefreshTokenCleanupIntervalHours, _ = strconv.Atoi(
 		ifEnvEmpty(os.Getenv("REFRESH_TOKEN_CLEANUP_INTERVAL_HOURS"), strconv.Itoa(cfg.RefreshTokenCleanupIntervalHours)))
+	cfg.RefreshRateLimitRequests, _ = strconv.Atoi(
+		ifEnvEmpty(os.Getenv("REFRESH_RATE_LIMIT_REQUESTS"), strconv.Itoa(cfg.RefreshRateLimitRequests)))
+	cfg.RefreshRateLimitWindowMinutes, _ = strconv.Atoi(
+		ifEnvEmpty(os.Getenv("REFRESH_RATE_LIMIT_WINDOW_MINUTES"), strconv.Itoa(cfg.RefreshRateLimitWindowMinutes)))
 	cfg.MailServer.MailIdentity = os.Getenv("MAIL_IDENTITY")
 	cfg.MailServer.MailUsername = os.Getenv("MAIL_USERNAME")
 	cfg.MailServer.MailPassword = os.Getenv("MAIL_PASSWORD")

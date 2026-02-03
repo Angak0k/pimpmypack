@@ -37,7 +37,8 @@ func GetPacks(c *gin.Context) {
 	packs, err := returnPacks()
 
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get packs: return packs failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -123,7 +124,8 @@ func GetPackByID(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get pack by ID: find pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -152,7 +154,8 @@ func GetPackByID(c *gin.Context) {
 func GetMyPackByID(c *gin.Context) {
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get my pack by ID: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -164,7 +167,8 @@ func GetMyPackByID(c *gin.Context) {
 
 	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get my pack by ID: check ownership failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -175,7 +179,8 @@ func GetMyPackByID(c *gin.Context) {
 				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 				return
 			}
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "get my pack by ID: find pack failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 
@@ -240,13 +245,15 @@ func PostPack(c *gin.Context) {
 	var newPack Pack
 
 	if err := c.BindJSON(&newPack); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post pack: bind JSON failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
 	err := insertPack(&newPack)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post pack: insert pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -271,12 +278,14 @@ func PostMyPack(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post my pack: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
 	if err := c.BindJSON(&newPack); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post my pack: bind JSON failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
@@ -284,7 +293,8 @@ func PostMyPack(c *gin.Context) {
 
 	err = insertPack(&newPack)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post my pack: insert pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -345,7 +355,8 @@ func PutPackByID(c *gin.Context) {
 
 	err = updatePackByID(id, &updatedPack)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put pack by ID: update pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -384,13 +395,15 @@ func PutMyPackByID(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put my pack by ID: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
 	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put my pack by ID: check ownership failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -398,7 +411,8 @@ func PutMyPackByID(c *gin.Context) {
 		updatedPack.UserID = userID
 		err = updatePackByID(id, &updatedPack)
 		if err != nil {
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "put my pack by ID: update pack failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 		c.IndentedJSON(http.StatusOK, updatedPack)
@@ -452,7 +466,8 @@ func DeletePackByID(c *gin.Context) {
 
 	err = deletePackByID(id)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete pack by ID: delete pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -481,20 +496,23 @@ func DeleteMyPackByID(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete my pack by ID: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
 	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete my pack by ID: check ownership failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
 	if myPack {
 		err := deletePackByID(id)
 		if err != nil {
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "delete my pack by ID: delete pack failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 		c.IndentedJSON(http.StatusOK, gin.H{"message": "Pack deleted"})
@@ -543,7 +561,8 @@ func ShareMyPack(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "share my pack: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -554,7 +573,8 @@ func ShareMyPack(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "share my pack: find pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -565,7 +585,8 @@ func ShareMyPack(c *gin.Context) {
 			c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "share my pack: share pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -598,7 +619,8 @@ func UnshareMyPack(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "unshare my pack: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -609,7 +631,8 @@ func UnshareMyPack(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "unshare my pack: find pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -620,7 +643,8 @@ func UnshareMyPack(c *gin.Context) {
 			c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "unshare my pack: unshare pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -639,7 +663,8 @@ func UnshareMyPack(c *gin.Context) {
 func GetPackContents(c *gin.Context) {
 	packContents, err := returnPackContents()
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get pack contents: return pack contents failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -706,7 +731,8 @@ func GetPackContentByID(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack Item not found"})
 			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get pack content by ID: find pack content failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -768,7 +794,8 @@ func PostPackContent(c *gin.Context) {
 
 	err := insertPackContent(&newPackContent)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post pack content: insert pack content failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -801,7 +828,8 @@ func PostMyPackContent(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post my pack content: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -820,14 +848,16 @@ func PostMyPackContent(c *gin.Context) {
 
 	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post my pack content: check ownership failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
 	if myPack {
 		err := insertPackContent(&newPackContent)
 		if err != nil {
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "post my pack content: insert pack content failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 		c.IndentedJSON(http.StatusCreated, newPackContent)
@@ -893,7 +923,8 @@ func PutPackContentByID(c *gin.Context) {
 
 	err = updatePackContentByID(id, &updatedPackContent)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put pack content by ID: update pack content failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -934,7 +965,8 @@ func PutMyPackContentByID(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put my pack content by ID: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -945,7 +977,8 @@ func PutMyPackContentByID(c *gin.Context) {
 
 	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put my pack content by ID: check ownership failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -953,7 +986,8 @@ func PutMyPackContentByID(c *gin.Context) {
 		updatedPackContent.PackID = id
 		err := updatePackContentByID(itemID, &updatedPackContent)
 		if err != nil {
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "put my pack content by ID: update pack content failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 		c.IndentedJSON(http.StatusOK, updatedPackContent)
@@ -1007,7 +1041,8 @@ func DeletePackContentByID(c *gin.Context) {
 
 	err = deletePackContentByID(id)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete pack content by ID: delete pack content failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -1043,20 +1078,23 @@ func DeleteMyPackContentByID(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete my pack content by ID: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
 	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete my pack content by ID: check ownership failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
 	if myPack {
 		err := deletePackContentByID(itemID)
 		if err != nil {
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "delete my pack content by ID: delete pack content failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 		c.IndentedJSON(http.StatusOK, gin.H{"message": "Pack Item deleted"})
@@ -1105,7 +1143,8 @@ func GetPackContentsByPackID(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get pack contents by pack ID: return pack contents failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 	if packContents == nil {
@@ -1141,13 +1180,15 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get my pack contents by pack ID: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
 	myPack, err := CheckPackOwnership(id, userID)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get my pack contents by pack ID: check ownership failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -1158,7 +1199,8 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 				return
 			}
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "get my pack contents by pack ID: return pack contents failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 
@@ -1259,7 +1301,8 @@ func GetMyPacks(c *gin.Context) {
 	userID, err := security.ExtractTokenID(c)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get my packs: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -1270,7 +1313,8 @@ func GetMyPacks(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "No pack found"})
 			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get my packs: find packs failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -1441,13 +1485,15 @@ func ImportFromLighterPack(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "import from lighterpack: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
 	file, _, err := c.Request.FormFile("file")
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "import from lighterpack: form file failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 	defer file.Close()
@@ -1475,7 +1521,8 @@ func ImportFromLighterPack(c *gin.Context) {
 			break
 		}
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "import from lighterpack: read CSV record failed")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 
@@ -1487,7 +1534,8 @@ func ImportFromLighterPack(c *gin.Context) {
 
 		lighterPackItem, err = readLineFromCSV(record)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "import from lighterpack: read line from CSV failed")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 
@@ -1497,7 +1545,8 @@ func ImportFromLighterPack(c *gin.Context) {
 	// Perform database insertion
 	packID, err := insertLighterPack(&lighterPack, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "import from lighterpack: insert lighterpack failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -1638,7 +1687,8 @@ func SharedList(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "shared list: return shared pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 

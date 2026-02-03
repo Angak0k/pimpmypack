@@ -150,7 +150,7 @@ func forgotPassword(ctx context.Context, email string) error {
 
 func loginCheck(
 	ctx context.Context, username string, password string, rememberMe bool,
-) (*security.TokenPairResponse, bool, error) {
+) (*security.TokenPairResponse, uint, bool, error) {
 	var err error
 	var status string
 	var storedPassword string
@@ -165,30 +165,30 @@ func loginCheck(
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, false, ErrInvalidCredentials
+			return nil, 0, false, ErrInvalidCredentials
 		}
-		return nil, false, fmt.Errorf("failed to query user: %w", err)
+		return nil, 0, false, fmt.Errorf("failed to query user: %w", err)
 	}
 
 	err = security.VerifyPassword(password, storedPassword)
 
 	if err != nil {
-		return nil, false, ErrInvalidCredentials
+		return nil, id, false, ErrInvalidCredentials
 	}
 
 	// Check account status before generating tokens
 	if status != "active" {
-		return nil, true, nil
+		return nil, id, true, nil
 	}
 
 	// Only generate tokens for active accounts
 	tokenPair, err := security.GenerateTokenPair(ctx, id, rememberMe)
 
 	if err != nil {
-		return nil, false, err
+		return nil, id, false, err
 	}
 
-	return tokenPair, false, nil
+	return tokenPair, id, false, nil
 }
 
 func updatePassword(ctx context.Context, userID uint, updatedPassword string) error {

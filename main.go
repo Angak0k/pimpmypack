@@ -101,7 +101,12 @@ func setupPublicRoutes(router *gin.Engine) {
 	public := router.Group("/api")
 	public.POST("/register", accounts.Register)
 	public.POST("/login", accounts.Login)
-	public.POST("/auth/refresh", security.RefreshTokenHandler)
+	public.POST("/auth/refresh",
+		security.RefreshRateLimiter(
+			config.RefreshRateLimitRequests,
+			config.RefreshRateLimitRequests,
+		),
+		security.RefreshTokenHandler)
 	public.GET("/confirmemail", accounts.ConfirmEmail)
 	public.POST("/forgotpassword", accounts.ForgotPassword)
 	public.GET("/sharedlist/:sharing_code", packs.SharedList)

@@ -10,6 +10,12 @@ The server is based on [Gin Framework](https://github.com/gin-gonic/gin) and pro
 
 A dedicated API documentation is available [here](https://pmp-dev.alki.earth/swagger/index.html).
 
+## For Developers
+
+- **Backend Setup**: See [Setup for local development](#setup-for-local-development)
+- **API Documentation**: [Swagger/OpenAPI](https://pmp-dev.alki.earth/swagger/index.html)
+- **Frontend Integration**: [Frontend Integration Guide](docs/frontend-integration.md)
+
 ## Authentication
 
 PimpMyPack uses JWT-based authentication with refresh tokens for secure API access.

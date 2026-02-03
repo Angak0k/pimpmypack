@@ -28,7 +28,8 @@ func GetInventories(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "No Inventory Found"})
 			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get inventories: return inventories failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -54,14 +55,16 @@ func GetMyInventory(c *gin.Context) {
 	userID, err := security.ExtractTokenID(c)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get my inventory: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
 	inventories, err := returnInventoriesByUserID(c.Request.Context(), userID)
 
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get my inventory: return inventories failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -98,7 +101,8 @@ func GetInventoryByID(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
 			return
 		}
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get inventory by ID: find inventory failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -126,7 +130,8 @@ func GetInventoryByID(c *gin.Context) {
 func GetMyInventoryByID(c *gin.Context) {
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get my inventory by ID: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -138,7 +143,8 @@ func GetMyInventoryByID(c *gin.Context) {
 
 	myInventory, err := checkInventoryOwnership(c.Request.Context(), id, userID)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get my inventory by ID: check ownership failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -149,7 +155,8 @@ func GetMyInventoryByID(c *gin.Context) {
 				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
 				return
 			}
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "get my inventory by ID: find inventory failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 		c.IndentedJSON(http.StatusOK, inventory)
@@ -174,12 +181,15 @@ func PostInventory(c *gin.Context) {
 	var newInventory Inventory
 
 	if err := c.BindJSON(&newInventory); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post inventory: bind JSON failed")
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
+		return
 	}
 
 	err := InsertInventory(c.Request.Context(), &newInventory)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post inventory: insert inventory failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -204,7 +214,8 @@ func PostMyInventory(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post my inventory: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -212,13 +223,15 @@ func PostMyInventory(c *gin.Context) {
 
 	err = c.BindJSON(&newInventory)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post my inventory: bind JSON failed")
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
 	err = InsertInventory(c.Request.Context(), &newInventory)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "post my inventory: insert inventory failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -249,7 +262,8 @@ func PutInventoryByID(c *gin.Context) {
 	}
 
 	if err := c.BindJSON(&updatedInventory); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put inventory by ID: bind JSON failed")
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
@@ -258,7 +272,8 @@ func PutInventoryByID(c *gin.Context) {
 
 	err = updateInventoryByID(c.Request.Context(), id, &updatedInventory)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put inventory by ID: update inventory failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -286,7 +301,8 @@ func PutMyInventoryByID(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put my inventory by ID: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -298,20 +314,23 @@ func PutMyInventoryByID(c *gin.Context) {
 
 	myInventory, err := checkInventoryOwnership(c.Request.Context(), id, userID)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put my inventory by ID: check ownership failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
 	if myInventory {
 		updatedInventory.UserID = userID
 		if err := c.BindJSON(&updatedInventory); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "put my inventory by ID: bind JSON failed")
+			c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 			return
 		}
 		updatedInventory.UpdatedAt = time.Now().Truncate(time.Second)
 		err = updateInventoryByID(c.Request.Context(), id, &updatedInventory)
 		if err != nil {
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "put my inventory by ID: update inventory failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 		c.IndentedJSON(http.StatusOK, updatedInventory)
@@ -340,7 +359,8 @@ func DeleteInventoryByID(c *gin.Context) {
 
 	err = deleteInventoryByID(c.Request.Context(), id)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete inventory by ID: delete inventory failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -363,7 +383,8 @@ func DeleteInventoryByID(c *gin.Context) {
 func DeleteMyInventoryByID(c *gin.Context) {
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete my inventory by ID: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -375,14 +396,16 @@ func DeleteMyInventoryByID(c *gin.Context) {
 
 	myInventory, err := checkInventoryOwnership(c.Request.Context(), id, userID)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete my inventory by ID: check ownership failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
 	if myInventory {
 		err = deleteInventoryByID(c.Request.Context(), id)
 		if err != nil {
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "delete my inventory by ID: delete inventory failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 		c.IndentedJSON(http.StatusOK, gin.H{"message": "Inventory deleted"})

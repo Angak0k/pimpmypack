@@ -1868,18 +1868,9 @@ func TestRefresh_UpdatesLastUsed(t *testing.T) {
 **Tâches** :
 
 1. [ ] Cleanup job : script de nettoyage tokens expirés
-2. [ ] Scheduler : cron job quotidien ou startup routine
-3. [ ] Deploy staging : validation complète
-4. [ ] Deploy production : rollout progressif
-5. [ ] Monitoring post-deploy : surveiller métriques 48h
-6. [ ] Communication : informer utilisateurs (sessions plus courtes temporairement)
-7. [ ] Documentation ops : runbook, troubleshooting
-
-**Livrable** :
-- ✅ Cleanup automatique actif
-- ✅ Production stable
-- ✅ Métriques positives
-- ✅ Documentation opérationnelle
+2. [ ] Deploy staging : validation complète
+3. [ ] Deploy production : rollout progressif
+4. [ ] Communication : informer utilisateurs (sessions plus courtes temporairement)
 
 ---
 

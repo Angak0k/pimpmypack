@@ -26,7 +26,8 @@ func Register(c *gin.Context) {
 	var input RegisterInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "register: bind JSON failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
@@ -46,7 +47,8 @@ func Register(c *gin.Context) {
 		emailSended, err := registerUser(c.Request.Context(), user)
 
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "register: user registration failed")
+			c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 
@@ -83,7 +85,8 @@ func ConfirmEmail(c *gin.Context) {
 	err := confirmEmail(c.Request.Context(), userID, confirmationCode)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "confirm email failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -105,14 +108,16 @@ func ForgotPassword(c *gin.Context) {
 	var email ForgotPasswordInput
 
 	if err := c.ShouldBindJSON(&email); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "forgot password: bind JSON failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
 	err := forgotPassword(c.Request.Context(), email.Email)
 
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "forgot password failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -137,26 +142,31 @@ func Login(c *gin.Context) {
 	var input LoginInput
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "login: bind JSON failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
-	tokenPair, pending, err := loginCheck(c.Request.Context(), input.Username, input.Password, input.RememberMe)
+	tokenPair, userID, pending, err := loginCheck(c.Request.Context(), input.Username, input.Password, input.RememberMe)
 
 	if err != nil {
 		if errors.Is(err, ErrInvalidCredentials) {
+			security.AuditLoginFailed(c, input.Username, "invalid credentials")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "credentials are incorrect"})
 			return
 		}
+		security.AuditLoginFailed(c, input.Username, "authentication failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "authentication failed"})
 		return
 	}
 
 	if pending {
+		security.AuditLoginFailed(c, input.Username, "account not yet confirmed")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "account not yet confirmed"})
 		return
 	}
 
+	security.AuditLoginSuccess(c, userID, input.RememberMe)
 	c.JSON(http.StatusOK, tokenPair)
 }
 
@@ -175,7 +185,8 @@ func GetMyAccount(c *gin.Context) {
 	userID, err := security.ExtractTokenID(c)
 
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get my account: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -185,7 +196,8 @@ func GetMyAccount(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get my account: find account failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -214,12 +226,14 @@ func PutMyPassword(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put my password: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put my password: bind JSON failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
@@ -246,7 +260,8 @@ func PutMyPassword(c *gin.Context) {
 
 	// Update the password
 	if err := updatePassword(c.Request.Context(), userID, input.NewPassword); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put my password: update password failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -271,13 +286,15 @@ func PutMyAccount(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put my account: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
 	// Call BindJSON to bind the received JSON to updatedAccount.
 	if err := c.BindJSON(&updatedAccount); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put my account: bind JSON failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
@@ -286,7 +303,8 @@ func PutMyAccount(c *gin.Context) {
 	// Update the DB
 	err = updateAccountByID(c.Request.Context(), userID, &updatedAccount)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put my account: update account failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -305,7 +323,8 @@ func PutMyAccount(c *gin.Context) {
 func GetAccounts(c *gin.Context) {
 	accounts, err := returnAccounts(c.Request.Context())
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "get accounts: return accounts failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -341,7 +360,8 @@ func GetAccountByID(c *gin.Context) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Account not found"})
 		} else {
 			// Handle other errors
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "get account by ID: find account failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		}
 	}
 
@@ -377,7 +397,8 @@ func PostAccount(c *gin.Context) {
 		// Insert the new account into the database.
 		err := insertAccount(c.Request.Context(), &newAccount)
 		if err != nil {
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			helper.LogAndSanitize(err, "post account: insert account failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 
@@ -419,7 +440,8 @@ func PutAccountByID(c *gin.Context) {
 	// Update the DB
 	err = updateAccountByID(c.Request.Context(), id, &updatedAccount)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "put account by ID: update account failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 	c.IndentedJSON(http.StatusOK, updatedAccount)
@@ -440,7 +462,8 @@ func DeleteAccountByID(c *gin.Context) {
 	id := c.Param("id")
 	err := deleteAccountByID(c.Request.Context(), id)
 	if err != nil {
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete account by ID: delete account failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 	c.IndentedJSON(http.StatusOK, gin.H{"message": "Account deleted"})
