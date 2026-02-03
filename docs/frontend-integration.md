@@ -66,9 +66,10 @@ const response = await fetch('https://api.pimpmypack.com/api/login', {
 });
 
 const data = await response.json();
-// Store tokens securely
+// Store the short-lived access token in frontend storage.
+// The refresh token should be sent as an httpOnly, secure cookie by the backend
+// and MUST NOT be stored in localStorage or exposed to JavaScript.
 localStorage.setItem('accessToken', data.access_token);
-localStorage.setItem('refreshToken', data.refresh_token);
 ```
 
 ### 2. Make Authenticated Request
