@@ -10,6 +10,95 @@ The server is based on [Gin Framework](https://github.com/gin-gonic/gin) and pro
 
 A dedicated API documentation is available [here](https://pmp-dev.alki.earth/swagger/index.html).
 
+## For Developers
+
+- **Backend Setup**: See [Setup for local development](#setup-for-local-development)
+- **API Documentation**: [Swagger/OpenAPI](https://pmp-dev.alki.earth/swagger/index.html)
+- **Frontend Integration**: [Frontend Integration Guide](docs/frontend-integration.md)
+
+## Authentication
+
+PimpMyPack uses JWT-based authentication with refresh tokens for secure API access.
+
+### Token Types
+
+- **Access Token**: Short-lived token (default: 15 minutes) used for API requests
+- **Refresh Token**: Long-lived token (default: 1 day, or 30 days with "remember me") used to obtain new access tokens
+
+### Authentication Flow
+
+1. **Login**: POST to `/api/login` with username and password
+
+   ```json
+   {
+     "username": "your_username",
+     "password": "your_password",
+     "remember_me": false
+   }
+   ```
+
+2. **Response**: Receive both tokens
+
+   ```json
+   {
+     "token": "...",              // Backward compatibility (same as access_token)
+     "access_token": "...",       // Use for API requests
+     "refresh_token": "...",      // Use to refresh access token
+     "access_expires_in": 900,    // Access token lifetime in seconds
+     "refresh_expires_in": 86400  // Refresh token lifetime in seconds
+   }
+   ```
+
+3. **API Requests**: Include access token in Authorization header
+
+   ```http
+   Authorization: Bearer <access_token>
+   ```
+
+4. **Token Refresh**: POST to `/api/refresh` when access token expires
+
+   ```json
+   {
+     "refresh_token": "..."
+   }
+   ```
+
+5. **Logout**: POST to `/api/logout` to revoke refresh token
+
+   ```json
+   {
+     "refresh_token": "..."
+   }
+   ```
+
+### Configuration
+
+Token lifetimes can be configured via environment variables in `.env`:
+
+- `ACCESS_TOKEN_MINUTES`: Access token lifetime (default: 15 minutes)
+- `REFRESH_TOKEN_DAYS`: Refresh token lifetime (default: 1 day)
+- `REFRESH_TOKEN_REMEMBER_ME_DAYS`: Refresh token lifetime with "remember me" (default: 30 days)
+- `REFRESH_TOKEN_CLEANUP_INTERVAL_HOURS`: Cleanup interval for expired tokens (default: 24 hours)
+- `REFRESH_RATE_LIMIT_REQUESTS`: Rate limit for refresh endpoint (default: 10 requests/minute)
+- `REFRESH_RATE_LIMIT_WINDOW_MINUTES`: Rate limit window (default: 1 minute)
+
+### For Frontend Developers
+
+See our comprehensive [Frontend Integration Guide](docs/frontend-integration.md) for:
+- Automatic token refresh implementation
+- Storage strategies (memory, sessionStorage, httpOnly cookies)
+- React hooks and Vue composables examples
+- Error handling and retry logic
+- Security best practices
+
+### Security Features
+
+- **Rate Limiting**: 10 refresh requests/minute per IP address
+- **Audit Logging**: All authentication events logged with structured data
+- **Automatic Cleanup**: Expired tokens removed automatically
+- **Error Sanitization**: No internal errors exposed to clients
+- **Short-lived Access Tokens**: 15-minute lifetime reduces exposure window
+
 ## Setup for local development
 
 ### 1. clone this repo
@@ -40,8 +129,8 @@ Pimpmypack app read its conf from the environment and/or `.env` file.
 
 The simplest way is to:
 
-* copy the `.env.sample` file to `.env`
-* customize the values in the `.env` file to match your setup
+- copy the `.env.sample` file to `.env`
+- customize the values in the `.env` file to match your setup
 
 ### 5. Start the API server
 

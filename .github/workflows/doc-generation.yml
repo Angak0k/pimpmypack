@@ -27,9 +27,9 @@ jobs:
 
       - name: Generate Swagger Documentation
         run: |
-          $(go env GOPATH)/bin/swag init --tags \!Internal
+          $(go env GOPATH)/bin/swag init --output api-doc --generalInfo main.go --tags \!Internal
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add docs/ 
+          git add api-doc/
           git commit -m "Update Swagger documentation" || echo "No changes to commit"
           git push

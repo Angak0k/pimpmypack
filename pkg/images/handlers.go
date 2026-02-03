@@ -65,7 +65,8 @@ func UploadPackImage(c *gin.Context) {
 	// Extract user ID from JWT
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "upload pack image: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -83,14 +84,16 @@ func UploadPackImage(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "upload pack image: find pack failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
 	// Check pack ownership
 	isOwner, err := packs.CheckPackOwnership(packID, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "upload pack image: check pack ownership failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 	if !isOwner {
@@ -107,7 +110,7 @@ func UploadPackImage(c *gin.Context) {
 			return
 		}
 		if errors.Is(err, ErrTooLarge) {
-			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": err.Error()})
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "File size exceeds maximum allowed"})
 			return
 		}
 		if errors.Is(err, ErrCorrupted) {
@@ -116,10 +119,11 @@ func UploadPackImage(c *gin.Context) {
 		}
 		// Generic file upload errors
 		if err.Error() == "no image file provided" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"error": "No image file provided"})
 			return
 		}
-		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Failed to process image: %v", err)})
+		helper.LogAndSanitize(err, "upload pack image: process image failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
@@ -241,7 +245,8 @@ func DeletePackImage(c *gin.Context) {
 	// Extract user ID from JWT
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete pack image: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
@@ -259,14 +264,16 @@ func DeletePackImage(c *gin.Context) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete pack image: find pack failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
 	// Check pack ownership
 	isOwner, err := packs.CheckPackOwnership(packID, userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		helper.LogAndSanitize(err, "delete pack image: check pack ownership failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 	if !isOwner {

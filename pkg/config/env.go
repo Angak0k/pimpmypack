@@ -17,36 +17,48 @@ type MailServer struct {
 	MailPassword string `json:"mail_password"`
 }
 
-var (
-	Scheme           string
-	HostName         string
-	DBHost           string
-	DBUser           string
-	DBPassword       string
-	DBName           string
-	DBPort           int
-	Stage            string
-	APISecret        string
-	TokenLifespan    int
-	MailServerConfig MailServer
-)
-
-type Config struct {
-	Scheme        string
-	HostName      string
-	DBConfig      DBConfig
-	Stage         string
-	APISecret     string
-	TokenLifespan int
-	MailServer    MailServer
-}
-
 type DBConfig struct {
 	DBHost     string
 	DBPort     int
 	DBUser     string
 	DBPassword string
 	DBName     string
+}
+
+var (
+	Scheme                           string
+	HostName                         string
+	DBHost                           string
+	DBUser                           string
+	DBPassword                       string
+	DBName                           string
+	DBPort                           int
+	Stage                            string
+	APISecret                        string
+	TokenLifespan                    int
+	AccessTokenMinutes               int
+	RefreshTokenDays                 int
+	RefreshTokenRememberMeDays       int
+	RefreshTokenCleanupIntervalHours int
+	RefreshRateLimitRequests         int
+	RefreshRateLimitWindowMinutes    int
+	MailServerConfig                 MailServer
+)
+
+type Config struct {
+	Scheme                           string
+	HostName                         string
+	DBConfig                         DBConfig
+	Stage                            string
+	APISecret                        string
+	TokenLifespan                    int
+	AccessTokenMinutes               int
+	RefreshTokenDays                 int
+	RefreshTokenRememberMeDays       int
+	RefreshTokenCleanupIntervalHours int
+	RefreshRateLimitRequests         int
+	RefreshRateLimitWindowMinutes    int
+	MailServer                       MailServer
 }
 
 func EnvInit(envFilePath string) error {
@@ -65,6 +77,12 @@ func EnvInit(envFilePath string) error {
 	Stage = newConfig.Stage
 	APISecret = newConfig.APISecret
 	TokenLifespan = newConfig.TokenLifespan
+	AccessTokenMinutes = newConfig.AccessTokenMinutes
+	RefreshTokenDays = newConfig.RefreshTokenDays
+	RefreshTokenRememberMeDays = newConfig.RefreshTokenRememberMeDays
+	RefreshTokenCleanupIntervalHours = newConfig.RefreshTokenCleanupIntervalHours
+	RefreshRateLimitRequests = newConfig.RefreshRateLimitRequests
+	RefreshRateLimitWindowMinutes = newConfig.RefreshRateLimitWindowMinutes
 	MailServerConfig = newConfig.MailServer
 
 	return nil
@@ -98,11 +116,17 @@ func loadEnv(envFilePath string) error {
 // newConfig returns a new Config struct with default values
 func newConfig() Config {
 	return Config{
-		Scheme:        "https",
-		TokenLifespan: 1,
-		APISecret:     "defaultApiSecret",
-		Stage:         "local",
-		HostName:      "localhost",
+		Scheme:                           "https",
+		TokenLifespan:                    1,
+		AccessTokenMinutes:               15,
+		RefreshTokenDays:                 1,
+		RefreshTokenRememberMeDays:       30,
+		RefreshTokenCleanupIntervalHours: 24,
+		RefreshRateLimitRequests:         10,
+		RefreshRateLimitWindowMinutes:    1,
+		APISecret:                        "defaultApiSecret",
+		Stage:                            "local",
+		HostName:                         "localhost",
 		DBConfig: DBConfig{
 			DBPort: 5432,
 		},
@@ -123,6 +147,18 @@ func setEnvVars(cfg *Config) {
 	cfg.Stage = ifEnvEmpty(os.Getenv("STAGE"), cfg.Stage)
 	cfg.APISecret = ifEnvEmpty(os.Getenv("API_SECRET"), cfg.APISecret)
 	cfg.TokenLifespan, _ = strconv.Atoi(ifEnvEmpty(os.Getenv("TOKEN_HOUR_LIFESPAN"), strconv.Itoa(cfg.TokenLifespan)))
+	cfg.AccessTokenMinutes, _ = strconv.Atoi(
+		ifEnvEmpty(os.Getenv("ACCESS_TOKEN_MINUTES"), strconv.Itoa(cfg.AccessTokenMinutes)))
+	cfg.RefreshTokenDays, _ = strconv.Atoi(
+		ifEnvEmpty(os.Getenv("REFRESH_TOKEN_DAYS"), strconv.Itoa(cfg.RefreshTokenDays)))
+	cfg.RefreshTokenRememberMeDays, _ = strconv.Atoi(
+		ifEnvEmpty(os.Getenv("REFRESH_TOKEN_REMEMBER_ME_DAYS"), strconv.Itoa(cfg.RefreshTokenRememberMeDays)))
+	cfg.RefreshTokenCleanupIntervalHours, _ = strconv.Atoi(
+		ifEnvEmpty(os.Getenv("REFRESH_TOKEN_CLEANUP_INTERVAL_HOURS"), strconv.Itoa(cfg.RefreshTokenCleanupIntervalHours)))
+	cfg.RefreshRateLimitRequests, _ = strconv.Atoi(
+		ifEnvEmpty(os.Getenv("REFRESH_RATE_LIMIT_REQUESTS"), strconv.Itoa(cfg.RefreshRateLimitRequests)))
+	cfg.RefreshRateLimitWindowMinutes, _ = strconv.Atoi(
+		ifEnvEmpty(os.Getenv("REFRESH_RATE_LIMIT_WINDOW_MINUTES"), strconv.Itoa(cfg.RefreshRateLimitWindowMinutes)))
 	cfg.MailServer.MailIdentity = os.Getenv("MAIL_IDENTITY")
 	cfg.MailServer.MailUsername = os.Getenv("MAIL_USERNAME")
 	cfg.MailServer.MailPassword = os.Getenv("MAIL_PASSWORD")
