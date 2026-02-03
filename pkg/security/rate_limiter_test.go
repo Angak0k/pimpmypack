@@ -136,12 +136,12 @@ func TestIPRateLimiter_GetLimiter(t *testing.T) {
 	limiter1 := limiter.GetLimiter("192.168.1.1")
 	assert.NotNil(t, limiter1)
 
-	// Get limiter for same IP should return same instance
+	// Get limiter for same IP should return same instance (same pointer)
 	limiter1Again := limiter.GetLimiter("192.168.1.1")
-	assert.Equal(t, limiter1, limiter1Again)
+	assert.Same(t, limiter1, limiter1Again, "Same IP should return same limiter instance")
 
-	// Get limiter for different IP should return different instance
+	// Get limiter for different IP should return different instance (different pointer)
 	limiter2 := limiter.GetLimiter("192.168.1.2")
 	assert.NotNil(t, limiter2)
-	assert.NotEqual(t, limiter1, limiter2)
+	assert.NotSame(t, limiter1, limiter2, "Different IPs should return different limiter instances")
 }
