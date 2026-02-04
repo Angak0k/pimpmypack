@@ -78,7 +78,7 @@ func UploadPackImage(c *gin.Context) {
 	}
 
 	// Check if pack exists
-	_, err = packs.FindPackByID(packID)
+	_, err = packs.FindPackByID(c.Request.Context(), packID)
 	if err != nil {
 		if errors.Is(err, packs.ErrPackNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
@@ -90,7 +90,7 @@ func UploadPackImage(c *gin.Context) {
 	}
 
 	// Check pack ownership
-	isOwner, err := packs.CheckPackOwnership(packID, userID)
+	isOwner, err := packs.CheckPackOwnership(c.Request.Context(), packID, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "upload pack image: check pack ownership failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -169,7 +169,7 @@ func GetPackImage(c *gin.Context) {
 	}
 
 	// Check if pack exists and if it's public
-	pack, err := packs.FindPackByID(packID)
+	pack, err := packs.FindPackByID(c.Request.Context(), packID)
 	if err != nil {
 		if errors.Is(err, packs.ErrPackNotFound) {
 			c.String(http.StatusNotFound, "Pack not found")
@@ -188,7 +188,7 @@ func GetPackImage(c *gin.Context) {
 			return
 		}
 
-		isOwner, err := packs.CheckPackOwnership(packID, userID)
+		isOwner, err := packs.CheckPackOwnership(c.Request.Context(), packID, userID)
 		if err != nil {
 			c.String(http.StatusInternalServerError, "Failed to verify ownership")
 			return
@@ -258,7 +258,7 @@ func DeletePackImage(c *gin.Context) {
 	}
 
 	// Check if pack exists
-	_, err = packs.FindPackByID(packID)
+	_, err = packs.FindPackByID(c.Request.Context(), packID)
 	if err != nil {
 		if errors.Is(err, packs.ErrPackNotFound) {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
@@ -270,7 +270,7 @@ func DeletePackImage(c *gin.Context) {
 	}
 
 	// Check pack ownership
-	isOwner, err := packs.CheckPackOwnership(packID, userID)
+	isOwner, err := packs.CheckPackOwnership(c.Request.Context(), packID, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "delete pack image: check pack ownership failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})

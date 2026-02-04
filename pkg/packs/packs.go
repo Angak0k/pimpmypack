@@ -2,18 +2,12 @@ package packs
 
 import (
 	"context"
-	"database/sql"
 	"encoding/csv"
 	"errors"
-	"fmt"
 	"io"
 	"net/http"
-	"strconv"
-	"time"
 
-	"github.com/Angak0k/pimpmypack/pkg/database"
 	"github.com/Angak0k/pimpmypack/pkg/helper"
-	"github.com/Angak0k/pimpmypack/pkg/inventories"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/gin-gonic/gin"
 )
@@ -34,7 +28,7 @@ var ErrPackContentNotFound = errors.New("pack content not found")
 // @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packs [get]
 func GetPacks(c *gin.Context) {
-	packs, err := returnPacks()
+	packs, err := returnPacks(c.Request.Context())
 
 	if err != nil {
 		helper.LogAndSanitize(err, "get packs: return packs failed")
@@ -47,55 +41,6 @@ func GetPacks(c *gin.Context) {
 	} else {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "No packs founded"})
 	}
-}
-
-func returnPacks() (Packs, error) {
-	var packs Packs
-
-	rows, err := database.DB().QueryContext(context.Background(),
-		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
-		COALESCE(SUM(pc.quantity), 0) as items_count,
-		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight,
-		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image
-		FROM pack p
-		LEFT JOIN pack_content pc ON p.id = pc.pack_id
-		LEFT JOIN inventory i ON pc.item_id = i.id
-		LEFT JOIN pack_images pi ON p.id = pi.pack_id
-		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at, pi.pack_id
-		ORDER BY p.id;`)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var pack Pack
-		err := rows.Scan(
-			&pack.ID,
-			&pack.UserID,
-			&pack.PackName,
-			&pack.PackDescription,
-			&pack.SharingCode,
-			&pack.CreatedAt,
-			&pack.UpdatedAt,
-			&pack.PackItemsCount,
-			&pack.PackWeight,
-			&pack.HasImage,
-		)
-		if err != nil {
-			return nil, err
-		}
-		packs = append(packs, pack)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return packs, nil
 }
 
 // Get pack by ID
@@ -117,7 +62,7 @@ func GetPackByID(c *gin.Context) {
 		return
 	}
 
-	pack, err := FindPackByID(id)
+	pack, err := FindPackByID(c.Request.Context(), id)
 
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
@@ -165,7 +110,7 @@ func GetMyPackByID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := CheckPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "get my pack by ID: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -173,7 +118,7 @@ func GetMyPackByID(c *gin.Context) {
 	}
 
 	if myPack {
-		pack, err := FindPackByID(id)
+		pack, err := FindPackByID(c.Request.Context(), id)
 		if err != nil {
 			if errors.Is(err, ErrPackNotFound) {
 				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
@@ -189,44 +134,6 @@ func GetMyPackByID(c *gin.Context) {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
-}
-
-// FindPackByID finds a pack by its ID
-func FindPackByID(id uint) (*Pack, error) {
-	var pack Pack
-
-	row := database.DB().QueryRowContext(context.Background(),
-		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
-		COALESCE(SUM(pc.quantity), 0) as items_count,
-		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight,
-		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image
-		FROM pack p
-		LEFT JOIN pack_content pc ON p.id = pc.pack_id
-		LEFT JOIN inventory i ON pc.item_id = i.id
-		LEFT JOIN pack_images pi ON p.id = pi.pack_id
-		WHERE p.id = $1
-		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at, pi.pack_id;`,
-		id)
-	err := row.Scan(
-		&pack.ID,
-		&pack.UserID,
-		&pack.PackName,
-		&pack.PackDescription,
-		&pack.SharingCode,
-		&pack.CreatedAt,
-		&pack.UpdatedAt,
-		&pack.PackItemsCount,
-		&pack.PackWeight,
-		&pack.HasImage)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrPackNotFound
-		}
-		return nil, err
-	}
-
-	return &pack, nil
 }
 
 // Create a new pack
@@ -250,7 +157,7 @@ func PostPack(c *gin.Context) {
 		return
 	}
 
-	err := insertPack(&newPack)
+	err := insertPack(c.Request.Context(), &newPack)
 	if err != nil {
 		helper.LogAndSanitize(err, "post pack: insert pack failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -291,7 +198,7 @@ func PostMyPack(c *gin.Context) {
 
 	newPack.UserID = userID
 
-	err = insertPack(&newPack)
+	err = insertPack(c.Request.Context(), &newPack)
 	if err != nil {
 		helper.LogAndSanitize(err, "post my pack: insert pack failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -299,32 +206,6 @@ func PostMyPack(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusCreated, newPack)
-}
-
-func insertPack(p *Pack) error {
-	if p == nil {
-		return errors.New("payload is empty")
-	}
-	p.CreatedAt = time.Now().Truncate(time.Second)
-	p.UpdatedAt = time.Now().Truncate(time.Second)
-	// SharingCode is now NULL by default (pack is private)
-
-	//nolint:execinquery
-	err := database.DB().QueryRowContext(context.Background(),
-		`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6)
-		RETURNING id;`,
-		p.UserID,
-		p.PackName,
-		p.PackDescription,
-		p.SharingCode,
-		p.CreatedAt,
-		p.UpdatedAt).Scan(&p.ID)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Update a pack by ID
@@ -353,7 +234,7 @@ func PutPackByID(c *gin.Context) {
 		return
 	}
 
-	err = updatePackByID(id, &updatedPack)
+	err = updatePackByID(c.Request.Context(), id, &updatedPack)
 	if err != nil {
 		helper.LogAndSanitize(err, "put pack by ID: update pack failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -400,7 +281,7 @@ func PutMyPackByID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := CheckPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "put my pack by ID: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -409,7 +290,7 @@ func PutMyPackByID(c *gin.Context) {
 
 	if myPack {
 		updatedPack.UserID = userID
-		err = updatePackByID(id, &updatedPack)
+		err = updatePackByID(c.Request.Context(), id, &updatedPack)
 		if err != nil {
 			helper.LogAndSanitize(err, "put my pack by ID: update pack failed")
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -420,29 +301,6 @@ func PutMyPackByID(c *gin.Context) {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
-}
-
-func updatePackByID(id uint, p *Pack) error {
-	if p == nil {
-		return errors.New("payload is empty")
-	}
-	p.UpdatedAt = time.Now().Truncate(time.Second)
-
-	statement, err := database.DB().PrepareContext(context.Background(),
-		`UPDATE pack SET user_id=$1, pack_name=$2, pack_description=$3, updated_at=$4 
-		WHERE id=$5;`)
-	if err != nil {
-		return err
-	}
-
-	defer statement.Close()
-
-	_, err = statement.ExecContext(context.Background(), p.UserID, p.PackName, p.PackDescription, p.UpdatedAt, id)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Delete a pack by ID
@@ -464,7 +322,7 @@ func DeletePackByID(c *gin.Context) {
 		return
 	}
 
-	err = deletePackByID(id)
+	err = deletePackByID(c.Request.Context(), id)
 	if err != nil {
 		helper.LogAndSanitize(err, "delete pack by ID: delete pack failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -501,7 +359,7 @@ func DeleteMyPackByID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := CheckPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "delete my pack by ID: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -509,7 +367,7 @@ func DeleteMyPackByID(c *gin.Context) {
 	}
 
 	if myPack {
-		err := deletePackByID(id)
+		err := deletePackByID(c.Request.Context(), id)
 		if err != nil {
 			helper.LogAndSanitize(err, "delete my pack by ID: delete pack failed")
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -520,22 +378,6 @@ func DeleteMyPackByID(c *gin.Context) {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
-}
-
-func deletePackByID(id uint) error {
-	statement, err := database.DB().PrepareContext(context.Background(), "DELETE FROM pack WHERE id=$1;")
-	if err != nil {
-		return err
-	}
-
-	defer statement.Close()
-
-	_, err = statement.ExecContext(context.Background(), id)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Share a pack by ID
@@ -567,7 +409,7 @@ func ShareMyPack(c *gin.Context) {
 	}
 
 	// Check if pack exists
-	_, err = FindPackByID(id)
+	_, err = FindPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
@@ -625,7 +467,7 @@ func UnshareMyPack(c *gin.Context) {
 	}
 
 	// Check if pack exists
-	_, err = FindPackByID(id)
+	_, err = FindPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
@@ -661,7 +503,7 @@ func UnshareMyPack(c *gin.Context) {
 // @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packcontents [get]
 func GetPackContents(c *gin.Context) {
-	packContents, err := returnPackContents()
+	packContents, err := returnPackContents(c.Request.Context())
 	if err != nil {
 		helper.LogAndSanitize(err, "get pack contents: return pack contents failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -669,41 +511,6 @@ func GetPackContents(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, packContents)
-}
-
-func returnPackContents() (*PackContents, error) {
-	var packContents PackContents
-
-	rows, err := database.DB().QueryContext(context.Background(),
-		`SELECT id, pack_id, item_id, quantity, worn, consumable, created_at, updated_at 
-		FROM pack_content;`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var packContent PackContent
-		err := rows.Scan(
-			&packContent.ID,
-			&packContent.PackID,
-			&packContent.ItemID,
-			&packContent.Quantity,
-			&packContent.Worn,
-			&packContent.Consumable,
-			&packContent.CreatedAt,
-			&packContent.UpdatedAt)
-		if err != nil {
-			return nil, err
-		}
-		packContents = append(packContents, packContent)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return &packContents, nil
 }
 
 // Get pack content by ID
@@ -725,7 +532,7 @@ func GetPackContentByID(c *gin.Context) {
 		return
 	}
 
-	packcontent, err := findPackContentByID(id)
+	packcontent, err := findPackContentByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackContentNotFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack Item not found"})
@@ -742,34 +549,6 @@ func GetPackContentByID(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, *packcontent)
-}
-
-func findPackContentByID(id uint) (*PackContent, error) {
-	var packcontent PackContent
-
-	row := database.DB().QueryRowContext(context.Background(),
-		`SELECT id, pack_id, item_id, quantity, worn, consumable, created_at, updated_at 
-		FROM pack_content 
-		WHERE id = $1;`,
-		id)
-	err := row.Scan(
-		&packcontent.ID,
-		&packcontent.PackID,
-		&packcontent.ItemID,
-		&packcontent.Quantity,
-		&packcontent.Worn,
-		&packcontent.Consumable,
-		&packcontent.CreatedAt,
-		&packcontent.UpdatedAt)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrPackContentNotFound
-		}
-		return nil, err
-	}
-
-	return &packcontent, nil
 }
 
 // Create a new pack content
@@ -792,7 +571,7 @@ func PostPackContent(c *gin.Context) {
 		return
 	}
 
-	err := insertPackContent(&newPackContent)
+	err := insertPackContent(c.Request.Context(), &newPackContent)
 	if err != nil {
 		helper.LogAndSanitize(err, "post pack content: insert pack content failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -846,7 +625,7 @@ func PostMyPackContent(c *gin.Context) {
 	newPackContent.Worn = requestData.Worn
 	newPackContent.Consumable = requestData.Consumable
 
-	myPack, err := CheckPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "post my pack content: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -854,7 +633,7 @@ func PostMyPackContent(c *gin.Context) {
 	}
 
 	if myPack {
-		err := insertPackContent(&newPackContent)
+		err := insertPackContent(c.Request.Context(), &newPackContent)
 		if err != nil {
 			helper.LogAndSanitize(err, "post my pack content: insert pack content failed")
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -865,33 +644,6 @@ func PostMyPackContent(c *gin.Context) {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
-}
-
-func insertPackContent(pc *PackContent) error {
-	if pc == nil {
-		return errors.New("payload is empty")
-	}
-	pc.CreatedAt = time.Now().Truncate(time.Second)
-	pc.UpdatedAt = time.Now().Truncate(time.Second)
-
-	//nolint:execinquery
-	err := database.DB().QueryRowContext(context.Background(), `
-		INSERT INTO pack_content 
-		(pack_id, item_id, quantity, worn, consumable, created_at, updated_at) 
-		VALUES ($1,$2,$3,$4,$5,$6,$7) 
-		RETURNING id;`,
-		pc.PackID,
-		pc.ItemID,
-		pc.Quantity,
-		pc.Worn,
-		pc.Consumable,
-		pc.CreatedAt,
-		pc.UpdatedAt).Scan(&pc.ID)
-
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // Update a pack content by ID
@@ -921,7 +673,7 @@ func PutPackContentByID(c *gin.Context) {
 		return
 	}
 
-	err = updatePackContentByID(id, &updatedPackContent)
+	err = updatePackContentByID(c.Request.Context(), id, &updatedPackContent)
 	if err != nil {
 		helper.LogAndSanitize(err, "put pack content by ID: update pack content failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -975,7 +727,7 @@ func PutMyPackContentByID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := CheckPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "put my pack content by ID: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -984,7 +736,7 @@ func PutMyPackContentByID(c *gin.Context) {
 
 	if myPack {
 		updatedPackContent.PackID = id
-		err := updatePackContentByID(itemID, &updatedPackContent)
+		err := updatePackContentByID(c.Request.Context(), itemID, &updatedPackContent)
 		if err != nil {
 			helper.LogAndSanitize(err, "put my pack content by ID: update pack content failed")
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -995,30 +747,6 @@ func PutMyPackContentByID(c *gin.Context) {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
-}
-
-func updatePackContentByID(id uint, pc *PackContent) error {
-	if pc == nil {
-		return errors.New("payload is empty")
-	}
-	pc.UpdatedAt = time.Now().Truncate(time.Second)
-
-	statement, err := database.DB().PrepareContext(context.Background(), `
-		UPDATE pack_content 
-		SET pack_id=$1, item_id=$2, quantity=$3, worn=$4, consumable=$5, updated_at=$6 
-		WHERE id=$7;`)
-	if err != nil {
-		return err
-	}
-
-	defer statement.Close()
-
-	_, err = statement.ExecContext(context.Background(),
-		pc.PackID, pc.ItemID, pc.Quantity, pc.Worn, pc.Consumable, pc.UpdatedAt, id)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // Delete a pack content by ID
@@ -1039,7 +767,7 @@ func DeletePackContentByID(c *gin.Context) {
 		return
 	}
 
-	err = deletePackContentByID(id)
+	err = deletePackContentByID(c.Request.Context(), id)
 	if err != nil {
 		helper.LogAndSanitize(err, "delete pack content by ID: delete pack content failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -1083,7 +811,7 @@ func DeleteMyPackContentByID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := CheckPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "delete my pack content by ID: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -1091,7 +819,7 @@ func DeleteMyPackContentByID(c *gin.Context) {
 	}
 
 	if myPack {
-		err := deletePackContentByID(itemID)
+		err := deletePackContentByID(c.Request.Context(), itemID)
 		if err != nil {
 			helper.LogAndSanitize(err, "delete my pack content by ID: delete pack content failed")
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -1102,21 +830,6 @@ func DeleteMyPackContentByID(c *gin.Context) {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
-}
-
-func deletePackContentByID(id uint) error {
-	statement, err := database.DB().PrepareContext(context.Background(), "DELETE FROM pack_content WHERE id=$1;")
-	if err != nil {
-		return err
-	}
-
-	defer statement.Close()
-
-	_, err = statement.ExecContext(context.Background(), id)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 // Get all pack contents
@@ -1137,7 +850,7 @@ func GetPackContentsByPackID(c *gin.Context) {
 		return
 	}
 
-	packContents, err := returnPackContentsByPackID(id)
+	packContents, err := returnPackContentsByPackID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
@@ -1185,7 +898,7 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 		return
 	}
 
-	myPack, err := CheckPackOwnership(id, userID)
+	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "get my pack contents by pack ID: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -1193,7 +906,7 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 	}
 
 	if myPack {
-		packContents, err = returnPackContentsByPackID(id)
+		packContents, err = returnPackContentsByPackID(c.Request.Context(), id)
 		if err != nil {
 			if errors.Is(err, ErrPackNotFound) {
 				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
@@ -1209,81 +922,6 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
-}
-
-func returnPackContentsByPackID(id uint) (*PackContentWithItems, error) {
-	// First, check if the pack exists in the database
-	packExists, err := checkPackExists(id)
-	if err != nil {
-		return nil, err
-	}
-	if !packExists {
-		return nil, ErrPackNotFound
-	}
-
-	// Pack exists, continue with fetching its contents
-	var packWithItems PackContentWithItems
-
-	rows, err := database.DB().QueryContext(context.Background(),
-		`SELECT pc.id AS pack_content_id, 
-			pc.pack_id as pack_id, 
-			i.id AS inventory_id, 
-			i.item_name, 
-			i.category,
-			i.description AS item_description, 
-			i.weight, 
-			i.url AS item_url, 
-			i.price, 
-			i.currency, 
-			pc.quantity, 
-			pc.worn, 
-			pc.consumable 
-			FROM pack_content pc JOIN inventory i ON pc.item_id = i.id 
-			WHERE pc.pack_id = $1;`,
-		id)
-
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var item PackContentWithItem
-		err := rows.Scan(
-			&item.PackContentID,
-			&item.PackID,
-			&item.InventoryID,
-			&item.ItemName,
-			&item.Category,
-			&item.ItemDescription,
-			&item.Weight,
-			&item.ItemURL,
-			&item.Price,
-			&item.Currency,
-			&item.Quantity,
-			&item.Worn,
-			&item.Consumable)
-		if err != nil {
-			return nil, err
-		}
-		packWithItems = append(packWithItems, item)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return &packWithItems, nil
-}
-
-// Helper function to check if a pack exists
-func checkPackExists(id uint) (bool, error) {
-	var count int
-	err := database.DB().QueryRowContext(context.Background(), "SELECT COUNT(*) FROM pack WHERE id = $1", id).Scan(&count)
-	if err != nil {
-		return false, err
-	}
-	return count > 0, nil
 }
 
 // Get My packs
@@ -1306,7 +944,7 @@ func GetMyPacks(c *gin.Context) {
 		return
 	}
 
-	packs, err := findPacksByUserID(userID)
+	packs, err := findPacksByUserID(c.Request.Context(), userID)
 
 	if err != nil {
 		if errors.Is(err, ErrPackContentNotFound) {
@@ -1324,147 +962,6 @@ func GetMyPacks(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, *packs)
-}
-
-func findPacksByUserID(id uint) (*Packs, error) {
-	var packs Packs
-
-	rows, err := database.DB().QueryContext(context.Background(), `
-		SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
-		COALESCE(SUM(pc.quantity), 0) as items_count,
-		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight,
-		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image
-		FROM pack p
-		LEFT JOIN pack_content pc ON p.id = pc.pack_id
-		LEFT JOIN inventory i ON pc.item_id = i.id
-		LEFT JOIN pack_images pi ON p.id = pi.pack_id
-		WHERE p.user_id = $1
-		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code,
-		         p.created_at, p.updated_at, pi.pack_id;`, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		var pack Pack
-		err := rows.Scan(
-			&pack.ID,
-			&pack.UserID,
-			&pack.PackName,
-			&pack.PackDescription,
-			&pack.SharingCode,
-			&pack.CreatedAt,
-			&pack.UpdatedAt,
-			&pack.PackItemsCount,
-			&pack.PackWeight,
-			&pack.HasImage)
-		if err != nil {
-			return nil, err
-		}
-		packs = append(packs, pack)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	if len(packs) == 0 {
-		return nil, ErrPackContentNotFound
-	}
-
-	return &packs, nil
-}
-
-// CheckPackOwnership verifies if a user owns a specific pack
-func CheckPackOwnership(id uint, userID uint) (bool, error) {
-	var rows int
-
-	row := database.DB().QueryRowContext(context.Background(),
-		"SELECT COUNT(id) FROM pack WHERE id = $1 AND user_id = $2;", id, userID)
-	err := row.Scan(&rows)
-	if err != nil {
-		return false, err
-	}
-
-	if rows == 0 {
-		return false, nil
-	}
-
-	return true, nil
-}
-
-// sharePackByID generates and sets a sharing code for a pack (idempotent)
-func sharePackByID(ctx context.Context, packID uint, userID uint) (string, error) {
-	// First check ownership
-	owns, err := CheckPackOwnership(packID, userID)
-	if err != nil {
-		return "", err
-	}
-	if !owns {
-		return "", errors.New("pack does not belong to user")
-	}
-
-	// Check if pack already has a sharing code (idempotent behavior)
-	var existingCode *string
-	err = database.DB().QueryRowContext(ctx,
-		"SELECT sharing_code FROM pack WHERE id = $1;", packID).Scan(&existingCode)
-	if err != nil {
-		return "", err
-	}
-
-	// If already shared, return existing code
-	if existingCode != nil && *existingCode != "" {
-		return *existingCode, nil
-	}
-
-	// Generate new sharing code
-	sharingCode, err := helper.GenerateRandomCode(30)
-	if err != nil {
-		return "", errors.New("failed to generate sharing code")
-	}
-
-	// Update pack with new sharing code
-	statement, err := database.DB().PrepareContext(ctx,
-		"UPDATE pack SET sharing_code = $1, updated_at = $2 WHERE id = $3;")
-	if err != nil {
-		return "", err
-	}
-	defer statement.Close()
-
-	_, err = statement.ExecContext(ctx, sharingCode, time.Now().Truncate(time.Second), packID)
-	if err != nil {
-		return "", err
-	}
-
-	return sharingCode, nil
-}
-
-// unsharePackByID removes the sharing code from a pack (idempotent)
-func unsharePackByID(ctx context.Context, packID uint, userID uint) error {
-	// First check ownership
-	owns, err := CheckPackOwnership(packID, userID)
-	if err != nil {
-		return err
-	}
-	if !owns {
-		return errors.New("pack does not belong to user")
-	}
-
-	// Set sharing_code to NULL (idempotent - no error if already NULL)
-	statement, err := database.DB().PrepareContext(ctx,
-		"UPDATE pack SET sharing_code = NULL, updated_at = $1 WHERE id = $2;")
-	if err != nil {
-		return err
-	}
-	defer statement.Close()
-
-	_, err = statement.ExecContext(ctx, time.Now().Truncate(time.Second), packID)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // Import from lighterpack
@@ -1532,7 +1029,7 @@ func ImportFromLighterPack(c *gin.Context) {
 			return
 		}
 
-		lighterPackItem, err = readLineFromCSV(record)
+		lighterPackItem, err = readLineFromCSV(context.Background(), record)
 		if err != nil {
 			helper.LogAndSanitize(err, "import from lighterpack: read line from CSV failed")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -1543,7 +1040,7 @@ func ImportFromLighterPack(c *gin.Context) {
 	}
 
 	// Perform database insertion
-	packID, err := insertLighterPack(&lighterPack, userID)
+	packID, err := insertLighterPack(c.Request.Context(), &lighterPack, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "import from lighterpack: insert lighterpack failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -1553,117 +1050,6 @@ func ImportFromLighterPack(c *gin.Context) {
 		"message": "CSV data imported successfully",
 		"pack_id": packID,
 	})
-}
-
-// Take a record from csv.Newreder and return a LighterPackItem
-func readLineFromCSV(record []string) (LighterPackItem, error) {
-	var lighterPackItem LighterPackItem
-
-	lighterPackItem.ItemName = record[0]
-	lighterPackItem.Category = record[1]
-	lighterPackItem.Desc = record[2]
-	lighterPackItem.Unit = record[5]
-	lighterPackItem.URL = record[6]
-
-	qty, err := strconv.Atoi(record[3])
-	if err != nil {
-		return lighterPackItem, errors.New("invalid CSV format - failed to convert qty to number")
-	}
-
-	lighterPackItem.Qty = qty
-
-	weight, err := strconv.Atoi(record[4])
-	if err != nil {
-		return lighterPackItem, errors.New("invalid CSV format - failed to convert weight to number")
-	}
-
-	lighterPackItem.Weight = weight
-
-	price, err := strconv.Atoi(record[7])
-	if err != nil {
-		return lighterPackItem, errors.New("invalid CSV format - failed to convert price to number")
-	}
-
-	lighterPackItem.Price = price
-
-	if record[8] == "Worn" {
-		lighterPackItem.Worn = true
-	}
-
-	if record[9] == "Consumable" {
-		lighterPackItem.Consumable = true
-	}
-
-	return lighterPackItem, nil
-}
-
-func insertLighterPack(lp *LighterPack, userID uint) (uint, error) {
-	if lp == nil || len(*lp) == 0 {
-		return 0, errors.New("payload is empty")
-	}
-
-	// Create new pack
-	var newPack Pack
-	newPack.UserID = userID
-	newPack.PackName = "LighterPack Import"
-	newPack.PackDescription = "LighterPack Import"
-	err := insertPack(&newPack)
-	if err != nil {
-		return 0, err
-	}
-
-	ctx := context.Background()
-
-	// Insert content in new pack with insertPackContent
-	for _, item := range *lp {
-		var itemID uint
-
-		// Check if item already exists in inventory
-		existingItem, err := inventories.FindInventoryItemByAttributes(
-			ctx,
-			userID,
-			item.ItemName,
-			item.Category,
-			item.Desc,
-		)
-		if err != nil && !errors.Is(err, inventories.ErrNoItemFound) {
-			return 0, fmt.Errorf("failed to check for existing item: %w", err)
-		}
-
-		if existingItem != nil {
-			// Item exists, reuse it
-			itemID = existingItem.ID
-		} else {
-			// Item doesn't exist, create it
-			var i inventories.Inventory
-			i.UserID = userID
-			i.ItemName = item.ItemName
-			i.Category = item.Category
-			i.Description = item.Desc
-			i.Weight = item.Weight
-			i.URL = item.URL
-			i.Price = item.Price
-			i.Currency = "USD"
-			err := inventories.InsertInventory(ctx, &i)
-			if err != nil {
-				return 0, err
-			}
-			itemID = i.ID
-		}
-
-		// Create PackContent with the item (existing or new)
-		var pc PackContent
-		pc.PackID = newPack.ID
-		pc.ItemID = itemID
-		pc.Quantity = item.Qty
-		pc.Worn = item.Worn
-		pc.Consumable = item.Consumable
-		err = insertPackContent(&pc)
-		if err != nil {
-			return 0, err
-		}
-	}
-	return newPack.ID, nil
 }
 
 // SharedList gets pack metadata and contents for a shared pack
@@ -1693,82 +1079,6 @@ func SharedList(c *gin.Context) {
 	}
 
 	c.IndentedJSON(http.StatusOK, sharedPack)
-}
-
-func findPackIDBySharingCode(sharingCode string) (uint, error) {
-	var packID uint
-	row := database.DB().QueryRowContext(context.Background(), "SELECT id FROM pack WHERE sharing_code = $1;", sharingCode)
-	err := row.Scan(&packID)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return 0, nil
-		}
-		return 0, err
-	}
-	return packID, nil
-}
-
-// returnPackInfoBySharingCode retrieves pack metadata using sharing code.
-// Returns nil if pack not found or sharing_code is NULL.
-func returnPackInfoBySharingCode(ctx context.Context, sharingCode string) (*SharedPackInfo, error) {
-	query := `
-		SELECT p.id, p.pack_name, p.pack_description, p.created_at,
-		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image
-		FROM pack p
-		LEFT JOIN pack_images pi ON p.id = pi.pack_id
-		WHERE p.sharing_code = $1 AND p.sharing_code IS NOT NULL
-	`
-
-	var packInfo SharedPackInfo
-	err := database.DB().QueryRowContext(ctx, query, sharingCode).Scan(
-		&packInfo.ID,
-		&packInfo.PackName,
-		&packInfo.PackDescription,
-		&packInfo.CreatedAt,
-		&packInfo.HasImage,
-	)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrPackNotFound
-		}
-		return nil, fmt.Errorf("failed to fetch pack info by sharing code: %w", err)
-	}
-
-	return &packInfo, nil
-}
-
-// returnSharedPack retrieves both pack metadata and contents for a shared pack.
-// This function is used by the public shared pack endpoint.
-func returnSharedPack(ctx context.Context, sharingCode string) (*SharedPackResponse, error) {
-	// Get pack metadata
-	packInfo, err := returnPackInfoBySharingCode(ctx, sharingCode)
-	if err != nil {
-		return nil, err
-	}
-
-	// Get pack contents
-	packContents, err := returnPackContentsByPackID(packInfo.ID)
-	if err != nil {
-		if errors.Is(err, ErrPackContentNotFound) {
-			// Pack exists but has no contents - return empty array
-			return &SharedPackResponse{
-				Pack:     *packInfo,
-				Contents: PackContentWithItems{},
-			}, nil
-		}
-		return nil, fmt.Errorf("failed to fetch pack contents: %w", err)
-	}
-
-	// Handle nil contents as empty array
-	if packContents == nil {
-		packContents = &PackContentWithItems{}
-	}
-
-	return &SharedPackResponse{
-		Pack:     *packInfo,
-		Contents: *packContents,
-	}, nil
 }
 
 // FindPackIDByPackName finds a pack ID by its name

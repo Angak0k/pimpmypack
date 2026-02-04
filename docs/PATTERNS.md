@@ -20,7 +20,7 @@ This document contains detailed code patterns, examples, and templates used in t
 
 The codebase follows a **domain-driven design** approach where each business domain has its own package with clear boundaries:
 
-```
+```markdown
 pkg/
 ├── accounts/          # User accounts and authentication
 │   ├── types.go       # Domain types (User, Account, LoginInput, etc.)
@@ -84,6 +84,7 @@ type Inventory struct { /* ... */ }
 ### Package File Organization
 
 #### Option A: Single File (Small Packages)
+
 For smaller packages, keep everything in one file:
 
 ```go
@@ -106,6 +107,7 @@ func FindPackIDByPackName(packs Packs, packname string) uint { /* ... */ }
 ```
 
 #### Option B: Separate Files (Larger Packages)
+
 For larger packages, separate concerns into files:
 
 ```go
@@ -204,7 +206,7 @@ func getAllInventoriesByUserID(ctx context.Context, db *sql.DB, userID uint) (In
 
 **Solution**: Keep dependencies flowing in one direction:
 
-```
+```markdown
 handlers → service → repository → database
    ↓
  types (same package)
