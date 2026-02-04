@@ -176,11 +176,63 @@ func TestGetMyInventory_Success(t *testing.T) {
    - This catches common mistakes (wrong assertions, code quality issues)
    - CI will reject PRs with linter violations
 
-3. ✅ **Verify build**: `go build ./...`
+3. ✅ **Run API tests** (non-regression): `make api-test`
+
+   - Verifies all API endpoints still work correctly
+   - Tests authentication, CRUD operations, file uploads
+   - **ESPECIALLY important** after changes to handlers, middleware, or database schema
+
+4. ✅ **Verify build**: `go build ./...`
 
    - All packages must compile without errors
 
-**Why this matters**: The linter catches subtle bugs that tests might miss (e.g., using `assert.Equal` for pointer comparison instead of `assert.Same`). Always run it locally before pushing to avoid CI failures and wasted review cycles.
+**Why this matters**: The linter catches subtle bugs that tests might miss (e.g., using `assert.Equal` for pointer comparison instead of `assert.Same`). API tests catch regressions in endpoint behavior. Always run both locally before pushing to avoid CI failures and wasted review cycles.
+
+## 🤖 Available Agents
+
+The project includes specialized agents for common tasks. Invoke them explicitly or Claude will suggest them based on context.
+
+### api-test-runner
+
+**Purpose**: Run automated API test scenarios for non-regression testing
+
+**When to use**:
+
+- After modifying API handlers or middleware
+- After database schema changes or migrations
+- After authentication/security updates
+- Before pushing code that affects API behavior
+- When explicitly requested: "run api tests" or "check for regressions"
+
+**Quick commands**:
+
+```bash
+# Build the test CLI
+make build-apitest
+
+# Run all test scenarios (35 tests across 4 scenarios)
+make api-test
+
+# Run specific scenario
+./bin/apitest run 001    # Authentication & registration
+./bin/apitest run 002    # Pack CRUD operations
+./bin/apitest run 003    # Inventory management
+./bin/apitest run 004    # CSV import (LighterPack)
+
+# Run with verbose output for debugging
+./bin/apitest run -v 001
+```
+
+**What it tests**:
+
+- User registration and email confirmation
+- Login and token refresh flows
+- Pack creation, update, deletion
+- Inventory CRUD operations
+- File upload (CSV import)
+- Authorization and access control
+
+**Note**: Server must be running on `localhost:8080` with `STAGE=LOCAL` in `.env`
 
 ## ❌ Common Mistakes to Avoid
 
