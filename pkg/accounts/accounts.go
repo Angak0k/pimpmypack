@@ -370,6 +370,9 @@ func insertAccount(ctx context.Context, a *Account) error {
 	return nil
 }
 
+// updateAccountByID updates ALL fields of an account including role and status
+// ADMIN ONLY: Used by PutAccountByID (admin endpoint) to update any user's account
+// SECURITY: NEVER call from user-facing endpoints - use updateMyAccount() instead
 func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 	if a == nil {
 		return errors.New("payload is empty")
@@ -393,6 +396,67 @@ func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 		return err
 	}
 	return nil
+}
+
+// updateMyAccount updates only user-controllable fields of an account
+// SECURITY: This function explicitly excludes role, status, username to prevent privilege escalation
+// Only safe fields can be updated: email, firstname, lastname, preferences
+func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput) (*Account, error) {
+	if input == nil {
+		return nil, errors.New("input is empty")
+	}
+
+	// Validate email format
+	if !helper.IsValidEmail(input.Email) {
+		return nil, errors.New("invalid email format")
+	}
+
+	now := time.Now().Truncate(time.Second)
+
+	// Update ONLY safe fields - explicitly excludes role, status, username
+	statement, err := database.DB().PrepareContext(ctx,
+		`UPDATE account
+		 SET email=$1, firstname=$2, lastname=$3, preferred_currency=$4,
+		     preferred_unit_system=$5, updated_at=$6
+		 WHERE id=$7
+		 RETURNING id, username, email, firstname, lastname, role, status,
+		           preferred_currency, preferred_unit_system, created_at, updated_at;`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare statement: %w", err)
+	}
+	defer statement.Close()
+
+	var account Account
+	err = statement.QueryRowContext(ctx,
+		input.Email,
+		input.Firstname,
+		input.Lastname,
+		input.PreferredCurrency,
+		input.PreferredUnitSystem,
+		now,
+		userID,
+	).Scan(
+		&account.ID,
+		&account.Username,
+		&account.Email,
+		&account.Firstname,
+		&account.Lastname,
+		&account.Role,
+		&account.Status,
+		&account.PreferredCurrency,
+		&account.PreferredUnitSystem,
+		&account.CreatedAt,
+		&account.UpdatedAt,
+	)
+
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNoAccountFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to update account: %w", err)
+	}
+
+	return &account, nil
 }
 
 func deleteAccountByID(ctx context.Context, id string) error {

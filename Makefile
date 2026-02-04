@@ -6,7 +6,7 @@ POSTGRES_PASSWORD=pmp1234
 POSTGRES_DB=pmp_db
 POSTGRES_VERSION=17
 
-.PHONY: test api-doc build lint start-db stop-db clean-db build-apitest api-test api-test-auth
+.PHONY: test api-doc build lint start-db stop-db clean-db build-apitest api-test api-test-auth stop-server start-server restart-server api-test-full
 
 start-db:
 	@echo "Starting PostgreSQL container (version $(POSTGRES_VERSION))..."
@@ -57,3 +57,26 @@ api-test-auth: build-apitest
 	@echo "Running authentication test with Go CLI..."
 	@echo "NOTE: Server must be running (STAGE=LOCAL)"
 	@./bin/apitest run 001
+
+stop-server:
+	@echo "Stopping any running pimpmypack server..."
+	@pkill -f "go run main.go" || true
+	@pkill -f "./$(NAME)" || true
+	@pkill -f "$(NAME)" || true
+	@sleep 1
+
+start-server: stop-server
+	@echo "Starting pimpmypack server in background..."
+	@nohup go run main.go > /tmp/pimpmypack-server.log 2>&1 &
+	@echo "Waiting for server to start..."
+	@sleep 3
+	@echo "Server started. Logs: /tmp/pimpmypack-server.log"
+
+restart-server: start-server
+
+api-test-full: start-server build-apitest
+	@echo "Running API tests with fresh server..."
+	@./bin/apitest run --all || (echo "Tests failed. Server logs:"; tail -50 /tmp/pimpmypack-server.log; exit 1)
+	@echo ""
+	@echo "✅ Tests completed successfully"
+	@echo "Server is still running. Use 'make stop-server' to stop it."

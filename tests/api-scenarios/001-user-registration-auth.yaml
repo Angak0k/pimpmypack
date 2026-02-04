@@ -87,12 +87,9 @@ scenarios:
       headers:
         Authorization: "Bearer {{access_token}}"
       body:
-        username: "{{username}}"
         email: "{{email}}"
         firstname: "Updated"
         lastname: "TestUser"
-        role: "{{user_role}}"
-        status: "{{user_status}}"
         preferred_unit_system: "metric"
         preferred_currency: "EUR"
     assertions:
@@ -104,6 +101,39 @@ scenarios:
       - type: json_path
         path: "$.preferred_currency"
         equals: "EUR"
+      - type: json_path
+        path: "$.role"
+        equals: "{{user_role}}"
+      - type: json_path
+        path: "$.status"
+        equals: "{{user_status}}"
+
+  - name: "SECURITY: Attempt privilege escalation (should be blocked)"
+    request:
+      method: PUT
+      endpoint: "/v1/myaccount"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        email: "{{email}}"
+        firstname: "Hacker"
+        lastname: "Attempt"
+        role: "admin"
+        status: "revoked"
+        preferred_unit_system: "metric"
+        preferred_currency: "USD"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.firstname"
+        equals: "Hacker"
+      - type: json_path
+        path: "$.role"
+        equals: "standard"
+      - type: json_path
+        path: "$.status"
+        equals: "active"
 
   - name: "Change user password"
     request:
