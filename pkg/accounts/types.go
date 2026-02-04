@@ -64,6 +64,17 @@ type PasswordUpdateInput struct {
 	NewPassword     string `json:"new_password" binding:"required"`
 }
 
+// AccountUpdateInput represents the data users can update about their own account
+// SECURITY: This type intentionally excludes role, status, username, and password fields
+// to prevent privilege escalation and unauthorized modifications
+type AccountUpdateInput struct {
+	Email               string `json:"email" binding:"required"`
+	Firstname           string `json:"firstname" binding:"required"`
+	Lastname            string `json:"lastname" binding:"required"`
+	PreferredCurrency   string `json:"preferred_currency"`
+	PreferredUnitSystem string `json:"preferred_unit_system"`
+}
+
 // Token represents an authentication token
 type Token struct {
 	Token string `json:"token"`

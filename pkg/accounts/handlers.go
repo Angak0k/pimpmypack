@@ -296,19 +296,19 @@ func PutMyPassword(c *gin.Context) {
 
 // Update my account information
 // @Summary Update account info
-// @Description Update information of the currently logged-in user
+// @Description Update information of the currently logged-in user (email, name, preferences only)
 // @Security Bearer
 // @Tags Accounts
 // @Accept  json
 // @Produce  json
-// @Param   input  body    Account  true  "Account Information"
+// @Param   input  body    AccountUpdateInput  true  "Account update data (excludes role, status, username)"
 // @Success 200 {object} Account
 // @Failure 400 {object} apitypes.ErrorResponse
 // @Failure 401 {object} apitypes.ErrorResponse
 // @Failure 500 {object} apitypes.ErrorResponse
 // @Router /v1/myaccount [put]
 func PutMyAccount(c *gin.Context) {
-	var updatedAccount Account
+	var input AccountUpdateInput
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -317,24 +317,22 @@ func PutMyAccount(c *gin.Context) {
 		return
 	}
 
-	// Call BindJSON to bind the received JSON to updatedAccount.
-	if err := c.BindJSON(&updatedAccount); err != nil {
+	// Bind and validate JSON input
+	if err := c.ShouldBindJSON(&input); err != nil {
 		helper.LogAndSanitize(err, "put my account: bind JSON failed")
 		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
-	updatedAccount.ID = userID
-
-	// Update the DB
-	err = updateAccountByID(c.Request.Context(), userID, &updatedAccount)
+	// Update only safe fields (excludes role, status, username)
+	account, err := updateMyAccount(c.Request.Context(), userID, &input)
 	if err != nil {
 		helper.LogAndSanitize(err, "put my account: update account failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, updatedAccount)
+	c.IndentedJSON(http.StatusOK, account)
 }
 
 // Get all accounts
