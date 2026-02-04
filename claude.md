@@ -30,7 +30,8 @@ pimpmypack/
 │   │   └── migration/      # SQL migration files
 │   └── helper/             # Utilities (email, validation, etc.)
 ├── specs/                  # Technical specifications (*.md)
-├── agents/                 # Agent documentation (patterns, templates)
+├── agents/                 # Agent definitions for Claude Code
+├── docs/                   # Documentation (patterns, templates, collaboration)
 └── .env.sample             # Environment variables template
 ```
 
@@ -156,9 +157,30 @@ func TestGetMyInventory_Success(t *testing.T) {
 
 1. ✅ **Read existing code** in the target package to understand patterns
 2. ✅ **Check [agents.md](agents.md)** for detailed architecture guidelines
-3. ✅ **Check [agents/PATTERNS.md](agents/PATTERNS.md)** for code examples
+3. ✅ **Check [docs/PATTERNS.md](docs/PATTERNS.md)** for code examples
 4. ✅ **Write specs** in `specs/*.md` before implementation (for non-trivial features)
 5. ✅ **Use SQL direct queries** - verify examples in `pkg/accounts/accounts.go`
+
+## ⚠️ Critical Workflow: Before Pushing to GitHub
+
+**MANDATORY steps before every push**:
+
+1. ✅ **Run full test suite**: `make test`
+
+   - All tests must pass
+   - No race conditions detected (`-race` flag enabled)
+
+2. ✅ **ALWAYS run linter**: `make lint`
+
+   - **CRITICAL**: Fix ALL linter issues before pushing
+   - This catches common mistakes (wrong assertions, code quality issues)
+   - CI will reject PRs with linter violations
+
+3. ✅ **Verify build**: `go build ./...`
+
+   - All packages must compile without errors
+
+**Why this matters**: The linter catches subtle bugs that tests might miss (e.g., using `assert.Equal` for pointer comparison instead of `assert.Same`). Always run it locally before pushing to avoid CI failures and wasted review cycles.
 
 ## ❌ Common Mistakes to Avoid
 
@@ -211,8 +233,8 @@ config.DBHost, config.DBPort, etc.
 ## 📖 Additional Resources
 
 - **[agents.md](agents.md)** - Complete architecture & contribution guidelines
-- **[agents/PATTERNS.md](agents/PATTERNS.md)** - Detailed code patterns & templates
-- **[agents/COLLABORATION.md](agents/COLLABORATION.md)** - Spec-driven development workflow
+- **[docs/PATTERNS.md](docs/PATTERNS.md)** - Detailed code patterns & templates
+- **[docs/COLLABORATION.md](docs/COLLABORATION.md)** - Spec-driven development workflow
 - **[specs/](specs/)** - Technical specifications for features
 - **[.env.sample](.env.sample)** - Environment variables documentation
 

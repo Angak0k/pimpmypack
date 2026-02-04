@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"strconv"
 	"time"
 
@@ -75,6 +76,14 @@ func registerUser(ctx context.Context, u User) (bool, error) {
 
 // Send confirmation email
 func sendConfirmationEmail(u User, code string) error {
+	// LOCAL mode: Don't send email, just log the confirmation details
+	if config.Stage == "LOCAL" {
+		log.Printf("LOCAL MODE: Email confirmation bypassed for user %s (ID: %d)", u.Username, u.ID)
+		log.Printf("LOCAL MODE: Confirm at: /api/confirmemail?id=%d&code=%s", u.ID, code)
+		log.Printf("LOCAL MODE: Or use simplified confirmation: /api/confirmemail?username=%s&email=%s", u.Username, u.Email)
+		return nil
+	}
+
 	// Send confirmation email
 	mailRcpt := u.Email
 	mailSubject := "PimpMyPack - Confirm your email address"
@@ -93,8 +102,27 @@ func sendConfirmationEmail(u User, code string) error {
 }
 
 func confirmEmail(ctx context.Context, id string, code string) error {
+	// LOCAL mode: Accept any code
+	if config.Stage == "LOCAL" && code == "LOCAL_BYPASS" {
+		log.Printf("LOCAL MODE: Bypassing code verification for user ID %s", id)
+		code = "" // Will be ignored in the query
+	}
+
 	// Check if the confirmation code is valid
-	row := database.DB().QueryRowContext(ctx, "SELECT id FROM account WHERE id = $1 AND confirmation_code = $2;", id, code)
+	var query string
+	var args []interface{}
+
+	if config.Stage == "LOCAL" && code == "" {
+		// LOCAL mode with bypass: only check ID
+		query = "SELECT id FROM account WHERE id = $1;"
+		args = []interface{}{id}
+	} else {
+		// Normal mode: check both ID and code
+		query = "SELECT id FROM account WHERE id = $1 AND confirmation_code = $2;"
+		args = []interface{}{id, code}
+	}
+
+	row := database.DB().QueryRowContext(ctx, query, args...)
 	err := row.Scan(&id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -114,6 +142,29 @@ func confirmEmail(ctx context.Context, id string, code string) error {
 		return fmt.Errorf("failed to execute update query: %w", err)
 	}
 
+	return nil
+}
+
+// confirmUserByUsernameAndEmail confirms a user by username and email (LOCAL mode only)
+func confirmUserByUsernameAndEmail(ctx context.Context, username, email string) error {
+	result, err := database.DB().ExecContext(ctx,
+		`UPDATE account SET status = 'active'
+		 WHERE username = $1 AND email = $2 AND status = 'pending'`,
+		username, email)
+	if err != nil {
+		return fmt.Errorf("failed to confirm user: %w", err)
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+
+	if rowsAffected == 0 {
+		return fmt.Errorf("user not found or already confirmed")
+	}
+
+	log.Printf("LOCAL MODE: Confirmed user %s (%s) via username/email", username, email)
 	return nil
 }
 

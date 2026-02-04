@@ -1,0 +1,189 @@
+name: "User Registration and Authentication Flow"
+base_url: "http://localhost:8080/api"
+scenarios:
+  - name: "Register new user with unique credentials"
+    request:
+      method: POST
+      endpoint: "/register"
+      body:
+        username: "test_api_{{timestamp}}"
+        email: "test_{{timestamp}}@example.com"
+        password: "TestPass123!"
+        firstname: "Test"
+        lastname: "User"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.message"
+        exists: true
+    store:
+      username: "{{request.body.username}}"
+      email: "{{request.body.email}}"
+      password: "{{request.body.password}}"
+
+  - name: "Confirm email using LOCAL mode simplified endpoint"
+    request:
+      method: GET
+      endpoint: "/confirmemail?username={{username}}&email={{email}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.message"
+        contains: "confirmed"
+
+  - name: "Login with confirmed user credentials"
+    request:
+      method: POST
+      endpoint: "/login"
+      body:
+        username: "{{username}}"
+        password: "{{password}}"
+        remember_me: false
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.access_token"
+        exists: true
+      - type: json_path
+        path: "$.refresh_token"
+        exists: true
+      - type: json_path
+        path: "$.token"
+        exists: true
+    store:
+      access_token: "{{response.access_token}}"
+      refresh_token: "{{response.refresh_token}}"
+
+  - name: "Get authenticated user account information"
+    request:
+      method: GET
+      endpoint: "/v1/myaccount"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.username"
+        equals: "{{username}}"
+      - type: json_path
+        path: "$.email"
+        equals: "{{email}}"
+      - type: json_path
+        path: "$.status"
+        equals: "active"
+    store:
+      user_id: "{{response.id}}"
+      user_role: "{{response.role}}"
+      user_status: "{{response.status}}"
+
+  - name: "Update user account details"
+    request:
+      method: PUT
+      endpoint: "/v1/myaccount"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        username: "{{username}}"
+        email: "{{email}}"
+        firstname: "Updated"
+        lastname: "TestUser"
+        role: "{{user_role}}"
+        status: "{{user_status}}"
+        preferred_unit_system: "metric"
+        preferred_currency: "EUR"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.firstname"
+        equals: "Updated"
+      - type: json_path
+        path: "$.preferred_currency"
+        equals: "EUR"
+
+  - name: "Change user password"
+    request:
+      method: PUT
+      endpoint: "/v1/mypassword"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        current_password: "{{password}}"
+        new_password: "NewTestPass456!"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.message"
+        exists: true
+    store:
+      password: "NewTestPass456!"
+
+  - name: "Login with new password to verify change"
+    request:
+      method: POST
+      endpoint: "/login"
+      body:
+        username: "{{username}}"
+        password: "{{password}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.access_token"
+        exists: true
+    store:
+      new_access_token: "{{response.access_token}}"
+
+  - name: "Refresh access token using refresh token"
+    request:
+      method: POST
+      endpoint: "/auth/refresh"
+      body:
+        refresh_token: "{{refresh_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.access_token"
+        exists: true
+      - type: json_path
+        path: "$.expires_in"
+        exists: true
+    store:
+      refreshed_access_token: "{{response.access_token}}"
+
+  - name: "Verify refreshed access token works"
+    request:
+      method: GET
+      endpoint: "/v1/myaccount"
+      headers:
+        Authorization: "Bearer {{refreshed_access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.username"
+        equals: "{{username}}"
+
+  - name: "Test login with remember_me flag"
+    request:
+      method: POST
+      endpoint: "/login"
+      body:
+        username: "{{username}}"
+        password: "{{password}}"
+        remember_me: true
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.access_token"
+        exists: true
+      - type: json_path
+        path: "$.refresh_token"
+        exists: true

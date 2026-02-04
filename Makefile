@@ -6,7 +6,7 @@ POSTGRES_PASSWORD=pmp1234
 POSTGRES_DB=pmp_db
 POSTGRES_VERSION=17
 
-.PHONY: test api-doc build lint start-db stop-db clean-db
+.PHONY: test api-doc build lint start-db stop-db clean-db build-apitest api-test api-test-auth
 
 start-db:
 	@echo "Starting PostgreSQL container (version $(POSTGRES_VERSION))..."
@@ -42,4 +42,18 @@ build: test
 
 lint:
 	@echo "Running golangci-lint..."
-	@golangci-lint run --timeout=5m 
+	@golangci-lint run --timeout=5m
+
+build-apitest:
+	@echo "Building API test CLI..."
+	@go build -o bin/apitest ./tests/cmd/apitest
+
+api-test: build-apitest
+	@echo "Running API tests with Go CLI..."
+	@echo "NOTE: Server must be running (STAGE=LOCAL)"
+	@./bin/apitest run --all
+
+api-test-auth: build-apitest
+	@echo "Running authentication test with Go CLI..."
+	@echo "NOTE: Server must be running (STAGE=LOCAL)"
+	@./bin/apitest run 001

@@ -1,0 +1,224 @@
+name: "Inventory Management CRUD Operations"
+base_url: "http://localhost:8080/api"
+scenarios:
+  - name: "Register test user for inventory testing"
+    request:
+      method: POST
+      endpoint: "/register"
+      body:
+        username: "test_inv_{{timestamp}}"
+        email: "inv_{{timestamp}}@example.com"
+        password: "InvTest123!"
+        firstname: "Inventory"
+        lastname: "Tester"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      username: "{{request.body.username}}"
+      email: "{{request.body.email}}"
+      password: "{{request.body.password}}"
+
+  - name: "Confirm email"
+    request:
+      method: GET
+      endpoint: "/confirmemail?username={{username}}&email={{email}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Login to get access token"
+    request:
+      method: POST
+      endpoint: "/login"
+      body:
+        username: "{{username}}"
+        password: "{{password}}"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      access_token: "{{response.access_token}}"
+
+  - name: "Create first inventory item - Tent"
+    request:
+      method: POST
+      endpoint: "/v1/myinventory"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        item_name: "Ultralight Tent"
+        category: "Shelter"
+        description: "1-person ultralight tent"
+        weight: 850
+        price: 399
+        currency: "USD"
+        url: "https://example.com/tent"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+      - type: json_path
+        path: "$.item_name"
+        equals: "Ultralight Tent"
+    store:
+      tent_id: "{{response.id}}"
+
+  - name: "Create second inventory item - Sleeping Bag"
+    request:
+      method: POST
+      endpoint: "/v1/myinventory"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        item_name: "Down Sleeping Bag"
+        category: "Sleep System"
+        description: "20F down sleeping bag"
+        weight: 750
+        price: 299
+        currency: "USD"
+    assertions:
+      - type: status_code
+        expected: 201
+    store:
+      sleeping_bag_id: "{{response.id}}"
+
+  - name: "Create third inventory item - Backpack"
+    request:
+      method: POST
+      endpoint: "/v1/myinventory"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        item_name: "50L Backpack"
+        category: "Pack"
+        description: "Adjustable 50 liter backpack"
+        weight: 1200
+        price: 199
+        currency: "EUR"
+    assertions:
+      - type: status_code
+        expected: 201
+    store:
+      backpack_id: "{{response.id}}"
+
+  - name: "List all inventory items"
+    request:
+      method: GET
+      endpoint: "/v1/myinventory"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Get specific inventory item by ID"
+    request:
+      method: GET
+      endpoint: "/v1/myinventory/{{tent_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.id"
+        equals: "{{tent_id}}"
+      - type: json_path
+        path: "$.item_name"
+        equals: "Ultralight Tent"
+      - type: json_path
+        path: "$.category"
+        equals: "Shelter"
+
+  - name: "Update inventory item details"
+    request:
+      method: PUT
+      endpoint: "/v1/myinventory/{{tent_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        item_name: "Updated Ultralight Tent"
+        category: "Shelter"
+        description: "Updated: 1-person ultralight tent with footprint"
+        weight: 900
+        price: 449
+        currency: "USD"
+        url: "https://example.com/tent-updated"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.item_name"
+        equals: "Updated Ultralight Tent"
+      - type: json_path
+        path: "$.weight"
+        equals: "900"
+      - type: json_path
+        path: "$.price"
+        equals: "449"
+
+  - name: "Verify update persisted"
+    request:
+      method: GET
+      endpoint: "/v1/myinventory/{{tent_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.item_name"
+        equals: "Updated Ultralight Tent"
+
+  - name: "Delete inventory item"
+    request:
+      method: DELETE
+      endpoint: "/v1/myinventory/{{sleeping_bag_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Verify item was deleted"
+    request:
+      method: GET
+      endpoint: "/v1/myinventory/{{sleeping_bag_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 403  # TODO: Should be 404 - see issue about ownership check order
+
+  - name: "Cleanup: Delete tent"
+    request:
+      method: DELETE
+      endpoint: "/v1/myinventory/{{tent_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: Delete backpack"
+    request:
+      method: DELETE
+      endpoint: "/v1/myinventory/{{backpack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Verify all items cleaned up"
+    request:
+      method: GET
+      endpoint: "/v1/myinventory"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 404

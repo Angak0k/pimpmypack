@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
 	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/Angak0k/pimpmypack/pkg/security"
@@ -77,6 +78,31 @@ func ConfirmEmail(c *gin.Context) {
 	// Retrieve the confirmation code from the url query
 	confirmationCode := c.Query("code")
 	userID := c.Query("id")
+
+	// LOCAL mode: Support simplified confirmation by username + email
+	if config.Stage == "LOCAL" {
+		username := c.Query("username")
+		email := c.Query("email")
+
+		// Method 1: Simplified confirmation with username + email (no code needed)
+		if username != "" && email != "" {
+			err := confirmUserByUsernameAndEmail(c.Request.Context(), username, email)
+			if err != nil {
+				helper.LogAndSanitize(err, "confirm email by username/email failed")
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, gin.H{"message": "Email confirmed successfully (LOCAL mode)"})
+			return
+		}
+
+		// Method 2: Traditional with ID but accept any code
+		if userID != "" && confirmationCode == "" {
+			confirmationCode = "LOCAL_BYPASS"
+		}
+	}
+
+	// Validate required params for traditional confirmation
 	if confirmationCode == "" || userID == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid confirmation code or user ID"})
 		return

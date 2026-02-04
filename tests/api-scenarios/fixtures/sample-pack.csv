@@ -1,0 +1,11 @@
+Item Name,Category,desc,qty,weight,unit,url,price,worn,consumable
+Tent,Shelter,Ultralight 2-person tent,1,2500,g,,29999,,
+Sleeping Bag,Sleep System,Down sleeping bag -5C,1,850,g,,19999,,
+Backpack,Pack,50L hiking backpack,1,1800,g,,14999,Worn,
+Water Filter,Water,Portable filter system,1,200,g,,3999,,
+Energy Bars,Food,High-energy snack bars,5,50,g,,299,,Consumable
+Stove,Cooking,Lightweight canister stove,1,300,g,,5999,,
+Pot,Cooking,Titanium cooking pot 1L,1,180,g,,4500,,
+Headlamp,Electronics,LED headlamp 300 lumens,1,75,g,,2999,,
+First Aid Kit,Safety,Compact wilderness first aid,1,150,g,,2499,,
+Rain Jacket,Clothing,Waterproof breathable jacket,1,280,g,,12000,Worn,
