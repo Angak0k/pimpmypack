@@ -29,8 +29,13 @@ func New(baseURL string) *HTTPClient {
 	}
 }
 
-// MakeRequest executes an HTTP request and returns the response
-func (c *HTTPClient) MakeRequest(ctx context.Context, method, endpoint string, headers map[string]string, body map[string]any) (*http.Response, []byte, error) {
+// MakeRequest executes an HTTP request and returns the status code and response body
+func (c *HTTPClient) MakeRequest(
+	ctx context.Context,
+	method, endpoint string,
+	headers map[string]string,
+	body map[string]any,
+) (int, []byte, error) {
 	// Build full URL
 	url := c.baseURL + endpoint
 
@@ -39,7 +44,7 @@ func (c *HTTPClient) MakeRequest(ctx context.Context, method, endpoint string, h
 	if body != nil {
 		bodyBytes, err := json.Marshal(body)
 		if err != nil {
-			return nil, nil, fmt.Errorf("failed to marshal request body: %w", err)
+			return 0, nil, fmt.Errorf("failed to marshal request body: %w", err)
 		}
 		bodyReader = bytes.NewReader(bodyBytes)
 	}
@@ -47,7 +52,7 @@ func (c *HTTPClient) MakeRequest(ctx context.Context, method, endpoint string, h
 	// Create HTTP request
 	req, err := http.NewRequestWithContext(ctx, method, url, bodyReader)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create request: %w", err)
+		return 0, nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	// Set default headers
@@ -63,28 +68,33 @@ func (c *HTTPClient) MakeRequest(ctx context.Context, method, endpoint string, h
 	// Execute request
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to execute request: %w", err)
+		return 0, nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Read response body
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read response body: %w", err)
+		return 0, nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	return resp, respBody, nil
+	return resp.StatusCode, respBody, nil
 }
 
 // MakeRequestWithFile executes an HTTP request with a file upload
-func (c *HTTPClient) MakeRequestWithFile(ctx context.Context, method, endpoint string, headers map[string]string, filePath, fieldName, contentType string) (*http.Response, []byte, error) {
+func (c *HTTPClient) MakeRequestWithFile(
+	ctx context.Context,
+	method, endpoint string,
+	headers map[string]string,
+	filePath, fieldName string,
+) (int, []byte, error) {
 	// Build full URL
 	url := c.baseURL + endpoint
 
 	// Open the file
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to open file: %w", err)
+		return 0, nil, fmt.Errorf("failed to open file: %w", err)
 	}
 	defer file.Close()
 
@@ -95,23 +105,23 @@ func (c *HTTPClient) MakeRequestWithFile(ctx context.Context, method, endpoint s
 	// Create form file field
 	part, err := writer.CreateFormFile(fieldName, filepath.Base(filePath))
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create form file: %w", err)
+		return 0, nil, fmt.Errorf("failed to create form file: %w", err)
 	}
 
 	// Copy file content to form
 	if _, err := io.Copy(part, file); err != nil {
-		return nil, nil, fmt.Errorf("failed to copy file content: %w", err)
+		return 0, nil, fmt.Errorf("failed to copy file content: %w", err)
 	}
 
 	// Close multipart writer to finalize the form
 	if err := writer.Close(); err != nil {
-		return nil, nil, fmt.Errorf("failed to close multipart writer: %w", err)
+		return 0, nil, fmt.Errorf("failed to close multipart writer: %w", err)
 	}
 
 	// Create HTTP request
 	req, err := http.NewRequestWithContext(ctx, method, url, body)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create request: %w", err)
+		return 0, nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	// Set multipart content type
@@ -125,23 +135,23 @@ func (c *HTTPClient) MakeRequestWithFile(ctx context.Context, method, endpoint s
 	// Execute request
 	resp, err := c.client.Do(req)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to execute request: %w", err)
+		return 0, nil, fmt.Errorf("failed to execute request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Read response body
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to read response body: %w", err)
+		return 0, nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
-	return resp, respBody, nil
+	return resp.StatusCode, respBody, nil
 }
 
 // CheckServer verifies the server is reachable
 func (c *HTTPClient) CheckServer(ctx context.Context) error {
 	// Try a simple request to check connectivity
-	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create health check request: %w", err)
 	}

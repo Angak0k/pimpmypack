@@ -49,7 +49,6 @@ scenarios:
       file:
         field: "file"
         path: "tests/api-scenarios/fixtures/sample-pack.csv"
-        content_type: "text/csv"
     assertions:
       - type: status_code
         expected: 200

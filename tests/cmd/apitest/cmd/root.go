@@ -27,14 +27,23 @@ Examples:
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() {
+	setupCommands()
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }
 
-func init() {
+func setupCommands() {
 	// Global flags available to all commands
 	rootCmd.PersistentFlags().StringVar(&baseURL, "base-url", "http://localhost:8080/api", "Base URL of the API server")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "Enable verbose output")
+
+	// Add subcommands
+	rootCmd.AddCommand(runCmd)
+	rootCmd.AddCommand(versionCmd)
+
+	// Setup run command flags
+	runCmd.Flags().BoolVar(&runAll, "all", false, "Run all test scenarios")
+	runCmd.Flags().StringVar(&scenarioDir, "scenario-dir", "tests/api-scenarios", "Directory containing test scenarios")
 }

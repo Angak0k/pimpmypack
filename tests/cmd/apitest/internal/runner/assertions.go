@@ -2,17 +2,17 @@ package runner
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 )
 
 // ValidateAssertion checks if a response matches the assertion criteria
-func ValidateAssertion(assertion Assertion, resp *http.Response, body []byte) error {
+func ValidateAssertion(assertion Assertion, statusCode int, body []byte) error {
 	switch assertion.Type {
 	case "status_code":
-		return validateStatusCode(assertion, resp)
+		return validateStatusCode(assertion, statusCode)
 	case "json_path":
 		return validateJSONPath(assertion, body)
 	default:
@@ -21,7 +21,7 @@ func ValidateAssertion(assertion Assertion, resp *http.Response, body []byte) er
 }
 
 // validateStatusCode checks the HTTP status code
-func validateStatusCode(assertion Assertion, resp *http.Response) error {
+func validateStatusCode(assertion Assertion, actualStatus int) error {
 	var expected int
 
 	// Handle Expected as different types (int, float64, string)
@@ -40,8 +40,8 @@ func validateStatusCode(assertion Assertion, resp *http.Response) error {
 		return fmt.Errorf("expected status code must be a number, got %T", assertion.Expected)
 	}
 
-	if resp.StatusCode != expected {
-		return fmt.Errorf("expected status %d, got %d", expected, resp.StatusCode)
+	if actualStatus != expected {
+		return fmt.Errorf("expected status %d, got %d", expected, actualStatus)
 	}
 
 	return nil
@@ -68,7 +68,7 @@ func validateJSONPath(assertion Assertion, body []byte) error {
 
 	// Check if collection is empty
 	if assertion.Empty {
-		isEmpty := false
+		var isEmpty bool
 		switch v := value.(type) {
 		case []any:
 			isEmpty = len(v) == 0
@@ -109,86 +109,97 @@ func validateJSONPath(assertion Assertion, body []byte) error {
 
 // getJSONPath extracts a value from JSON using a path like "$.field.nested" or "$[0].field"
 func getJSONPath(data any, path string) any {
-	// Remove "$" prefix if present
-	path = strings.TrimPrefix(path, "$")
+	// Remove "$" prefix and leading "." if present
+	path = strings.TrimPrefix(strings.TrimPrefix(path, "$"), ".")
 
 	// Handle empty path
-	if path == "" || path == "." {
+	if path == "" {
 		return data
 	}
 
-	// Remove leading "." if present
-	path = strings.TrimPrefix(path, ".")
-
-	var current any = data
+	current := data
 	i := 0
 
 	for i < len(path) {
-		// Handle array index [n]
 		if path[i] == '[' {
-			// Find closing bracket
-			closeBracket := strings.Index(path[i:], "]")
-			if closeBracket == -1 {
-				return nil
-			}
-
-			// Extract index
-			indexStr := path[i+1 : i+closeBracket]
-			index, err := strconv.Atoi(indexStr)
+			var err error
+			current, i, err = processArrayIndex(current, path, i)
 			if err != nil {
 				return nil
-			}
-
-			// Access array element
-			arr, ok := current.([]any)
-			if !ok {
-				return nil
-			}
-			if index < 0 || index >= len(arr) {
-				return nil
-			}
-			current = arr[index]
-
-			// Move past the bracket
-			i += closeBracket + 1
-
-			// Skip the dot after bracket if present
-			if i < len(path) && path[i] == '.' {
-				i++
 			}
 			continue
 		}
 
-		// Handle object field
-		// Find next delimiter (. or [)
-		nextDelim := len(path)
-		for j := i; j < len(path); j++ {
-			if path[j] == '.' || path[j] == '[' {
-				nextDelim = j
-				break
-			}
-		}
-
-		key := path[i:nextDelim]
-		if key != "" {
-			m, ok := current.(map[string]any)
-			if !ok {
-				return nil
-			}
-			current = m[key]
-			if current == nil {
-				return nil
-			}
-		}
-
-		i = nextDelim
-		// Skip the dot
-		if i < len(path) && path[i] == '.' {
-			i++
+		var err error
+		current, i, err = processObjectField(current, path, i)
+		if err != nil {
+			return nil
 		}
 	}
 
 	return current
+}
+
+// processArrayIndex handles array indexing in JSON path
+func processArrayIndex(current any, path string, pos int) (any, int, error) {
+	// Find closing bracket
+	closeBracket := strings.Index(path[pos:], "]")
+	if closeBracket == -1 {
+		return nil, 0, errors.New("missing closing bracket")
+	}
+
+	// Extract and parse index
+	indexStr := path[pos+1 : pos+closeBracket]
+	index, err := strconv.Atoi(indexStr)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Access array element
+	arr, ok := current.([]any)
+	if !ok || index < 0 || index >= len(arr) {
+		return nil, 0, errors.New("invalid array access")
+	}
+
+	newPos := pos + closeBracket + 1
+	// Skip the dot after bracket if present
+	if newPos < len(path) && path[newPos] == '.' {
+		newPos++
+	}
+
+	return arr[index], newPos, nil
+}
+
+// processObjectField handles object field access in JSON path
+func processObjectField(current any, path string, pos int) (any, int, error) {
+	// Find next delimiter (. or [)
+	nextDelim := len(path)
+	for j := pos; j < len(path); j++ {
+		if path[j] == '.' || path[j] == '[' {
+			nextDelim = j
+			break
+		}
+	}
+
+	key := path[pos:nextDelim]
+	if key != "" {
+		m, ok := current.(map[string]any)
+		if !ok {
+			return nil, 0, errors.New("not an object")
+		}
+		current = m[key]
+		if current == nil {
+			return nil, 0, errors.New("field not found")
+		}
+	}
+
+	newPos := nextDelim
+	// Skip the dot
+	if newPos < len(path) && path[newPos] == '.' {
+		newPos++
+	}
+
+	return current, newPos, nil
 }
 
 // getLength returns the length of a collection (array or object)

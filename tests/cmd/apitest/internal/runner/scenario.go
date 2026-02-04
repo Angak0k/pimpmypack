@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -33,9 +34,8 @@ type Request struct {
 
 // FileUpload defines a file to be uploaded
 type FileUpload struct {
-	Field       string `yaml:"field"`        // Form field name
-	Path        string `yaml:"path"`         // Path to the file
-	ContentType string `yaml:"content_type"` // MIME type
+	Field string `yaml:"field"` // Form field name
+	Path  string `yaml:"path"`  // Path to the file
 }
 
 // Assertion defines a validation rule for the response
@@ -63,13 +63,13 @@ func LoadScenario(filename string) (*Scenario, error) {
 
 	// Validate required fields
 	if scenario.Name == "" {
-		return nil, fmt.Errorf("scenario name is required")
+		return nil, errors.New("scenario name is required")
 	}
 	if scenario.BaseURL == "" {
-		return nil, fmt.Errorf("base_url is required")
+		return nil, errors.New("base_url is required")
 	}
 	if len(scenario.Steps) == 0 {
-		return nil, fmt.Errorf("scenario must have at least one step")
+		return nil, errors.New("scenario must have at least one step")
 	}
 
 	return &scenario, nil

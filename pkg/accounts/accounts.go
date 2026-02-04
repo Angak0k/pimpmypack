@@ -18,6 +18,9 @@ import (
 // ErrNoAccountFound is returned when no account is found for a given ID.
 var ErrNoAccountFound = errors.New("no account found")
 
+// stageLocal represents the local development stage
+const stageLocal = "LOCAL"
+
 // ErrInvalidCredentials is returned when login credentials are invalid.
 var ErrInvalidCredentials = errors.New("invalid credentials")
 
@@ -77,7 +80,7 @@ func registerUser(ctx context.Context, u User) (bool, error) {
 // Send confirmation email
 func sendConfirmationEmail(u User, code string) error {
 	// LOCAL mode: Don't send email, just log the confirmation details
-	if config.Stage == "LOCAL" {
+	if config.Stage == stageLocal {
 		log.Printf("LOCAL MODE: Email confirmation bypassed for user %s (ID: %d)", u.Username, u.ID)
 		log.Printf("LOCAL MODE: Confirm at: /api/confirmemail?id=%d&code=%s", u.ID, code)
 		log.Printf("LOCAL MODE: Or use simplified confirmation: /api/confirmemail?username=%s&email=%s", u.Username, u.Email)
@@ -103,7 +106,7 @@ func sendConfirmationEmail(u User, code string) error {
 
 func confirmEmail(ctx context.Context, id string, code string) error {
 	// LOCAL mode: Accept any code
-	if config.Stage == "LOCAL" && code == "LOCAL_BYPASS" {
+	if config.Stage == stageLocal && code == "LOCAL_BYPASS" {
 		log.Printf("LOCAL MODE: Bypassing code verification for user ID %s", id)
 		code = "" // Will be ignored in the query
 	}
@@ -112,7 +115,7 @@ func confirmEmail(ctx context.Context, id string, code string) error {
 	var query string
 	var args []interface{}
 
-	if config.Stage == "LOCAL" && code == "" {
+	if config.Stage == stageLocal && code == "" {
 		// LOCAL mode with bypass: only check ID
 		query = "SELECT id FROM account WHERE id = $1;"
 		args = []interface{}{id}
@@ -161,7 +164,7 @@ func confirmUserByUsernameAndEmail(ctx context.Context, username, email string) 
 	}
 
 	if rowsAffected == 0 {
-		return fmt.Errorf("user not found or already confirmed")
+		return errors.New("user not found or already confirmed")
 	}
 
 	log.Printf("LOCAL MODE: Confirmed user %s (%s) via username/email", username, email)

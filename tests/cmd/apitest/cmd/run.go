@@ -1,11 +1,11 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/Angak0k/pimpmypack/tests/cmd/apitest/internal/runner"
@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	runAll         bool
-	scenarioDir    string
+	runAll      bool
+	scenarioDir string
 )
 
 // runCmd represents the run command
@@ -33,35 +33,28 @@ Examples:
 	RunE: runScenarios,
 }
 
-func init() {
-	rootCmd.AddCommand(runCmd)
-
-	runCmd.Flags().BoolVar(&runAll, "all", false, "Run all test scenarios")
-	runCmd.Flags().StringVar(&scenarioDir, "scenario-dir", "tests/api-scenarios", "Directory containing test scenarios")
-}
-
-func runScenarios(cmd *cobra.Command, args []string) error {
-	// Determine which scenarios to run
+func getScenarioPaths(args []string) ([]string, error) {
 	var scenarioPaths []string
 
-	if runAll {
+	switch {
+	case runAll:
 		// Find all YAML files in scenario directory
 		matches, err := filepath.Glob(filepath.Join(scenarioDir, "*.yaml"))
 		if err != nil {
-			return fmt.Errorf("failed to find scenarios: %w", err)
+			return nil, fmt.Errorf("failed to find scenarios: %w", err)
 		}
 		if len(matches) == 0 {
-			return fmt.Errorf("no scenarios found in %s", scenarioDir)
+			return nil, fmt.Errorf("no scenarios found in %s", scenarioDir)
 		}
 		sort.Strings(matches)
 		scenarioPaths = matches
-	} else if len(args) > 0 {
+	case len(args) > 0:
 		// Run specific scenarios by number
 		for _, num := range args {
-			pattern := filepath.Join(scenarioDir, fmt.Sprintf("%s-*.yaml", num))
+			pattern := filepath.Join(scenarioDir, num+"-*.yaml")
 			matches, err := filepath.Glob(pattern)
 			if err != nil {
-				return fmt.Errorf("failed to find scenario %s: %w", num, err)
+				return nil, fmt.Errorf("failed to find scenario %s: %w", num, err)
 			}
 			if len(matches) == 0 {
 				fmt.Printf("⚠️  Warning: No scenario found matching %s\n", num)
@@ -69,12 +62,22 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 			}
 			scenarioPaths = append(scenarioPaths, matches...)
 		}
-	} else {
-		return fmt.Errorf("no scenarios specified (use scenario numbers or --all)")
+	default:
+		return nil, errors.New("no scenarios specified (use scenario numbers or --all)")
 	}
 
 	if len(scenarioPaths) == 0 {
-		return fmt.Errorf("no scenarios to run")
+		return nil, errors.New("no scenarios to run")
+	}
+
+	return scenarioPaths, nil
+}
+
+func runScenarios(_ *cobra.Command, args []string) error {
+	// Determine which scenarios to run
+	scenarioPaths, err := getScenarioPaths(args)
+	if err != nil {
+		return err
 	}
 
 	// Create test runner
@@ -99,7 +102,12 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 	}
 
 	overallDuration := time.Since(overallStart)
+	printTestSummary(testRunner, overallDuration)
 
+	return nil
+}
+
+func printTestSummary(testRunner *runner.Runner, duration time.Duration) {
 	// Print summary
 	fmt.Println()
 	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
@@ -111,26 +119,17 @@ func runScenarios(cmd *cobra.Command, args []string) error {
 	fmt.Printf("Total tests:   %d\n", total)
 	fmt.Printf("Passed tests:  \033[0;32m%d ✅\033[0m\n", passed)
 	fmt.Printf("Failed tests:  \033[0;31m%d ❌\033[0m\n", failed)
-	fmt.Printf("Duration:      %.2fs\n", overallDuration.Seconds())
+	fmt.Printf("Duration:      %.2fs\n", duration.Seconds())
 	fmt.Println()
 
-	if failed == 0 && total > 0 {
+	switch {
+	case failed == 0 && total > 0:
 		fmt.Println("\033[0;32m✅ All tests passed! 🎉\033[0m")
-		return nil
-	} else if failed > 0 {
+	case failed > 0:
 		fmt.Println("\033[0;31m❌ Some tests failed\033[0m")
 		os.Exit(1)
-	} else {
+	default:
 		fmt.Println("⚠️  No tests were run")
 		os.Exit(1)
 	}
-
-	return nil
-}
-
-// getScenarioName extracts a friendly name from the scenario file path
-func getScenarioName(path string) string {
-	base := filepath.Base(path)
-	name := strings.TrimSuffix(base, ".yaml")
-	return name
 }

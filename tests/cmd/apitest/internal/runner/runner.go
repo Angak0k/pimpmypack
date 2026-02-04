@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"time"
 
 	"github.com/Angak0k/pimpmypack/tests/cmd/apitest/internal/client"
@@ -57,7 +56,7 @@ func (r *Runner) Run(scenarioFile string) error {
 		return fmt.Errorf("failed to load scenario: %w", err)
 	}
 
-	r.formatter.PrintHeader(fmt.Sprintf("Scenario: %s", scenario.Name))
+	r.formatter.PrintHeader("Scenario: " + scenario.Name)
 
 	startTime := time.Now()
 
@@ -66,7 +65,7 @@ func (r *Runner) Run(scenarioFile string) error {
 		r.TotalTests++
 		r.formatter.PrintStep(i+1, step.Name)
 
-		statusCode, err := r.executeStep(scenario.BaseURL, step)
+		statusCode, err := r.executeStep(step)
 		if err != nil {
 			r.formatter.PrintFail(err.Error())
 			r.FailedTests++
@@ -87,7 +86,7 @@ func (r *Runner) Run(scenarioFile string) error {
 }
 
 // executeStep runs a single test step and returns the HTTP status code
-func (r *Runner) executeStep(baseURL string, step Step) (int, error) {
+func (r *Runner) executeStep(step Step) (int, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
@@ -95,24 +94,23 @@ func (r *Runner) executeStep(baseURL string, step Step) (int, error) {
 	req := r.substituteRequest(step.Request)
 
 	// 2. Make HTTP request (with file upload if specified)
-	var resp *http.Response
+	var statusCode int
 	var body []byte
 	var err error
 
 	if req.File != nil {
 		// File upload request
-		resp, body, err = r.client.MakeRequestWithFile(
+		statusCode, body, err = r.client.MakeRequestWithFile(
 			ctx,
 			req.Method,
 			req.Endpoint,
 			req.Headers,
 			req.File.Path,
 			req.File.Field,
-			req.File.ContentType,
 		)
 	} else {
 		// Regular JSON request
-		resp, body, err = r.client.MakeRequest(ctx, req.Method, req.Endpoint, req.Headers, req.Body)
+		statusCode, body, err = r.client.MakeRequest(ctx, req.Method, req.Endpoint, req.Headers, req.Body)
 	}
 
 	if err != nil {
@@ -123,17 +121,17 @@ func (r *Runner) executeStep(baseURL string, step Step) (int, error) {
 	for _, assertion := range step.Assertions {
 		// Substitute variables in assertion values
 		substitutedAssertion := r.substituteAssertion(assertion)
-		if err := ValidateAssertion(substitutedAssertion, resp, body); err != nil {
-			return resp.StatusCode, err
+		if err := ValidateAssertion(substitutedAssertion, statusCode, body); err != nil {
+			return statusCode, err
 		}
 	}
 
 	// 4. Store variables
 	if err := r.storeVariables(step.Store, body, req.Body); err != nil {
-		return resp.StatusCode, fmt.Errorf("failed to store variables: %w", err)
+		return statusCode, fmt.Errorf("failed to store variables: %w", err)
 	}
 
-	return resp.StatusCode, nil
+	return statusCode, nil
 }
 
 // substituteRequest replaces variables in a request
@@ -166,7 +164,8 @@ func (r *Runner) storeVariables(store map[string]string, responseBody []byte, re
 		var value string
 
 		// Check if expression references response
-		if len(expression) > 11 && expression[:11] == "{{response." {
+		switch {
+		case len(expression) > 11 && expression[:11] == "{{response.":
 			// Extract from response: {{response.field}}
 			path := expression[11 : len(expression)-2] // Remove {{response. and }}
 
@@ -179,14 +178,14 @@ func (r *Runner) storeVariables(store map[string]string, responseBody []byte, re
 			if val != nil {
 				value = fmt.Sprint(val)
 			}
-		} else if len(expression) > 15 && expression[:15] == "{{request.body." {
+		case len(expression) > 15 && expression[:15] == "{{request.body.":
 			// Extract from request body: {{request.body.field}}
 			path := expression[15 : len(expression)-2] // Remove {{request.body. and }}
 			val := getJSONPath(requestBody, path)
 			if val != nil {
 				value = fmt.Sprint(val)
 			}
-		} else {
+		default:
 			// Direct value
 			value = expression
 		}
@@ -202,6 +201,6 @@ func (r *Runner) storeVariables(store map[string]string, responseBody []byte, re
 }
 
 // GetSummary returns test execution summary
-func (r *Runner) GetSummary() (total, passed, failed int) {
+func (r *Runner) GetSummary() (int, int, int) {
 	return r.TotalTests, r.PassedTests, r.FailedTests
 }
