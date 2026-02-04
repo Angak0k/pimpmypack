@@ -1,0 +1,121 @@
+name: "Import from LighterPack CSV"
+base_url: "http://localhost:8080/api"
+scenarios:
+  - name: "Register test user for CSV import testing"
+    request:
+      method: POST
+      endpoint: "/register"
+      body:
+        username: "test_csv_{{timestamp}}"
+        email: "csv_{{timestamp}}@example.com"
+        password: "CsvTest123!"
+        firstname: "CSV"
+        lastname: "Tester"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      username: "{{request.body.username}}"
+      email: "{{request.body.email}}"
+      password: "{{request.body.password}}"
+
+  - name: "Confirm email"
+    request:
+      method: GET
+      endpoint: "/confirmemail?username={{username}}&email={{email}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Login to get access token"
+    request:
+      method: POST
+      endpoint: "/login"
+      body:
+        username: "{{username}}"
+        password: "{{password}}"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      access_token: "{{response.access_token}}"
+
+  - name: "Upload CSV file to import pack"
+    request:
+      method: POST
+      endpoint: "/v1/importfromlighterpack"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      file:
+        field: "file"
+        path: "tests/api-scenarios/fixtures/sample-pack.csv"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.pack_id"
+        exists: true
+      - type: json_path
+        path: "$.message"
+        contains: "imported"
+    store:
+      imported_pack_id: "{{response.pack_id}}"
+
+  - name: "Get imported pack details"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{imported_pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.id"
+        equals: "{{imported_pack_id}}"
+      - type: json_path
+        path: "$.pack_name"
+        exists: true
+
+  - name: "Get pack contents to verify CSV import"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{imported_pack_id}}/packcontents"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Verify pack weight was calculated from CSV"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{imported_pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.pack_weight"
+        exists: true
+
+  - name: "List user's inventory to verify items were created"
+    request:
+      method: GET
+      endpoint: "/v1/myinventory"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: Delete imported pack"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{imported_pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200

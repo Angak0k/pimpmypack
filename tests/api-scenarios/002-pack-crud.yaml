@@ -1,0 +1,261 @@
+name: "Pack CRUD Operations"
+base_url: "http://localhost:8080/api"
+scenarios:
+  - name: "Register and login test user for pack testing"
+    request:
+      method: POST
+      endpoint: "/register"
+      body:
+        username: "test_pack_{{timestamp}}"
+        email: "pack_{{timestamp}}@example.com"
+        password: "PackTest123!"
+        firstname: "Pack"
+        lastname: "Tester"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      username: "{{request.body.username}}"
+      email: "{{request.body.email}}"
+      password: "{{request.body.password}}"
+
+  - name: "Confirm email"
+    request:
+      method: GET
+      endpoint: "/confirmemail?username={{username}}&email={{email}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Login to get access token"
+    request:
+      method: POST
+      endpoint: "/login"
+      body:
+        username: "{{username}}"
+        password: "{{password}}"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      access_token: "{{response.access_token}}"
+
+  - name: "Create a new pack"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        pack_name: "Weekend Hiking Pack"
+        pack_description: "A lightweight pack for weekend hikes"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+      - type: json_path
+        path: "$.pack_name"
+        equals: "Weekend Hiking Pack"
+    store:
+      pack_id: "{{response.id}}"
+
+  - name: "Get pack by ID"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.id"
+        equals: "{{pack_id}}"
+      - type: json_path
+        path: "$.pack_name"
+        equals: "Weekend Hiking Pack"
+
+  - name: "List all user packs"
+    request:
+      method: GET
+      endpoint: "/v1/mypacks"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$[0].id"
+        exists: true
+      - type: json_path
+        path: "$[0].pack_name"
+        equals: "Weekend Hiking Pack"
+
+  - name: "Update pack details"
+    request:
+      method: PUT
+      endpoint: "/v1/mypack/{{pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        pack_name: "Updated Weekend Pack"
+        pack_description: "An updated description for the pack"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.pack_name"
+        equals: "Updated Weekend Pack"
+
+  - name: "Get pack contents (should be empty initially)"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{pack_id}}/packcontents"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$"
+        empty: true
+
+  - name: "Create inventory item for pack content"
+    request:
+      method: POST
+      endpoint: "/v1/myinventory"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        item_name: "Tent"
+        category: "Shelter"
+        description: "2-person tent"
+        weight: 1200
+        price: 299
+        currency: "USD"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+    store:
+      inventory_item_id: "{{response.id}}"
+
+  - name: "Add item to pack content"
+    request:
+      method: POST
+      endpoint: "/v1/mypack/{{pack_id}}/packcontent"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        inventory_id: "{{inventory_item_id}}"
+        quantity: 1
+        worn: false
+        consumable: false
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+    store:
+      pack_content_id: "{{response.id}}"
+
+  - name: "Update pack content"
+    request:
+      method: PUT
+      endpoint: "/v1/mypack/{{pack_id}}/packcontent/{{pack_content_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        pack_id: "{{pack_id}}"
+        item_id: "{{inventory_item_id}}"
+        quantity: 2
+        worn: false
+        consumable: false
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.quantity"
+        equals: "2"
+
+  - name: "Share the pack to generate sharing code"
+    request:
+      method: POST
+      endpoint: "/v1/mypack/{{pack_id}}/share"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.sharing_code"
+        exists: true
+    store:
+      sharing_code: "{{response.sharing_code}}"
+
+  - name: "Get shared pack via public endpoint (no auth required)"
+    request:
+      method: GET
+      endpoint: "/sharedlist/{{sharing_code}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.pack.pack_name"
+        equals: "Updated Weekend Pack"
+      - type: json_path
+        path: "$.contents"
+        exists: true
+
+  - name: "Unshare the pack"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id}}/share"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Verify pack is no longer shared"
+    request:
+      method: GET
+      endpoint: "/sharedlist/{{sharing_code}}"
+    assertions:
+      - type: status_code
+        expected: 404
+
+  - name: "Cleanup: Delete pack content"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id}}/packcontent/{{pack_content_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: Delete pack"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: Delete inventory item"
+    request:
+      method: DELETE
+      endpoint: "/v1/myinventory/{{inventory_item_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
