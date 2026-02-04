@@ -1081,13 +1081,3 @@ func SharedList(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, sharedPack)
 }
 
-// FindPackIDByPackName finds a pack ID by its name
-// Returns 0 if not found
-func FindPackIDByPackName(packs Packs, packname string) uint {
-	for _, pack := range packs {
-		if pack.PackName == packname {
-			return pack.ID
-		}
-	}
-	return 0
-}

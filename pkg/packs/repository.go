@@ -65,7 +65,7 @@ func returnPacks(ctx context.Context) (Packs, error) {
 }
 
 // FindPackByID finds a pack by its ID
-func FindPackByID(ctx context.Context, id uint) (*Pack, error) {
+func findPackByID(ctx context.Context, id uint) (*Pack, error) {
 	var pack Pack
 
 	row := database.DB().QueryRowContext(ctx,
@@ -245,7 +245,7 @@ func deletePackByID(ctx context.Context, id uint) error {
 // Pack sharing
 
 // CheckPackOwnership verifies if a user owns a specific pack
-func CheckPackOwnership(ctx context.Context, id uint, userID uint) (bool, error) {
+func checkPackOwnership(ctx context.Context, id uint, userID uint) (bool, error) {
 	var rows int
 
 	row := database.DB().QueryRowContext(ctx,
