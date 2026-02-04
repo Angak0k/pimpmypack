@@ -1,14 +1,18 @@
 package packs
 
-import "time"
+import (
+	"errors"
+	"time"
+)
 
-// Additional domain errors (ErrPackNotFound and ErrPackContentNotFound are in packs.go)
-// These will be used after the refactoring is complete
-// var (
-// 	ErrPayloadEmpty        = errors.New("payload is empty")
-// 	ErrPackOwnershipDenied = errors.New("pack does not belong to user")
-// 	ErrInvalidCSVFormat    = errors.New("invalid CSV format")
-// )
+// Domain errors
+var (
+	// ErrPackNotFound is returned when a pack is not found
+	ErrPackNotFound = errors.New("pack not found")
+
+	// ErrPackContentNotFound is returned when no item are found in a given pack
+	ErrPackContentNotFound = errors.New("pack content not found")
+)
 
 // Pack represents a pack with its metadata
 type Pack struct {

@@ -1,7 +1,6 @@
 package packs
 
 import (
-	"context"
 	"encoding/csv"
 	"errors"
 	"io"
@@ -413,6 +412,7 @@ func DeleteMyPackByID(c *gin.Context) {
 		return
 	}
 }
+
 // Get all pack contents
 // @Summary [ADMIN] Get all pack contents
 // @Description Get all pack contents - for admin use only
@@ -1022,7 +1022,7 @@ func ImportFromLighterPack(c *gin.Context) {
 			return
 		}
 
-		lighterPackItem, err = readLineFromCSV(context.Background(), record)
+		lighterPackItem, err = readLineFromCSV(record)
 		if err != nil {
 			helper.LogAndSanitize(err, "import from lighterpack: read line from CSV failed")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})

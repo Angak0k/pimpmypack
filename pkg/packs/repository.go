@@ -599,7 +599,7 @@ func deletePackContentByID(ctx context.Context, id uint) error {
 // Import/CSV
 
 // Take a record from csv.Newreder and return a LighterPackItem
-func readLineFromCSV(ctx context.Context, record []string) (LighterPackItem, error) {
+func readLineFromCSV(record []string) (LighterPackItem, error) {
 	var lighterPackItem LighterPackItem
 
 	lighterPackItem.ItemName = record[0]
