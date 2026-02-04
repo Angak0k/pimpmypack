@@ -2,6 +2,14 @@ package packs
 
 import "time"
 
+// Additional domain errors (ErrPackNotFound and ErrPackContentNotFound are in packs.go)
+// These will be used after the refactoring is complete
+// var (
+// 	ErrPayloadEmpty        = errors.New("payload is empty")
+// 	ErrPackOwnershipDenied = errors.New("pack does not belong to user")
+// 	ErrInvalidCSVFormat    = errors.New("invalid CSV format")
+// )
+
 // Pack represents a pack with its metadata
 type Pack struct {
 	ID              uint      `json:"id"`
