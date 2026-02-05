@@ -188,7 +188,7 @@ func PostInventory(c *gin.Context) {
 
 	currency := input.Currency
 	if currency == "" {
-		currency = "EUR" // Database default
+		currency = DefaultCurrency
 	}
 
 	newInventory := Inventory{
@@ -246,7 +246,7 @@ func PostMyInventory(c *gin.Context) {
 	// UserID from JWT cannot be overridden by client
 	currency := input.Currency
 	if currency == "" {
-		currency = "EUR" // Database default
+		currency = DefaultCurrency
 	}
 
 	newInventory := Inventory{
@@ -309,7 +309,7 @@ func PutInventoryByID(c *gin.Context) {
 
 	currency := input.Currency
 	if currency == "" {
-		currency = "EUR" // Database default
+		currency = DefaultCurrency
 	}
 
 	updatedInventory := Inventory{
@@ -385,7 +385,7 @@ func PutMyInventoryByID(c *gin.Context) {
 		// UserID from JWT cannot be overridden by client
 		currency := input.Currency
 		if currency == "" {
-			currency = "EUR" // Database default
+			currency = DefaultCurrency
 		}
 
 		updatedInventory := Inventory{

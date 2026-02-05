@@ -2,6 +2,10 @@ package inventories
 
 import "time"
 
+// DefaultCurrency is the default currency used when none is specified
+// This matches the database default value in the Currency enum
+const DefaultCurrency = "EUR"
+
 // Inventory represents an item in a user's inventory
 type Inventory struct {
 	ID          uint      `json:"id"`

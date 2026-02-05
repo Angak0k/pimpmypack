@@ -25,6 +25,23 @@ definitions:
       username:
         type: string
     type: object
+  accounts.AccountUpdateInput:
+    properties:
+      email:
+        type: string
+      firstname:
+        type: string
+      lastname:
+        type: string
+      preferred_currency:
+        type: string
+      preferred_unit_system:
+        type: string
+    required:
+    - email
+    - firstname
+    - lastname
+    type: object
   accounts.ForgotPasswordInput:
     properties:
       email:
@@ -109,6 +126,46 @@ definitions:
       weight:
         type: integer
     type: object
+  inventories.InventoryCreateRequest:
+    properties:
+      category:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      item_name:
+        type: string
+      price:
+        type: integer
+      url:
+        type: string
+      weight:
+        type: integer
+    required:
+    - category
+    - item_name
+    type: object
+  inventories.InventoryUpdateRequest:
+    properties:
+      category:
+        type: string
+      currency:
+        type: string
+      description:
+        type: string
+      item_name:
+        type: string
+      price:
+        type: integer
+      url:
+        type: string
+      weight:
+        type: integer
+    required:
+    - category
+    - item_name
+    type: object
   packs.ImportLighterPackResponse:
     properties:
       message:
@@ -158,6 +215,17 @@ definitions:
       worn:
         type: boolean
     type: object
+  packs.PackContentRequest:
+    properties:
+      consumable:
+        type: boolean
+      inventory_id:
+        type: integer
+      quantity:
+        type: integer
+      worn:
+        type: boolean
+    type: object
   packs.PackContentWithItem:
     properties:
       category:
@@ -186,6 +254,24 @@ definitions:
         type: integer
       worn:
         type: boolean
+    type: object
+  packs.PackCreateRequest:
+    properties:
+      pack_description:
+        type: string
+      pack_name:
+        type: string
+    required:
+    - pack_name
+    type: object
+  packs.PackUpdateRequest:
+    properties:
+      pack_description:
+        type: string
+      pack_name:
+        type: string
+    required:
+    - pack_name
     type: object
   packs.SharedPackInfo:
     properties:
@@ -277,7 +363,7 @@ paths:
             $ref: '#/definitions/apitypes.ErrorResponse'
       summary: Refresh access token
       tags:
-      - authentication
+      - Authentication
   /confirmemail:
     get:
       description: Confirm email address by providing username and email
@@ -487,14 +573,15 @@ paths:
     put:
       consumes:
       - application/json
-      description: Update information of the currently logged-in user
+      description: Update information of the currently logged-in user (email, name,
+        preferences only)
       parameters:
-      - description: Account Information
+      - description: Account update data (excludes role, status, username)
         in: body
         name: input
         required: true
         schema:
-          $ref: '#/definitions/accounts.Account'
+          $ref: '#/definitions/accounts.AccountUpdateInput'
       produces:
       - application/json
       responses:
@@ -558,7 +645,7 @@ paths:
         name: inventory
         required: true
         schema:
-          $ref: '#/definitions/inventories.Inventory'
+          $ref: '#/definitions/inventories.InventoryCreateRequest'
       produces:
       - application/json
       responses:
@@ -671,7 +758,7 @@ paths:
         name: inventory
         required: true
         schema:
-          $ref: '#/definitions/inventories.Inventory'
+          $ref: '#/definitions/inventories.InventoryUpdateRequest'
       produces:
       - application/json
       responses:
@@ -715,7 +802,7 @@ paths:
         name: pack
         required: true
         schema:
-          $ref: '#/definitions/packs.Pack'
+          $ref: '#/definitions/packs.PackCreateRequest'
       produces:
       - application/json
       responses:
@@ -872,7 +959,7 @@ paths:
         name: pack
         required: true
         schema:
-          $ref: '#/definitions/packs.Pack'
+          $ref: '#/definitions/packs.PackUpdateRequest'
       produces:
       - application/json
       responses:
@@ -1080,7 +1167,7 @@ paths:
         name: packcontent
         required: true
         schema:
-          $ref: '#/definitions/packs.PackContent'
+          $ref: '#/definitions/packs.PackContentRequest'
       produces:
       - application/json
       responses:
