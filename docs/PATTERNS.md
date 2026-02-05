@@ -20,7 +20,7 @@ This document contains detailed code patterns, examples, and templates used in t
 
 The codebase follows a **domain-driven design** approach where each business domain has its own package with clear boundaries:
 
-```
+```markdown
 pkg/
 ├── accounts/          # User accounts and authentication
 │   ├── types.go       # Domain types (User, Account, LoginInput, etc.)
@@ -28,7 +28,9 @@ pkg/
 │   └── testdata.go    # Test fixtures
 ├── packs/             # Pack management
 │   ├── types.go       # Domain types (Pack, PackContent, etc.)
-│   ├── packs.go       # Handlers, service, and repository functions
+│   ├── handlers.go    # HTTP handlers
+│   ├── service.go     # Business logic (public functions)
+│   ├── repository.go  # Data access (private functions)
 │   └── testdata.go    # Test fixtures
 ├── inventories/       # Inventory items
 │   ├── types.go       # Domain types (Inventory, etc.)
@@ -84,47 +86,51 @@ type Inventory struct { /* ... */ }
 ### Package File Organization
 
 #### Option A: Single File (Small Packages)
+
 For smaller packages, keep everything in one file:
 
 ```go
-// pkg/packs/packs.go
-package packs
+// pkg/accounts/accounts.go
+package accounts
 
 // Types are in types.go
 
 // Handlers (public, Gin-specific)
-func GetPacks(c *gin.Context) { /* ... */ }
+func GetAccounts(c *gin.Context) { /* ... */ }
 
 // Service functions (public, framework-agnostic)
-func GetAllPacks(ctx context.Context, userID uint) (Packs, error) { /* ... */ }
+func GetAllAccounts(ctx context.Context) ([]Account, error) { /* ... */ }
 
 // Repository functions (private, database access)
-func getAllPacks(ctx context.Context, db *sql.DB, userID uint) (Packs, error) { /* ... */ }
+func getAllAccounts(ctx context.Context, db *sql.DB) ([]Account, error) { /* ... */ }
 
 // Helper functions (package-specific)
-func FindPackIDByPackName(packs Packs, packname string) uint { /* ... */ }
+func FindUserIDByUsername(users []Account, username string) uint { /* ... */ }
 ```
 
 #### Option B: Separate Files (Larger Packages)
+
 For larger packages, separate concerns into files:
 
 ```go
-// pkg/inventories/types.go
+// pkg/inventories/types.go or pkg/packs/types.go
 package inventories
 type Inventory struct { /* ... */ }
 
-// pkg/inventories/handlers.go
+// pkg/inventories/handlers.go or pkg/packs/handlers.go
 package inventories
 func GetMyInventories(c *gin.Context) { /* ... */ }
 
-// pkg/inventories/service.go (public business functions)
+// pkg/inventories/service.go or pkg/packs/service.go (public business functions)
 package inventories
 func GetAllInventoriesByUserID(ctx context.Context, userID uint) (Inventories, error) { /* ... */ }
 
-// pkg/inventories/repository.go (private data access)
+// pkg/inventories/repository.go or pkg/packs/repository.go (private data access)
 package inventories
 func getAllInventoriesByUserID(ctx context.Context, db *sql.DB, userID uint) (Inventories, error) { /* ... */ }
 ```
+
+**Examples**: Both `pkg/inventories/` and `pkg/packs/` follow this pattern.
 
 ### Helper Functions
 
@@ -204,7 +210,7 @@ func getAllInventoriesByUserID(ctx context.Context, db *sql.DB, userID uint) (In
 
 **Solution**: Keep dependencies flowing in one direction:
 
-```
+```markdown
 handlers → service → repository → database
    ↓
  types (same package)

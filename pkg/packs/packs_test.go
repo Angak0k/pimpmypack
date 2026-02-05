@@ -2,6 +2,7 @@ package packs
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -1152,7 +1153,7 @@ func TestCheckPackOwnership(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Call the function under test
-			test, err := CheckPackOwnership(tc.packID, tc.userID)
+			test, err := CheckPackOwnership(context.Background(), tc.packID, tc.userID)
 			if err != nil {
 				t.Fatalf("Failed to check pack ownership: %v", err)
 			}
@@ -1185,7 +1186,7 @@ func TestFindPackIDBySharingCode(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Call the function under test
-			test, err := findPackIDBySharingCode(tc.sharingCode)
+			test, err := findPackIDBySharingCode(context.Background(), tc.sharingCode)
 			if err != nil {
 				t.Fatalf("Failed to find pack ID by sharing code: %v", err)
 			}

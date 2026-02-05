@@ -1,6 +1,18 @@
 package packs
 
-import "time"
+import (
+	"errors"
+	"time"
+)
+
+// Domain errors
+var (
+	// ErrPackNotFound is returned when a pack is not found
+	ErrPackNotFound = errors.New("pack not found")
+
+	// ErrPackContentNotFound is returned when no items are found in a given pack
+	ErrPackContentNotFound = errors.New("pack content not found")
+)
 
 // Pack represents a pack with its metadata
 type Pack struct {
