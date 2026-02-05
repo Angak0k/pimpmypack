@@ -31,6 +31,25 @@ type Pack struct {
 // Packs represents a collection of packs
 type Packs []Pack
 
+// PackCreateRequest represents the input for creating a pack (user endpoint)
+type PackCreateRequest struct {
+	PackName        string `json:"pack_name" binding:"required"`
+	PackDescription string `json:"pack_description"`
+}
+
+// PackCreateAdminRequest represents the input for creating a pack (admin endpoint)
+type PackCreateAdminRequest struct {
+	UserID          uint   `json:"user_id" binding:"required"`
+	PackName        string `json:"pack_name" binding:"required"`
+	PackDescription string `json:"pack_description"`
+}
+
+// PackUpdateRequest represents the input for updating a pack
+type PackUpdateRequest struct {
+	PackName        string `json:"pack_name" binding:"required"`
+	PackDescription string `json:"pack_description"`
+}
+
 // PackContent represents an item in a pack
 type PackContent struct {
 	ID         uint      `json:"id"`
@@ -72,6 +91,25 @@ type PackContentRequest struct {
 	Quantity    int  `json:"quantity"`
 	Worn        bool `json:"worn"`
 	Consumable  bool `json:"consumable"`
+}
+
+// PackContentCreateRequest represents the input for creating pack content (admin)
+// Note: User endpoint uses PackContentRequest which doesn't include PackID/ItemID
+type PackContentCreateRequest struct {
+	PackID     uint `json:"pack_id" binding:"required"`
+	ItemID     uint `json:"item_id" binding:"required"`
+	Quantity   int  `json:"quantity" binding:"required,min=1"`
+	Worn       bool `json:"worn"`
+	Consumable bool `json:"consumable"`
+}
+
+// PackContentUpdateRequest represents the input for updating pack content
+type PackContentUpdateRequest struct {
+	PackID     uint `json:"pack_id" binding:"required"`
+	ItemID     uint `json:"item_id" binding:"required"`
+	Quantity   int  `json:"quantity" binding:"required,min=1"`
+	Worn       bool `json:"worn"`
+	Consumable bool `json:"consumable"`
 }
 
 // LighterPackItem represents an item imported from LighterPack format

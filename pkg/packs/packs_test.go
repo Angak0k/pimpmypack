@@ -228,8 +228,8 @@ func TestPostPack(t *testing.T) {
 	// Define the endpoint for PostPacks handler
 	router.POST("/packs", PostPack)
 
-	// Sample pack data
-	newPack := Pack{
+	// Sample pack data using admin request struct
+	newPack := PackCreateAdminRequest{
 		UserID:          users[0].ID,
 		PackName:        "SomePack",
 		PackDescription: "This is a new pack",
@@ -566,8 +566,8 @@ func TestPostPackContent(t *testing.T) {
 	// Define the endpoint for PostPackContents handler
 	router.POST("/packcontents", PostPackContent)
 
-	// Sample pack content data
-	newPackContent := PackContent{
+	// Sample pack content data using admin request struct
+	newPackContent := PackContentCreateRequest{
 		PackID:     packs[1].ID,
 		ItemID:     inventoriesUserPack1[2].ID,
 		Quantity:   10,

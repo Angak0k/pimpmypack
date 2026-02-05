@@ -46,6 +46,26 @@ go build -o bin/apitest ./tests/cmd/apitest
 ./bin/apitest version
 ```
 
+### Makefile Shortcuts
+
+For convenience, use these Makefile targets:
+
+```bash
+# Run tests with existing server (server must be running)
+make api-test
+
+# Run full test suite in a clean environment (recommended)
+# This will:
+# - Stop any running server
+# - Clean and restart the database
+# - Start a fresh server in background
+# - Build and run all API tests
+# - Show server logs if tests fail
+make api-test-full
+```
+
+**Note:** `make api-test-full` is the **recommended approach** for comprehensive testing as it ensures a clean, isolated environment. The server remains running after tests complete - use `make stop-server` to stop it.
+
 ## Workflow
 
 ### 1. Pre-flight Checks
@@ -66,10 +86,6 @@ if [ ! -f bin/apitest ]; then
     make build-apitest
 fi
 ```
-
-**C. Database is clean (optional):**
-- Tests use `test_api_*` prefix for usernames
-- Tests include cleanup steps where possible
 
 ### 2. Execute Tests
 
@@ -149,10 +165,11 @@ Available scenarios in `tests/api-scenarios/`:
 
 | Scenario | Description | Tests |
 |----------|-------------|-------|
-| **001-user-registration-auth.yaml** | User registration, email confirmation, login, token refresh | 10 steps |
-| **002-pack-crud.yaml** | Create, read, update, delete packs | 8 steps |
-| **003-inventory-management.yaml** | Inventory CRUD and pack contents | 11 steps |
-| **004-import-lighterpack.yaml** | CSV file import from LighterPack | 6 steps |
+| **001-user-registration-auth.yaml** | User registration, email confirmation, login, token refresh | 11 steps |
+| **002-pack-crud.yaml** | Create, read, update, delete packs | 18 steps |
+| **003-inventory-management.yaml** | Inventory CRUD operations | 15 steps |
+| **004-import-lighterpack.yaml** | CSV file import from LighterPack | 9 steps |
+| **005-security-input-validation.yaml** | Security testing: input sanitization, field override attempts | 24 steps |
 
 ## Common Issues & Solutions
 

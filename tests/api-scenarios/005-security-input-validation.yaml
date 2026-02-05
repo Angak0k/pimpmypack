@@ -1,0 +1,385 @@
+name: "Security - Input Validation & Sanitization"
+base_url: "http://localhost:8080/api"
+scenarios:
+  # Setup: Register and authenticate test user
+  - name: "Register test user for security testing"
+    request:
+      method: POST
+      endpoint: "/register"
+      body:
+        username: "test_security_{{timestamp}}"
+        email: "security_{{timestamp}}@example.com"
+        password: "SecTest123!"
+        firstname: "Security"
+        lastname: "Tester"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      username: "{{request.body.username}}"
+      email: "{{request.body.email}}"
+      password: "{{request.body.password}}"
+
+  - name: "Confirm email"
+    request:
+      method: GET
+      endpoint: "/confirmemail?username={{username}}&email={{email}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Login to get access token"
+    request:
+      method: POST
+      endpoint: "/login"
+      body:
+        username: "{{username}}"
+        password: "{{password}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.access_token"
+        exists: true
+    store:
+      access_token: "{{response.access_token}}"
+      user_id: "{{response.id}}"
+
+  # Test 1: Attempt to override user_id when creating inventory
+  - name: "Security: Attempt to set user_id when creating inventory (should be ignored)"
+    request:
+      method: POST
+      endpoint: "/v1/myinventory"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        user_id: 99999
+        item_name: "Malicious Item - UserID Override Attempt"
+        category: "Security Test"
+        description: "This item attempted to set user_id to 99999"
+        weight: 100
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+      - type: json_path
+        path: "$.user_id"
+        equals: "{{user_id}}"
+      - type: json_path
+        path: "$.item_name"
+        equals: "Malicious Item - UserID Override Attempt"
+    store:
+      inventory_id_test1: "{{response.id}}"
+
+  # Test 2: Attempt to override ID when creating pack
+  - name: "Security: Attempt to set ID when creating pack (should be ignored)"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        id: 99999
+        pack_name: "Malicious Pack - ID Override Attempt"
+        pack_description: "This pack attempted to set ID to 99999"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+      - type: json_path
+        path: "$.pack_name"
+        equals: "Malicious Pack - ID Override Attempt"
+    store:
+      pack_id_test2: "{{response.id}}"
+
+  # Test 3: Verify ID was auto-generated, not overridden
+  - name: "Security: Verify pack ID was not overridden with 99999"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/99999"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 403
+
+  # Test 4: Attempt to set computed fields when creating pack
+  - name: "Security: Attempt to set computed fields (pack_weight, pack_items_count, has_image)"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        pack_name: "Test Pack - Computed Fields"
+        pack_description: "Testing computed field sanitization"
+        pack_weight: 99999
+        pack_items_count: 999
+        has_image: true
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.pack_weight"
+        equals: "0"
+      - type: json_path
+        path: "$.pack_items_count"
+        equals: "0"
+      - type: json_path
+        path: "$.has_image"
+        equals: "false"
+    store:
+      pack_id_test4: "{{response.id}}"
+
+  # Test 5: Attempt to set sharing_code when creating pack
+  - name: "Security: Attempt to set sharing_code when creating pack (should be null)"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        pack_name: "Test Pack - Sharing Code Override"
+        pack_description: "Testing sharing code sanitization"
+        sharing_code: "MALICIOUS123"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.sharing_code"
+        exists: false
+    store:
+      pack_id_test5: "{{response.id}}"
+
+  # Test 6: Attempt to override user_id when updating inventory
+  - name: "Security: Attempt to override user_id when updating inventory"
+    request:
+      method: PUT
+      endpoint: "/v1/myinventory/{{inventory_id_test1}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        user_id: 88888
+        item_name: "Updated Malicious Item"
+        category: "Security Test"
+        description: "Attempted to reassign to user_id 88888"
+        weight: 200
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.user_id"
+        equals: "{{user_id}}"
+      - type: json_path
+        path: "$.item_name"
+        equals: "Updated Malicious Item"
+
+  # Test 7: Attempt to override ID when updating pack
+  - name: "Security: Attempt to override ID when updating pack"
+    request:
+      method: PUT
+      endpoint: "/v1/mypack/{{pack_id_test2}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        id: 77777
+        pack_name: "Updated Pack - ID Override Attempt"
+        pack_description: "Attempted to change ID to 77777"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.id"
+        equals: "{{pack_id_test2}}"
+      - type: json_path
+        path: "$.pack_name"
+        equals: "Updated Pack - ID Override Attempt"
+
+  # Test 8: Verify pack 77777 doesn't exist
+  - name: "Security: Verify pack 77777 doesn't exist"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/77777"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 403
+
+  # Test 9: Attempt to set timestamps when creating inventory
+  - name: "Security: Attempt to set created_at and updated_at (should be server-generated)"
+    request:
+      method: POST
+      endpoint: "/v1/myinventory"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        item_name: "Timestamp Override Test"
+        category: "Security Test"
+        created_at: "2020-01-01T00:00:00Z"
+        updated_at: "2020-01-01T00:00:00Z"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.created_at"
+        exists: true
+      - type: json_path
+        path: "$.updated_at"
+        exists: true
+    store:
+      inventory_id_test9: "{{response.id}}"
+
+  # Test 10: Add inventory item for pack content tests
+  - name: "Create legitimate inventory item for pack content security tests"
+    request:
+      method: POST
+      endpoint: "/v1/myinventory"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        item_name: "Test Gear Item"
+        category: "Test"
+        weight: 500
+    assertions:
+      - type: status_code
+        expected: 201
+    store:
+      inventory_id_test10: "{{response.id}}"
+
+  # Test 11: Create pack for pack content tests
+  - name: "Create pack for pack content security tests"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        pack_name: "Pack Content Security Test"
+        pack_description: "Testing pack content input sanitization"
+    assertions:
+      - type: status_code
+        expected: 201
+    store:
+      pack_id_test11: "{{response.id}}"
+
+  # Test 12: Attempt to set ID when creating pack content
+  - name: "Security: Attempt to set pack_content ID when adding item to pack"
+    request:
+      method: POST
+      endpoint: "/v1/mypack/{{pack_id_test11}}/packcontent"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        id: 88888
+        inventory_id: "{{inventory_id_test10}}"
+        quantity: 1
+        worn: false
+        consumable: false
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+    store:
+      pack_content_id: "{{response.id}}"
+
+  # Test 13: Verify pack_content ID was not 88888
+  - name: "Security: Verify pack content ID was auto-generated"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{pack_id_test11}}/packcontents"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$[0].pack_content_id"
+        equals: "{{pack_content_id}}"
+
+  # Cleanup: Delete all test resources
+  - name: "Cleanup: Delete pack content"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id_test11}}/packcontent/{{pack_content_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: Delete pack_id_test2"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id_test2}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: Delete pack_id_test4"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id_test4}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: Delete pack_id_test5"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id_test5}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: Delete pack_id_test11"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id_test11}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: Delete inventory_id_test1"
+    request:
+      method: DELETE
+      endpoint: "/v1/myinventory/{{inventory_id_test1}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: Delete inventory_id_test9"
+    request:
+      method: DELETE
+      endpoint: "/v1/myinventory/{{inventory_id_test9}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: Delete inventory_id_test10"
+    request:
+      method: DELETE
+      endpoint: "/v1/myinventory/{{inventory_id_test10}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200

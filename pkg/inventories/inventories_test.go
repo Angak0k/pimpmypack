@@ -322,8 +322,8 @@ func TestPostInventory(t *testing.T) {
 	// Define the endpoint for PostInventory handler
 	router.POST("/inventories", PostInventory)
 
-	// Sample inventory data
-	newInventory := Inventory{
+	// Sample inventory data using admin request struct
+	newInventory := InventoryCreateAdminRequest{
 		UserID:      users[0].ID,
 		ItemName:    "Light",
 		Category:    "Outdoor Gear",
@@ -334,11 +334,15 @@ func TestPostInventory(t *testing.T) {
 		Currency:    "USD",
 	}
 
+	// Debug: print the UserID
+	t.Logf("DEBUG: users[0].ID = %d", users[0].ID)
+
 	// Convert inventory data to JSON
 	jsonData, err := json.Marshal(newInventory)
 	if err != nil {
 		t.Fatalf("Failed to marshal inventory data: %v", err)
 	}
+	t.Logf("DEBUG: JSON data = %s", string(jsonData))
 
 	t.Run("Insert Inventory", func(t *testing.T) {
 		// Set up a test scenario: sending a POST request with JSON data

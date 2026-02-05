@@ -37,7 +37,7 @@ test: start-db
 api-doc:
 	swag init --output api-doc --generalInfo main.go --tags \!Internal
 
-build: test
+build:
 	go build
 
 lint:
@@ -53,11 +53,6 @@ api-test: build-apitest
 	@echo "NOTE: Server must be running (STAGE=LOCAL)"
 	@./bin/apitest run --all
 
-api-test-auth: build-apitest
-	@echo "Running authentication test with Go CLI..."
-	@echo "NOTE: Server must be running (STAGE=LOCAL)"
-	@./bin/apitest run 001
-
 stop-server:
 	@echo "Stopping any running pimpmypack server..."
 	@pkill -f "go run main.go" || true
@@ -65,7 +60,7 @@ stop-server:
 	@pkill -f "$(NAME)" || true
 	@sleep 1
 
-start-server: stop-server
+start-server: stop-server clean-db start-db
 	@echo "Starting pimpmypack server in background..."
 	@nohup go run main.go > /tmp/pimpmypack-server.log 2>&1 &
 	@echo "Waiting for server to start..."
