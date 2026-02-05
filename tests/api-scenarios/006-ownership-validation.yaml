@@ -1,0 +1,303 @@
+name: "Ownership Validation (403 vs 404)"
+description: "Test that endpoints correctly distinguish between not found (404) and forbidden (403)"
+base_url: "http://localhost:8080/api"
+scenarios:
+  # Register User A
+  - name: "Register User A"
+    request:
+      method: POST
+      endpoint: "/register"
+      body:
+        username: "test_user_a_{{timestamp}}"
+        email: "usera_{{timestamp}}@example.com"
+        password: "UserA123!"
+        firstname: "User"
+        lastname: "A"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      user_a_username: "{{request.body.username}}"
+      user_a_email: "{{request.body.email}}"
+      user_a_password: "{{request.body.password}}"
+
+  - name: "Confirm User A email"
+    request:
+      method: GET
+      endpoint: "/confirmemail?username={{user_a_username}}&email={{user_a_email}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Login User A to get access token"
+    request:
+      method: POST
+      endpoint: "/login"
+      body:
+        username: "{{user_a_username}}"
+        password: "{{user_a_password}}"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      user_a_token: "{{response.access_token}}"
+
+  # Register User B
+  - name: "Register User B"
+    request:
+      method: POST
+      endpoint: "/register"
+      body:
+        username: "test_user_b_{{timestamp}}"
+        email: "userb_{{timestamp}}@example.com"
+        password: "UserB123!"
+        firstname: "User"
+        lastname: "B"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      user_b_username: "{{request.body.username}}"
+      user_b_email: "{{request.body.email}}"
+      user_b_password: "{{request.body.password}}"
+
+  - name: "Confirm User B email"
+    request:
+      method: GET
+      endpoint: "/confirmemail?username={{user_b_username}}&email={{user_b_email}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Login User B to get access token"
+    request:
+      method: POST
+      endpoint: "/login"
+      body:
+        username: "{{user_b_username}}"
+        password: "{{user_b_password}}"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      user_b_token: "{{response.access_token}}"
+
+  # User A creates inventory item
+  - name: "User A creates inventory item"
+    request:
+      method: POST
+      endpoint: "/v1/myinventory"
+      headers:
+        Authorization: "Bearer {{user_a_token}}"
+      body:
+        item_name: "User A's Tent"
+        category: "Shelter"
+        description: "A tent belonging to User A"
+        weight: 1500
+        price: 350
+        currency: "USD"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+    store:
+      user_a_inventory_id: "{{response.id}}"
+
+  # Test inventory ownership violations (User B tries to access User A's inventory)
+  - name: "User B tries to GET User A's inventory (should fail with 403)"
+    request:
+      method: GET
+      endpoint: "/v1/myinventory/{{user_a_inventory_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+    assertions:
+      - type: status_code
+        expected: 403
+
+  - name: "User B tries to PUT User A's inventory (should fail with 403)"
+    request:
+      method: PUT
+      endpoint: "/v1/myinventory/{{user_a_inventory_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+      body:
+        item_name: "Hacked Name"
+        category: "Shelter"
+        weight: 1500
+    assertions:
+      - type: status_code
+        expected: 403
+
+  - name: "User B tries to DELETE User A's inventory (should fail with 403)"
+    request:
+      method: DELETE
+      endpoint: "/v1/myinventory/{{user_a_inventory_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+    assertions:
+      - type: status_code
+        expected: 403
+
+  # User A creates pack
+  - name: "User A creates pack"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{user_a_token}}"
+      body:
+        pack_name: "User A's Hiking Pack"
+        pack_description: "A pack belonging to User A"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+    store:
+      user_a_pack_id: "{{response.id}}"
+
+  # Test pack ownership violations (User B tries to access User A's pack)
+  - name: "User B tries to GET User A's pack (should fail with 403)"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{user_a_pack_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+    assertions:
+      - type: status_code
+        expected: 403
+
+  - name: "User B tries to PUT User A's pack (should fail with 403)"
+    request:
+      method: PUT
+      endpoint: "/v1/mypack/{{user_a_pack_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+      body:
+        pack_name: "Hacked Pack Name"
+        pack_description: "Hacked description"
+    assertions:
+      - type: status_code
+        expected: 403
+
+  - name: "User B tries to DELETE User A's pack (should fail with 403)"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{user_a_pack_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+    assertions:
+      - type: status_code
+        expected: 403
+
+  # User A adds pack content (inventory item to pack)
+  - name: "User A adds inventory item to their pack"
+    request:
+      method: POST
+      endpoint: "/v1/mypack/{{user_a_pack_id}}/packcontent"
+      headers:
+        Authorization: "Bearer {{user_a_token}}"
+      body:
+        inventory_id: "{{user_a_inventory_id}}"
+        quantity: 1
+        worn: false
+        consumable: false
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+    store:
+      user_a_pack_content_id: "{{response.id}}"
+
+  # User B creates their own pack
+  - name: "User B creates their own pack"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+      body:
+        pack_name: "User B's Pack"
+        pack_description: "A pack belonging to User B"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+    store:
+      user_b_pack_id: "{{response.id}}"
+
+  # Test pack content cross-pack validation (Security bugs)
+  - name: "User B tries to PUT User A's pack content via User B's pack (should fail with 404)"
+    request:
+      method: PUT
+      endpoint: "/v1/mypack/{{user_b_pack_id}}/packcontent/{{user_a_pack_content_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+      body:
+        inventory_id: "{{user_a_inventory_id}}"
+        quantity: 999
+        worn: true
+        consumable: true
+    assertions:
+      - type: status_code
+        expected: 404
+
+  - name: "User B tries to DELETE User A's pack content via User B's pack (should fail with 404)"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{user_b_pack_id}}/packcontent/{{user_a_pack_content_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+    assertions:
+      - type: status_code
+        expected: 404
+
+  # Cleanup - User B deletes their own resources
+  - name: "Cleanup: User B deletes their pack"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{user_b_pack_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  # Cleanup - User A deletes their own resources
+  - name: "Cleanup: User A deletes pack content"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{user_a_pack_id}}/packcontent/{{user_a_pack_content_id}}"
+      headers:
+        Authorization: "Bearer {{user_a_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  # Cleanup - User A deletes their own resources
+  - name: "Cleanup: User A deletes their pack"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{user_a_pack_id}}"
+      headers:
+        Authorization: "Bearer {{user_a_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: User A deletes their inventory item"
+    request:
+      method: DELETE
+      endpoint: "/v1/myinventory/{{user_a_inventory_id}}"
+      headers:
+        Authorization: "Bearer {{user_a_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
