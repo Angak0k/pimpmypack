@@ -25,7 +25,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "authentication"
+                    "Authentication"
                 ],
                 "summary": "Refresh access token",
                 "parameters": [
@@ -384,7 +384,7 @@ const docTemplate = `{
                         "Bearer": []
                     }
                 ],
-                "description": "Update information of the currently logged-in user",
+                "description": "Update information of the currently logged-in user (email, name, preferences only)",
                 "consumes": [
                     "application/json"
                 ],
@@ -397,12 +397,12 @@ const docTemplate = `{
                 "summary": "Update account info",
                 "parameters": [
                     {
-                        "description": "Account Information",
+                        "description": "Account update data (excludes role, status, username)",
                         "name": "input",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/accounts.Account"
+                            "$ref": "#/definitions/accounts.AccountUpdateInput"
                         }
                     }
                 ],
@@ -503,7 +503,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/inventories.Inventory"
+                            "$ref": "#/definitions/inventories.InventoryCreateRequest"
                         }
                     }
                 ],
@@ -623,7 +623,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/inventories.Inventory"
+                            "$ref": "#/definitions/inventories.InventoryUpdateRequest"
                         }
                     }
                 ],
@@ -746,7 +746,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/packs.Pack"
+                            "$ref": "#/definitions/packs.PackCreateRequest"
                         }
                     }
                 ],
@@ -935,7 +935,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/packs.Pack"
+                            "$ref": "#/definitions/packs.PackUpdateRequest"
                         }
                     }
                 ],
@@ -1245,7 +1245,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/packs.PackContent"
+                            "$ref": "#/definitions/packs.PackContentRequest"
                         }
                     }
                 ],
@@ -1741,6 +1741,31 @@ const docTemplate = `{
                 }
             }
         },
+        "accounts.AccountUpdateInput": {
+            "type": "object",
+            "required": [
+                "email",
+                "firstname",
+                "lastname"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "firstname": {
+                    "type": "string"
+                },
+                "lastname": {
+                    "type": "string"
+                },
+                "preferred_currency": {
+                    "type": "string"
+                },
+                "preferred_unit_system": {
+                    "type": "string"
+                }
+            }
+        },
         "accounts.ForgotPasswordInput": {
             "type": "object",
             "required": [
@@ -1867,6 +1892,66 @@ const docTemplate = `{
                 }
             }
         },
+        "inventories.InventoryCreateRequest": {
+            "type": "object",
+            "required": [
+                "category",
+                "item_name"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "item_name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
+                }
+            }
+        },
+        "inventories.InventoryUpdateRequest": {
+            "type": "object",
+            "required": [
+                "category",
+                "item_name"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "item_name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
+                }
+            }
+        },
         "packs.ImportLighterPackResponse": {
             "type": "object",
             "properties": {
@@ -1942,6 +2027,23 @@ const docTemplate = `{
                 }
             }
         },
+        "packs.PackContentRequest": {
+            "type": "object",
+            "properties": {
+                "consumable": {
+                    "type": "boolean"
+                },
+                "inventory_id": {
+                    "type": "integer"
+                },
+                "quantity": {
+                    "type": "integer"
+                },
+                "worn": {
+                    "type": "boolean"
+                }
+            }
+        },
         "packs.PackContentWithItem": {
             "type": "object",
             "properties": {
@@ -1983,6 +2085,34 @@ const docTemplate = `{
                 },
                 "worn": {
                     "type": "boolean"
+                }
+            }
+        },
+        "packs.PackCreateRequest": {
+            "type": "object",
+            "required": [
+                "pack_name"
+            ],
+            "properties": {
+                "pack_description": {
+                    "type": "string"
+                },
+                "pack_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "packs.PackUpdateRequest": {
+            "type": "object",
+            "required": [
+                "pack_name"
+            ],
+            "properties": {
+                "pack_description": {
+                    "type": "string"
+                },
+                "pack_name": {
+                    "type": "string"
                 }
             }
         },

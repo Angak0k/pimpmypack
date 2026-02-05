@@ -171,8 +171,7 @@ scenarios:
       headers:
         Authorization: "Bearer {{access_token}}"
       body:
-        pack_id: "{{pack_id}}"
-        item_id: "{{inventory_item_id}}"
+        inventory_id: "{{inventory_item_id}}"
         quantity: 2
         worn: false
         consumable: false

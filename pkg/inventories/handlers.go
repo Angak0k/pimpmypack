@@ -178,12 +178,28 @@ func GetMyInventoryByID(c *gin.Context) {
 // @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/inventories [post]
 func PostInventory(c *gin.Context) {
-	var newInventory Inventory
+	var input InventoryCreateAdminRequest
 
-	if err := c.BindJSON(&newInventory); err != nil {
+	if err := c.BindJSON(&input); err != nil {
 		helper.LogAndSanitize(err, "post inventory: bind JSON failed")
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
+	}
+
+	currency := input.Currency
+	if currency == "" {
+		currency = DefaultCurrency
+	}
+
+	newInventory := Inventory{
+		UserID:      input.UserID,
+		ItemName:    input.ItemName,
+		Category:    input.Category,
+		Description: input.Description,
+		Weight:      input.Weight,
+		URL:         input.URL,
+		Price:       input.Price,
+		Currency:    currency,
 	}
 
 	err := InsertInventory(c.Request.Context(), &newInventory)
@@ -203,14 +219,14 @@ func PostInventory(c *gin.Context) {
 // @Tags Inventories
 // @Accept json
 // @Produce json
-// @Param inventory body inventories.Inventory true "Inventory"
+// @Param inventory body inventories.InventoryCreateRequest true "Inventory"
 // @Success 201 {object} inventories.Inventory "Inventory Updated"
 // @Failure 400 {object} apitypes.ErrorResponse "Invalid payload"
 // @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
 // @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/myinventory [post]
 func PostMyInventory(c *gin.Context) {
-	var newInventory Inventory
+	var input InventoryCreateRequest
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -219,13 +235,29 @@ func PostMyInventory(c *gin.Context) {
 		return
 	}
 
-	newInventory.UserID = userID
-
-	err = c.BindJSON(&newInventory)
+	err = c.BindJSON(&input)
 	if err != nil {
 		helper.LogAndSanitize(err, "post my inventory: bind JSON failed")
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
+	}
+
+	// SECURITY FIX: Map input to Inventory AFTER binding
+	// UserID from JWT cannot be overridden by client
+	currency := input.Currency
+	if currency == "" {
+		currency = DefaultCurrency
+	}
+
+	newInventory := Inventory{
+		UserID:      userID, // From JWT, set AFTER binding
+		ItemName:    input.ItemName,
+		Category:    input.Category,
+		Description: input.Description,
+		Weight:      input.Weight,
+		URL:         input.URL,
+		Price:       input.Price,
+		Currency:    currency,
 	}
 
 	err = InsertInventory(c.Request.Context(), &newInventory)
@@ -246,14 +278,14 @@ func PostMyInventory(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Inventory ID"
-// @Param inventory body inventories.Inventory true "Inventory"
+// @Param inventory body inventories.InventoryUpdateRequest true "Inventory"
 // @Success 200 {object} inventories.Inventory
 // @Failure 400 {object} apitypes.ErrorResponse
 // @Failure 400 {object} apitypes.ErrorResponse
 // @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/inventories/{id} [put]
 func PutInventoryByID(c *gin.Context) {
-	var updatedInventory Inventory
+	var input InventoryUpdateRequest
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
@@ -261,14 +293,42 @@ func PutInventoryByID(c *gin.Context) {
 		return
 	}
 
-	if err := c.BindJSON(&updatedInventory); err != nil {
+	if err := c.BindJSON(&input); err != nil {
 		helper.LogAndSanitize(err, "put inventory by ID: bind JSON failed")
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
-	updatedInventory.ID = id
-	updatedInventory.UpdatedAt = time.Now().Truncate(time.Second)
+	// Fetch existing inventory to preserve UserID and CreatedAt
+	existingInventory, err := findInventoryByID(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNoItemFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+			return
+		}
+		helper.LogAndSanitize(err, "put inventory by ID: get existing inventory failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	currency := input.Currency
+	if currency == "" {
+		currency = DefaultCurrency
+	}
+
+	updatedInventory := Inventory{
+		ID:          id,
+		UserID:      existingInventory.UserID, // Preserve existing UserID
+		ItemName:    input.ItemName,
+		Category:    input.Category,
+		Description: input.Description,
+		Weight:      input.Weight,
+		URL:         input.URL,
+		Price:       input.Price,
+		Currency:    currency,
+		CreatedAt:   existingInventory.CreatedAt, // Preserve existing CreatedAt
+		UpdatedAt:   time.Now().Truncate(time.Second),
+	}
 
 	err = updateInventoryByID(c.Request.Context(), id, &updatedInventory)
 	if err != nil {
@@ -288,7 +348,7 @@ func PutInventoryByID(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path int true "Inventory ID"
-// @Param inventory body inventories.Inventory true "Inventory"
+// @Param inventory body inventories.InventoryUpdateRequest true "Inventory"
 // @Success 200 {object} inventories.Inventory "Inventory Updated"
 // @Failure 400 {object} map[string]interface{} "Invalid ID format"
 // @Failure 400 {object} map[string]interface{} "Invalid payload"
@@ -297,7 +357,7 @@ func PutInventoryByID(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Internal Server Error"
 // @Router /v1/myinventory/{id} [put]
 func PutMyInventoryByID(c *gin.Context) {
-	var updatedInventory Inventory
+	var input InventoryUpdateRequest
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -319,24 +379,53 @@ func PutMyInventoryByID(c *gin.Context) {
 		return
 	}
 
-	if myInventory {
-		updatedInventory.UserID = userID
-		if err := c.BindJSON(&updatedInventory); err != nil {
-			helper.LogAndSanitize(err, "put my inventory by ID: bind JSON failed")
-			c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
-			return
-		}
-		updatedInventory.UpdatedAt = time.Now().Truncate(time.Second)
-		err = updateInventoryByID(c.Request.Context(), id, &updatedInventory)
-		if err != nil {
-			helper.LogAndSanitize(err, "put my inventory by ID: update inventory failed")
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
-			return
-		}
-		c.IndentedJSON(http.StatusOK, updatedInventory)
-	} else {
+	if !myInventory {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
+		return
 	}
+
+	if err := c.BindJSON(&input); err != nil {
+		helper.LogAndSanitize(err, "put my inventory by ID: bind JSON failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
+		return
+	}
+
+	// Fetch existing inventory to preserve CreatedAt
+	existingInventory, err := findInventoryByID(c.Request.Context(), id)
+	if err != nil {
+		helper.LogAndSanitize(err, "put my inventory by ID: get existing inventory failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	// SECURITY FIX: Map input to Inventory AFTER binding
+	// UserID from JWT cannot be overridden by client
+	currency := input.Currency
+	if currency == "" {
+		currency = DefaultCurrency
+	}
+
+	updatedInventory := Inventory{
+		ID:          id,
+		UserID:      userID,
+		ItemName:    input.ItemName,
+		Category:    input.Category,
+		Description: input.Description,
+		Weight:      input.Weight,
+		URL:         input.URL,
+		Price:       input.Price,
+		Currency:    currency,
+		CreatedAt:   existingInventory.CreatedAt, // Preserve existing CreatedAt
+		UpdatedAt:   time.Now().Truncate(time.Second),
+	}
+
+	err = updateInventoryByID(c.Request.Context(), id, &updatedInventory)
+	if err != nil {
+		helper.LogAndSanitize(err, "put my inventory by ID: update inventory failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, updatedInventory)
 }
 
 // DeleteInventoryByID deletes an inventory by ID

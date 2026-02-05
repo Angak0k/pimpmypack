@@ -82,18 +82,24 @@ func GetPackByID(c *gin.Context) {
 // @Tags Internal
 // @Accept  json
 // @Produce  json
-// @Param pack body Pack true "Pack"
+// @Param pack body PackCreateAdminRequest true "Pack"
 // @Success 201 {object} Pack
 // @Failure 400 {object} apitypes.ErrorResponse
 // @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packs [post]
 func PostPack(c *gin.Context) {
-	var newPack Pack
+	var input PackCreateAdminRequest
 
-	if err := c.BindJSON(&newPack); err != nil {
+	if err := c.BindJSON(&input); err != nil {
 		helper.LogAndSanitize(err, "post pack: bind JSON failed")
 		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
+	}
+
+	newPack := Pack{
+		UserID:          input.UserID,
+		PackName:        input.PackName,
+		PackDescription: input.PackDescription,
 	}
 
 	err := insertPack(c.Request.Context(), &newPack)
@@ -114,22 +120,47 @@ func PostPack(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Param id path int true "Pack ID"
-// @Param pack body Pack true "Pack"
+// @Param pack body PackUpdateRequest true "Pack"
 // @Success 200 {object} Pack
 // @Failure 400 {object} apitypes.ErrorResponse
 // @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packs/{id} [put]
 func PutPackByID(c *gin.Context) {
-	var updatedPack Pack
+	var input PackUpdateRequest
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	if err := c.BindJSON(&updatedPack); err != nil {
+	if err := c.BindJSON(&input); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Body format"})
 		return
+	}
+
+	// Fetch existing pack to preserve UserID and other fields
+	existingPack, err := findPackByID(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrPackNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
+		helper.LogAndSanitize(err, "put pack by ID: get existing pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	updatedPack := Pack{
+		ID:              id,
+		UserID:          existingPack.UserID, // Preserve existing UserID
+		PackName:        input.PackName,
+		PackDescription: input.PackDescription,
+		CreatedAt:       existingPack.CreatedAt,      // Preserve existing CreatedAt
+		UpdatedAt:       existingPack.UpdatedAt,      // Preserve existing UpdatedAt
+		SharingCode:     existingPack.SharingCode,    // Preserve existing SharingCode
+		PackWeight:      existingPack.PackWeight,     // Preserve computed field
+		PackItemsCount:  existingPack.PackItemsCount, // Preserve computed field
+		HasImage:        existingPack.HasImage,       // Preserve computed field
 	}
 
 	err = updatePackByID(c.Request.Context(), id, &updatedPack)
@@ -268,14 +299,14 @@ func GetMyPackByID(c *gin.Context) {
 // @Tags Packs
 // @Accept  json
 // @Produce  json
-// @Param pack body Pack true "Pack"
+// @Param pack body PackCreateRequest true "Pack"
 // @Success 201 {object} Pack "Pack created"
 // @Failure 400 {object} apitypes.ErrorResponse "Invalid Body format"
 // @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
 // @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack [post]
 func PostMyPack(c *gin.Context) {
-	var newPack Pack
+	var input PackCreateRequest
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -284,13 +315,17 @@ func PostMyPack(c *gin.Context) {
 		return
 	}
 
-	if err := c.BindJSON(&newPack); err != nil {
+	if err := c.BindJSON(&input); err != nil {
 		helper.LogAndSanitize(err, "post my pack: bind JSON failed")
 		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
-	newPack.UserID = userID
+	newPack := Pack{
+		UserID:          userID, // From JWT, cannot be overridden
+		PackName:        input.PackName,
+		PackDescription: input.PackDescription,
+	}
 
 	err = insertPack(c.Request.Context(), &newPack)
 	if err != nil {
@@ -310,7 +345,7 @@ func PostMyPack(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Param id path int true "Pack ID"
-// @Param pack body Pack true "Pack"
+// @Param pack body PackUpdateRequest true "Pack"
 // @Success 200 {object} Pack "Pack updated"
 // @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
 // @Failure 400 {object} apitypes.ErrorResponse "Invalid Payload"
@@ -319,7 +354,7 @@ func PostMyPack(c *gin.Context) {
 // @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id} [put]
 func PutMyPackByID(c *gin.Context) {
-	var updatedPack Pack
+	var input PackUpdateRequest
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
@@ -327,15 +362,15 @@ func PutMyPackByID(c *gin.Context) {
 		return
 	}
 
-	if err := c.BindJSON(&updatedPack); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Payload"})
-		return
-	}
-
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
 		helper.LogAndSanitize(err, "put my pack by ID: extract token ID failed")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
+		return
+	}
+
+	if err := c.BindJSON(&input); err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Payload"})
 		return
 	}
 
@@ -347,7 +382,21 @@ func PutMyPackByID(c *gin.Context) {
 	}
 
 	if myPack {
+		// Fetch existing pack to preserve fields like CreatedAt, UpdatedAt,
+		// SharingCode, PackWeight, PackItemsCount, and HasImage
+		existingPack, err := findPackByID(c.Request.Context(), id)
+		if err != nil {
+			helper.LogAndSanitize(err, "put my pack by ID: get pack by ID failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+
+		// Start from the existing pack to preserve all fields
+		updatedPack := *existingPack
 		updatedPack.UserID = userID
+		updatedPack.PackName = input.PackName
+		updatedPack.PackDescription = input.PackDescription
+
 		err = updatePackByID(c.Request.Context(), id, &updatedPack)
 		if err != nil {
 			helper.LogAndSanitize(err, "put my pack by ID: update pack failed")
@@ -474,17 +523,25 @@ func GetPackContentByID(c *gin.Context) {
 // @Tags Internal
 // @Accept  json
 // @Produce  json
-// @Param packcontent body PackContent true "Pack Content"
+// @Param packcontent body PackContentCreateRequest true "Pack Content"
 // @Success 201 {object} PackContent
 // @Failure 400 {object} apitypes.ErrorResponse
 // @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packcontents [post]
 func PostPackContent(c *gin.Context) {
-	var newPackContent PackContent
+	var input PackContentCreateRequest
 
-	if err := c.BindJSON(&newPackContent); err != nil {
+	if err := c.BindJSON(&input); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Body format"})
 		return
+	}
+
+	newPackContent := PackContent{
+		PackID:     input.PackID,
+		ItemID:     input.ItemID,
+		Quantity:   input.Quantity,
+		Worn:       input.Worn,
+		Consumable: input.Consumable,
 	}
 
 	err := insertPackContent(c.Request.Context(), &newPackContent)
@@ -570,13 +627,13 @@ func PostMyPackContent(c *gin.Context) {
 // @Accept  json
 // @Produce  json
 // @Param id path int true "Pack Content ID"
-// @Param packcontent body PackContent true "Pack Content"
+// @Param packcontent body PackContentUpdateRequest true "Pack Content"
 // @Success 200 {object} PackContent
 // @Failure 400 {object} apitypes.ErrorResponse
 // @Failure 500 {object} apitypes.ErrorResponse
 // @Router /admin/packcontents/{id} [put]
 func PutPackContentByID(c *gin.Context) {
-	var updatedPackContent PackContent
+	var input PackContentUpdateRequest
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
@@ -584,9 +641,28 @@ func PutPackContentByID(c *gin.Context) {
 		return
 	}
 
-	if err := c.BindJSON(&updatedPackContent); err != nil {
+	if err := c.BindJSON(&input); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Body format"})
 		return
+	}
+
+	// Fetch existing pack content to preserve timestamps
+	existingPackContent, err := findPackContentByID(c.Request.Context(), id)
+	if err != nil {
+		helper.LogAndSanitize(err, "put pack content by ID: get existing pack content failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	updatedPackContent := PackContent{
+		ID:         id,
+		PackID:     input.PackID,
+		ItemID:     input.ItemID,
+		Quantity:   input.Quantity,
+		Worn:       input.Worn,
+		Consumable: input.Consumable,
+		CreatedAt:  existingPackContent.CreatedAt, // Preserve existing CreatedAt
+		UpdatedAt:  existingPackContent.UpdatedAt, // Preserve existing UpdatedAt
 	}
 
 	err = updatePackContentByID(c.Request.Context(), id, &updatedPackContent)
@@ -608,7 +684,7 @@ func PutPackContentByID(c *gin.Context) {
 // @Produce  json
 // @Param id path int true "Pack ID"
 // @Param item_id path int true "Item ID"
-// @Param packcontent body PackContent true "Pack Content"
+// @Param packcontent body PackContentRequest true "Pack Content"
 // @Success 200 {object} PackContent "Pack Content updated"
 // @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
 // @Failure 400 {object} apitypes.ErrorResponse "Invalid Body format"
@@ -617,15 +693,15 @@ func PutPackContentByID(c *gin.Context) {
 // @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id}/packcontent/{item_id} [put]
 func PutMyPackContentByID(c *gin.Context) {
-	var updatedPackContent PackContent
+	var input PackContentRequest
 
-	id, err := helper.StringToUint(c.Param("id"))
+	packID, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
 	}
 
-	itemID, err := helper.StringToUint(c.Param("item_id"))
+	contentID, err := helper.StringToUint(c.Param("item_id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
 		return
@@ -638,12 +714,12 @@ func PutMyPackContentByID(c *gin.Context) {
 		return
 	}
 
-	if err := c.BindJSON(&updatedPackContent); err != nil {
+	if err := c.BindJSON(&input); err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Body format"})
 		return
 	}
 
-	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
+	myPack, err := CheckPackOwnership(c.Request.Context(), packID, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "put my pack content by ID: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -651,8 +727,26 @@ func PutMyPackContentByID(c *gin.Context) {
 	}
 
 	if myPack {
-		updatedPackContent.PackID = id
-		err := updatePackContentByID(c.Request.Context(), itemID, &updatedPackContent)
+		// Fetch existing pack content to preserve timestamps
+		existingPackContent, err := findPackContentByID(c.Request.Context(), contentID)
+		if err != nil {
+			helper.LogAndSanitize(err, "put my pack content by ID: get existing pack content failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+
+		updatedPackContent := PackContent{
+			ID:         contentID,
+			PackID:     packID,
+			ItemID:     input.InventoryID,
+			Quantity:   input.Quantity,
+			Worn:       input.Worn,
+			Consumable: input.Consumable,
+			CreatedAt:  existingPackContent.CreatedAt, // Preserve existing CreatedAt
+			UpdatedAt:  existingPackContent.UpdatedAt, // Preserve existing UpdatedAt
+		}
+
+		err = updatePackContentByID(c.Request.Context(), contentID, &updatedPackContent)
 		if err != nil {
 			helper.LogAndSanitize(err, "put my pack content by ID: update pack content failed")
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
