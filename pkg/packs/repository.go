@@ -64,7 +64,7 @@ func returnPacks(ctx context.Context) (Packs, error) {
 	return packs, nil
 }
 
-// FindPackByID finds a pack by its ID
+// findPackByID finds a pack by its ID
 func findPackByID(ctx context.Context, id uint) (*Pack, error) {
 	var pack Pack
 
@@ -145,10 +145,7 @@ func findPacksByUserID(ctx context.Context, id uint) (*Packs, error) {
 		return nil, err
 	}
 
-	if len(packs) == 0 {
-		return nil, ErrPackContentNotFound
-	}
-
+	// Return empty slice if no packs found (not an error)
 	return &packs, nil
 }
 
@@ -244,7 +241,7 @@ func deletePackByID(ctx context.Context, id uint) error {
 
 // Pack sharing
 
-// CheckPackOwnership verifies if a user owns a specific pack
+// checkPackOwnership verifies if a user owns a specific pack
 func checkPackOwnership(ctx context.Context, id uint, userID uint) (bool, error) {
 	var rows int
 
@@ -265,7 +262,7 @@ func checkPackOwnership(ctx context.Context, id uint, userID uint) (bool, error)
 // sharePackByID generates and sets a sharing code for a pack (idempotent)
 func sharePackByID(ctx context.Context, packID uint, userID uint) (string, error) {
 	// First check ownership
-	owns, err := CheckPackOwnership(ctx, packID, userID)
+	owns, err := checkPackOwnership(ctx, packID, userID)
 	if err != nil {
 		return "", err
 	}
@@ -311,7 +308,7 @@ func sharePackByID(ctx context.Context, packID uint, userID uint) (string, error
 // unsharePackByID removes the sharing code from a pack (idempotent)
 func unsharePackByID(ctx context.Context, packID uint, userID uint) error {
 	// First check ownership
-	owns, err := CheckPackOwnership(ctx, packID, userID)
+	owns, err := checkPackOwnership(ctx, packID, userID)
 	if err != nil {
 		return err
 	}
@@ -377,13 +374,6 @@ func returnSharedPack(ctx context.Context, sharingCode string) (*SharedPackRespo
 	// Get pack contents
 	packContents, err := returnPackContentsByPackID(ctx, packInfo.ID)
 	if err != nil {
-		if errors.Is(err, ErrPackContentNotFound) {
-			// Pack exists but has no contents - return empty array
-			return &SharedPackResponse{
-				Pack:     *packInfo,
-				Contents: PackContentWithItems{},
-			}, nil
-		}
 		return nil, fmt.Errorf("failed to fetch pack contents: %w", err)
 	}
 
@@ -598,7 +588,7 @@ func deletePackContentByID(ctx context.Context, id uint) error {
 
 // Import/CSV
 
-// Take a record from csv.Newreder and return a LighterPackItem
+// readLineFromCSV takes a record from csv.NewReader and returns a LighterPackItem
 func readLineFromCSV(record []string) (LighterPackItem, error) {
 	var lighterPackItem LighterPackItem
 

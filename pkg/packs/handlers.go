@@ -194,16 +194,12 @@ func GetMyPacks(c *gin.Context) {
 	packs, err := findPacksByUserID(c.Request.Context(), userID)
 
 	if err != nil {
-		if errors.Is(err, ErrPackContentNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "No pack found"})
-			return
-		}
 		helper.LogAndSanitize(err, "get my packs: find packs failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
-	if packs == nil {
+	if packs == nil || len(*packs) == 0 {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "No pack found"})
 		return
 	}
