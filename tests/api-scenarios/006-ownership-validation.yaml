@@ -193,6 +193,94 @@ scenarios:
       - type: status_code
         expected: 403
 
+  # User A adds pack content (inventory item to pack)
+  - name: "User A adds inventory item to their pack"
+    request:
+      method: POST
+      endpoint: "/v1/mypack/{{user_a_pack_id}}/packcontent"
+      headers:
+        Authorization: "Bearer {{user_a_token}}"
+      body:
+        inventory_id: "{{user_a_inventory_id}}"
+        quantity: 1
+        worn: false
+        consumable: false
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+    store:
+      user_a_pack_content_id: "{{response.id}}"
+
+  # User B creates their own pack
+  - name: "User B creates their own pack"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+      body:
+        pack_name: "User B's Pack"
+        pack_description: "A pack belonging to User B"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+    store:
+      user_b_pack_id: "{{response.id}}"
+
+  # Test pack content cross-pack validation (Security bugs)
+  - name: "User B tries to PUT User A's pack content via User B's pack (should fail with 404)"
+    request:
+      method: PUT
+      endpoint: "/v1/mypack/{{user_b_pack_id}}/packcontent/{{user_a_pack_content_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+      body:
+        inventory_id: "{{user_a_inventory_id}}"
+        quantity: 999
+        worn: true
+        consumable: true
+    assertions:
+      - type: status_code
+        expected: 404
+
+  - name: "User B tries to DELETE User A's pack content via User B's pack (should fail with 404)"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{user_b_pack_id}}/packcontent/{{user_a_pack_content_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+    assertions:
+      - type: status_code
+        expected: 404
+
+  # Cleanup - User B deletes their own resources
+  - name: "Cleanup: User B deletes their pack"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{user_b_pack_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  # Cleanup - User A deletes their own resources
+  - name: "Cleanup: User A deletes pack content"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{user_a_pack_id}}/packcontent/{{user_a_pack_content_id}}"
+      headers:
+        Authorization: "Bearer {{user_a_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
   # Cleanup - User A deletes their own resources
   - name: "Cleanup: User A deletes their pack"
     request:

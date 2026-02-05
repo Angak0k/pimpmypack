@@ -267,7 +267,7 @@ func GetMyPackByID(c *gin.Context) {
 	}
 
 	// Check existence first
-	pack, err := FindPackByID(c.Request.Context(), id)
+	pack, err := findPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
@@ -754,6 +754,12 @@ func PutMyPackContentByID(c *gin.Context) {
 		return
 	}
 
+	// Ensure the pack content actually belongs to the specified pack
+	if existingPackContent.PackID != packID {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack content not found"})
+		return
+	}
+
 	updatedPackContent := PackContent{
 		ID:         contentID,
 		PackID:     packID,
@@ -851,6 +857,24 @@ func DeleteMyPackContentByID(c *gin.Context) {
 	// Check pack ownership
 	if pack.UserID != userID {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+		return
+	}
+
+	// Ensure the pack content exists and belongs to this pack before deleting
+	packContent, err := findPackContentByID(c.Request.Context(), itemID)
+	if err != nil {
+		if errors.Is(err, ErrPackContentNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack item not found"})
+			return
+		}
+		helper.LogAndSanitize(err, "delete my pack content by ID: find pack content failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	// Validate that the pack content actually belongs to the requested pack
+	if packContent.PackID != id {
+		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack item not found"})
 		return
 	}
 
