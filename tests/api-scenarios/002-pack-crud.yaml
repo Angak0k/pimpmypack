@@ -249,6 +249,39 @@ scenarios:
       - type: status_code
         expected: 200
 
+  - name: "Try to GET deleted pack (should fail with 404)"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 404
+
+  - name: "Try to PUT deleted pack (should fail with 404)"
+    request:
+      method: PUT
+      endpoint: "/v1/mypack/{{pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        pack_name: "Updated Name"
+        pack_description: "This should fail"
+    assertions:
+      - type: status_code
+        expected: 404
+
+  - name: "Try to DELETE deleted pack again (should fail with 404)"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 404
+
   - name: "Cleanup: Delete inventory item"
     request:
       method: DELETE
