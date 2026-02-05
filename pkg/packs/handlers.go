@@ -138,9 +138,13 @@ func PutPackByID(c *gin.Context) {
 		return
 	}
 
-	// Fetch existing pack to preserve UserID
+	// Fetch existing pack to preserve UserID and other fields
 	existingPack, err := findPackByID(c.Request.Context(), id)
 	if err != nil {
+		if errors.Is(err, ErrPackNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
 		helper.LogAndSanitize(err, "put pack by ID: get existing pack failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
@@ -151,6 +155,12 @@ func PutPackByID(c *gin.Context) {
 		UserID:          existingPack.UserID, // Preserve existing UserID
 		PackName:        input.PackName,
 		PackDescription: input.PackDescription,
+		CreatedAt:       existingPack.CreatedAt,      // Preserve existing CreatedAt
+		UpdatedAt:       existingPack.UpdatedAt,      // Preserve existing UpdatedAt
+		SharingCode:     existingPack.SharingCode,    // Preserve existing SharingCode
+		PackWeight:      existingPack.PackWeight,     // Preserve computed field
+		PackItemsCount:  existingPack.PackItemsCount, // Preserve computed field
+		HasImage:        existingPack.HasImage,       // Preserve computed field
 	}
 
 	err = updatePackByID(c.Request.Context(), id, &updatedPack)
@@ -372,12 +382,20 @@ func PutMyPackByID(c *gin.Context) {
 	}
 
 	if myPack {
-		updatedPack := Pack{
-			ID:              id,     // From path parameter
-			UserID:          userID, // From JWT, cannot be overridden
-			PackName:        input.PackName,
-			PackDescription: input.PackDescription,
+		// Fetch existing pack to preserve fields like CreatedAt, UpdatedAt,
+		// SharingCode, PackWeight, PackItemsCount, and HasImage
+		existingPack, err := findPackByID(c.Request.Context(), id)
+		if err != nil {
+			helper.LogAndSanitize(err, "put my pack by ID: get pack by ID failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
 		}
+
+		// Start from the existing pack to preserve all fields
+		updatedPack := *existingPack
+		updatedPack.UserID = userID
+		updatedPack.PackName = input.PackName
+		updatedPack.PackDescription = input.PackDescription
 
 		err = updatePackByID(c.Request.Context(), id, &updatedPack)
 		if err != nil {
@@ -628,13 +646,23 @@ func PutPackContentByID(c *gin.Context) {
 		return
 	}
 
+	// Fetch existing pack content to preserve timestamps
+	existingPackContent, err := findPackContentByID(c.Request.Context(), id)
+	if err != nil {
+		helper.LogAndSanitize(err, "put pack content by ID: get existing pack content failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
 	updatedPackContent := PackContent{
-		ID:         id, // From path parameter
+		ID:         id,
 		PackID:     input.PackID,
 		ItemID:     input.ItemID,
 		Quantity:   input.Quantity,
 		Worn:       input.Worn,
 		Consumable: input.Consumable,
+		CreatedAt:  existingPackContent.CreatedAt, // Preserve existing CreatedAt
+		UpdatedAt:  existingPackContent.UpdatedAt, // Preserve existing UpdatedAt
 	}
 
 	err = updatePackContentByID(c.Request.Context(), id, &updatedPackContent)
@@ -699,16 +727,26 @@ func PutMyPackContentByID(c *gin.Context) {
 	}
 
 	if myPack {
+		// Fetch existing pack content to preserve timestamps
+		existingPackContent, err := findPackContentByID(c.Request.Context(), contentID)
+		if err != nil {
+			helper.LogAndSanitize(err, "put my pack content by ID: get existing pack content failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+
 		updatedPackContent := PackContent{
-			ID:         contentID, // From path parameter
-			PackID:     packID,    // From path parameter, cannot be overridden
+			ID:         contentID,
+			PackID:     packID,
 			ItemID:     input.InventoryID,
 			Quantity:   input.Quantity,
 			Worn:       input.Worn,
 			Consumable: input.Consumable,
+			CreatedAt:  existingPackContent.CreatedAt, // Preserve existing CreatedAt
+			UpdatedAt:  existingPackContent.UpdatedAt, // Preserve existing UpdatedAt
 		}
 
-		err := updatePackContentByID(c.Request.Context(), contentID, &updatedPackContent)
+		err = updatePackContentByID(c.Request.Context(), contentID, &updatedPackContent)
 		if err != nil {
 			helper.LogAndSanitize(err, "put my pack content by ID: update pack content failed")
 			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})

@@ -87,8 +87,8 @@ type PackContentWithItems []PackContentWithItem
 
 // PackContentRequest represents the data required to add an item to a pack
 type PackContentRequest struct {
-	InventoryID uint `json:"inventory_id"`
-	Quantity    int  `json:"quantity"`
+	InventoryID uint `json:"inventory_id" binding:"required"`
+	Quantity    int  `json:"quantity" binding:"required,min=1"`
 	Worn        bool `json:"worn"`
 	Consumable  bool `json:"consumable"`
 }

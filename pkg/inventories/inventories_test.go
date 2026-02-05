@@ -342,7 +342,6 @@ func TestPostInventory(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to marshal inventory data: %v", err)
 	}
-	t.Logf("DEBUG: JSON data = %s", string(jsonData))
 
 	t.Run("Insert Inventory", func(t *testing.T) {
 		// Set up a test scenario: sending a POST request with JSON data
