@@ -105,7 +105,7 @@ scenarios:
         Authorization: "Bearer {{access_token}}"
     assertions:
       - type: status_code
-        expected: 404
+        expected: 403
 
   # Test 4: Attempt to set computed fields when creating pack
   - name: "Security: Attempt to set computed fields (pack_weight, pack_items_count, has_image)"
@@ -208,7 +208,7 @@ scenarios:
         Authorization: "Bearer {{access_token}}"
     assertions:
       - type: status_code
-        expected: 404
+        expected: 403
 
   # Test 9: Attempt to set timestamps when creating inventory
   - name: "Security: Attempt to set created_at and updated_at (should be server-generated)"

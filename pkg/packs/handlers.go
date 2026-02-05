@@ -266,25 +266,30 @@ func GetMyPackByID(c *gin.Context) {
 		return
 	}
 
-	// Check existence first
-	pack, err := FindPackByID(c.Request.Context(), id)
+	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
 	if err != nil {
-		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-			return
-		}
-		helper.LogAndSanitize(err, "get my pack by ID: find pack failed")
+		helper.LogAndSanitize(err, "get my pack by ID: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
-	// Check ownership
-	if pack.UserID != userID {
+	if myPack {
+		pack, err := FindPackByID(c.Request.Context(), id)
+		if err != nil {
+			if errors.Is(err, ErrPackNotFound) {
+				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+				return
+			}
+			helper.LogAndSanitize(err, "get my pack by ID: find pack failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+
+		c.IndentedJSON(http.StatusOK, *pack)
+	} else {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
-
-	c.IndentedJSON(http.StatusOK, *pack)
 }
 
 // Create a new pack
@@ -369,39 +374,40 @@ func PutMyPackByID(c *gin.Context) {
 		return
 	}
 
-	// Check existence first
-	// Fetch existing pack to preserve fields like CreatedAt, UpdatedAt,
-	// SharingCode, PackWeight, PackItemsCount, and HasImage
-	existingPack, err := findPackByID(c.Request.Context(), id)
+	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
 	if err != nil {
-		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-			return
-		}
-		helper.LogAndSanitize(err, "put my pack by ID: find pack failed")
+		helper.LogAndSanitize(err, "put my pack by ID: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
-	// Check ownership
-	if existingPack.UserID != userID {
+	if myPack {
+		// Fetch existing pack to preserve fields like CreatedAt, UpdatedAt,
+		// SharingCode, PackWeight, PackItemsCount, and HasImage
+		existingPack, err := findPackByID(c.Request.Context(), id)
+		if err != nil {
+			helper.LogAndSanitize(err, "put my pack by ID: get pack by ID failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+
+		// Start from the existing pack to preserve all fields
+		updatedPack := *existingPack
+		updatedPack.UserID = userID
+		updatedPack.PackName = input.PackName
+		updatedPack.PackDescription = input.PackDescription
+
+		err = updatePackByID(c.Request.Context(), id, &updatedPack)
+		if err != nil {
+			helper.LogAndSanitize(err, "put my pack by ID: update pack failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+		c.IndentedJSON(http.StatusOK, updatedPack)
+	} else {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
-
-	// Start from the existing pack to preserve all fields
-	updatedPack := *existingPack
-	updatedPack.UserID = userID
-	updatedPack.PackName = input.PackName
-	updatedPack.PackDescription = input.PackDescription
-
-	err = updatePackByID(c.Request.Context(), id, &updatedPack)
-	if err != nil {
-		helper.LogAndSanitize(err, "put my pack by ID: update pack failed")
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
-		return
-	}
-	c.IndentedJSON(http.StatusOK, updatedPack)
 }
 
 // Delete a pack by ID
@@ -431,33 +437,25 @@ func DeleteMyPackByID(c *gin.Context) {
 		return
 	}
 
-	// Check existence first
-	pack, err := findPackByID(c.Request.Context(), id)
+	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
 	if err != nil {
-		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-			return
-		}
-		helper.LogAndSanitize(err, "delete my pack by ID: find pack failed")
+		helper.LogAndSanitize(err, "delete my pack by ID: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
-	// Check ownership
-	if pack.UserID != userID {
+	if myPack {
+		err := deletePackByID(c.Request.Context(), id)
+		if err != nil {
+			helper.LogAndSanitize(err, "delete my pack by ID: delete pack failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+		c.IndentedJSON(http.StatusOK, gin.H{"message": "Pack deleted"})
+	} else {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
-
-	// Delete
-	err = deletePackByID(c.Request.Context(), id)
-	if err != nil {
-		helper.LogAndSanitize(err, "delete my pack by ID: delete pack failed")
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
-		return
-	}
-
-	c.IndentedJSON(http.StatusOK, gin.H{"message": "Pack deleted"})
 }
 
 // Get all pack contents
@@ -593,24 +591,6 @@ func PostMyPackContent(c *gin.Context) {
 		return
 	}
 
-	// Check pack existence first
-	pack, err := findPackByID(c.Request.Context(), id)
-	if err != nil {
-		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-			return
-		}
-		helper.LogAndSanitize(err, "post my pack content: find pack failed")
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
-		return
-	}
-
-	// Check pack ownership
-	if pack.UserID != userID {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
-		return
-	}
-
 	// Map the request data to the PackContent struct
 	newPackContent.PackID = id
 	newPackContent.ItemID = requestData.InventoryID
@@ -618,14 +598,25 @@ func PostMyPackContent(c *gin.Context) {
 	newPackContent.Worn = requestData.Worn
 	newPackContent.Consumable = requestData.Consumable
 
-	err = insertPackContent(c.Request.Context(), &newPackContent)
+	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
 	if err != nil {
-		helper.LogAndSanitize(err, "post my pack content: insert pack content failed")
+		helper.LogAndSanitize(err, "post my pack content: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
-	c.IndentedJSON(http.StatusCreated, newPackContent)
+	if myPack {
+		err := insertPackContent(c.Request.Context(), &newPackContent)
+		if err != nil {
+			helper.LogAndSanitize(err, "post my pack content: insert pack content failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+		c.IndentedJSON(http.StatusCreated, newPackContent)
+	} else {
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+		return
+	}
 }
 
 // Update a pack content by ID
@@ -728,50 +719,44 @@ func PutMyPackContentByID(c *gin.Context) {
 		return
 	}
 
-	// Check pack existence first
-	pack, err := findPackByID(c.Request.Context(), packID)
+	myPack, err := CheckPackOwnership(c.Request.Context(), packID, userID)
 	if err != nil {
-		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-			return
-		}
-		helper.LogAndSanitize(err, "put my pack content by ID: find pack failed")
+		helper.LogAndSanitize(err, "put my pack content by ID: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
-	// Check pack ownership
-	if pack.UserID != userID {
+	if myPack {
+		// Fetch existing pack content to preserve timestamps
+		existingPackContent, err := findPackContentByID(c.Request.Context(), contentID)
+		if err != nil {
+			helper.LogAndSanitize(err, "put my pack content by ID: get existing pack content failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+
+		updatedPackContent := PackContent{
+			ID:         contentID,
+			PackID:     packID,
+			ItemID:     input.InventoryID,
+			Quantity:   input.Quantity,
+			Worn:       input.Worn,
+			Consumable: input.Consumable,
+			CreatedAt:  existingPackContent.CreatedAt, // Preserve existing CreatedAt
+			UpdatedAt:  existingPackContent.UpdatedAt, // Preserve existing UpdatedAt
+		}
+
+		err = updatePackContentByID(c.Request.Context(), contentID, &updatedPackContent)
+		if err != nil {
+			helper.LogAndSanitize(err, "put my pack content by ID: update pack content failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+		c.IndentedJSON(http.StatusOK, updatedPackContent)
+	} else {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
-
-	// Fetch existing pack content to preserve timestamps
-	existingPackContent, err := findPackContentByID(c.Request.Context(), contentID)
-	if err != nil {
-		helper.LogAndSanitize(err, "put my pack content by ID: get existing pack content failed")
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
-		return
-	}
-
-	updatedPackContent := PackContent{
-		ID:         contentID,
-		PackID:     packID,
-		ItemID:     input.InventoryID,
-		Quantity:   input.Quantity,
-		Worn:       input.Worn,
-		Consumable: input.Consumable,
-		CreatedAt:  existingPackContent.CreatedAt, // Preserve existing CreatedAt
-		UpdatedAt:  existingPackContent.UpdatedAt, // Preserve existing UpdatedAt
-	}
-
-	err = updatePackContentByID(c.Request.Context(), contentID, &updatedPackContent)
-	if err != nil {
-		helper.LogAndSanitize(err, "put my pack content by ID: update pack content failed")
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
-		return
-	}
-	c.IndentedJSON(http.StatusOK, updatedPackContent)
 }
 
 // Delete a pack content by ID
@@ -836,33 +821,25 @@ func DeleteMyPackContentByID(c *gin.Context) {
 		return
 	}
 
-	// Check pack existence first
-	pack, err := findPackByID(c.Request.Context(), id)
+	myPack, err := CheckPackOwnership(c.Request.Context(), id, userID)
 	if err != nil {
-		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
-			return
-		}
-		helper.LogAndSanitize(err, "delete my pack content by ID: find pack failed")
+		helper.LogAndSanitize(err, "delete my pack content by ID: check ownership failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
-	// Check pack ownership
-	if pack.UserID != userID {
+	if myPack {
+		err := deletePackContentByID(c.Request.Context(), itemID)
+		if err != nil {
+			helper.LogAndSanitize(err, "delete my pack content by ID: delete pack content failed")
+			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+		c.IndentedJSON(http.StatusOK, gin.H{"message": "Pack Item deleted"})
+	} else {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 		return
 	}
-
-	// Delete pack content
-	err = deletePackContentByID(c.Request.Context(), itemID)
-	if err != nil {
-		helper.LogAndSanitize(err, "delete my pack content by ID: delete pack content failed")
-		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
-		return
-	}
-
-	c.IndentedJSON(http.StatusOK, gin.H{"message": "Pack Item deleted"})
 }
 
 // Get all pack contents

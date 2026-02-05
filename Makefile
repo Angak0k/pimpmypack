@@ -55,11 +55,10 @@ api-test: build-apitest
 
 stop-server:
 	@echo "Stopping any running pimpmypack server..."
-	@lsof -ti:8080 | xargs kill -9 2>/dev/null || true
 	@pkill -f "go run main.go" || true
 	@pkill -f "./$(NAME)" || true
 	@pkill -f "$(NAME)" || true
-	@sleep 2
+	@sleep 1
 
 start-server: stop-server clean-db start-db
 	@echo "Starting pimpmypack server in background..."
