@@ -119,3 +119,70 @@ scenarios:
     assertions:
       - type: status_code
         expected: 200
+
+  - name: "Upload imperial CSV file to import pack"
+    request:
+      method: POST
+      endpoint: "/v1/importfromlighterpack"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      file:
+        field: "file"
+        path: "tests/api-scenarios/fixtures/sample-pack-imperial.csv"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.pack_id"
+        exists: true
+      - type: json_path
+        path: "$.message"
+        contains: "imported"
+    store:
+      imperial_pack_id: "{{response.pack_id}}"
+
+  - name: "Get imported imperial pack details"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{imperial_pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.id"
+        equals: "{{imperial_pack_id}}"
+
+  - name: "Get imperial pack contents to verify items imported"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{imperial_pack_id}}/packcontents"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Verify imperial pack weight exists"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{imperial_pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.pack_weight"
+        exists: true
+
+  - name: "Cleanup: Delete imperial imported pack"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{imperial_pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200

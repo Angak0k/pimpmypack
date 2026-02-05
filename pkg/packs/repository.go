@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
@@ -605,12 +606,12 @@ func readLineFromCSV(record []string) (LighterPackItem, error) {
 
 	lighterPackItem.Qty = qty
 
-	weight, err := strconv.Atoi(record[4])
+	weightRaw, err := strconv.ParseFloat(record[4], 64)
 	if err != nil {
 		return lighterPackItem, errors.New("invalid CSV format - failed to convert weight to number")
 	}
 
-	lighterPackItem.Weight = weight
+	lighterPackItem.Weight = int(math.Round(helper.ConvertToGrams(weightRaw, record[5])))
 
 	price, err := strconv.Atoi(record[7])
 	if err != nil {
