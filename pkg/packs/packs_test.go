@@ -1128,6 +1128,73 @@ Compass,Navigation,Emergency compass,1,50,g,http://example.com/compass,25,Worn,C
 	})
 }
 
+func TestImportFromLighterPackImperialWeights(t *testing.T) {
+	csvData := `Item Name,Category,desc,qty,weight,unit,url,price,worn,consumable
+Trail Tent,Shelter,Ultralight tent,1,56.5,oz,http://example.com/tent,29999,,
+Down Quilt,Sleep System,20F quilt,1,1.5,lb,http://example.com/quilt,19999,,
+Small Knife,Tools,Pocket knife,1,3,oz,http://example.com/knife,2999,,
+Metric Item,Gear,Already in grams,1,250,g,http://example.com/metric,999,,`
+
+	token, err := security.GenerateToken(users[0].ID)
+	if err != nil {
+		t.Fatalf("Failed to generate token: %v", err)
+	}
+
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.POST("/importfromlighterpack", ImportFromLighterPack)
+
+	t.Run("Import items with imperial decimal weights", func(t *testing.T) {
+		statusCode := performLighterPackImport(t, router, token, csvData)
+		if statusCode != http.StatusOK {
+			t.Errorf("Expected status %d, got %d", http.StatusOK, statusCode)
+			return
+		}
+
+		// Get the pack that was just created
+		var packID uint
+		err := database.DB().QueryRow(
+			`SELECT id FROM pack
+			WHERE user_id = $1 AND pack_name = 'LighterPack Import'
+			ORDER BY id DESC LIMIT 1`,
+			users[0].ID,
+		).Scan(&packID)
+		if err != nil {
+			t.Fatalf("Failed to get pack ID: %v", err)
+		}
+
+		// Verify weights were converted to grams correctly
+		testCases := []struct {
+			itemName       string
+			expectedWeight int // weight in grams after conversion and rounding
+		}{
+			{"Trail Tent", 1602}, // 56.5 oz * 28.3495 = 1601.75 → 1602
+			{"Down Quilt", 680},  // 1.5 lb * 453.592 = 680.388 → 680
+			{"Small Knife", 85},  // 3 oz * 28.3495 = 85.0485 → 85
+			{"Metric Item", 250}, // 250 g stays 250
+		}
+
+		for _, tc := range testCases {
+			var weight int
+			err := database.DB().QueryRow(
+				`SELECT i.weight
+				FROM pack_content pc
+				JOIN inventory i ON pc.item_id = i.id
+				WHERE pc.pack_id = $1 AND i.item_name = $2`,
+				packID, tc.itemName,
+			).Scan(&weight)
+			if err != nil {
+				t.Errorf("Failed to get weight for %s: %v", tc.itemName, err)
+				continue
+			}
+
+			if weight != tc.expectedWeight {
+				t.Errorf("Item %s: expected weight=%d grams, got %d", tc.itemName, tc.expectedWeight, weight)
+			}
+		}
+	})
+}
+
 func TestCheckPackOwnership(t *testing.T) {
 	testCases := []struct {
 		packID   uint
