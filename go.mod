@@ -12,7 +12,7 @@ require (
 	github.com/swaggo/files v1.0.1
 	github.com/swaggo/gin-swagger v1.6.1
 	github.com/swaggo/swag v1.16.6
-	golang.org/x/image v0.35.0
+	golang.org/x/image v0.36.0
 	golang.org/x/time v0.14.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -36,9 +36,9 @@ require (
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.59.0 // indirect
 	github.com/spf13/pflag v1.0.9 // indirect
-	golang.org/x/mod v0.31.0 // indirect
+	golang.org/x/mod v0.32.0 // indirect
 	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/tools v0.40.0 // indirect
+	golang.org/x/tools v0.41.0 // indirect
 )
 
 require (
@@ -63,8 +63,8 @@ require (
 	github.com/ugorji/go/codec v1.3.0 // indirect
 	golang.org/x/arch v0.20.0 // indirect
 	golang.org/x/crypto v0.47.0
-	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/net v0.49.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
-	golang.org/x/text v0.33.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	google.golang.org/protobuf v1.36.9 // indirect
 )
