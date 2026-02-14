@@ -1,6 +1,7 @@
 package packs
 
 import (
+	"context"
 	"encoding/csv"
 	"errors"
 	"io"
@@ -158,6 +159,7 @@ func PutPackByID(c *gin.Context) {
 		CreatedAt:       existingPack.CreatedAt,      // Preserve existing CreatedAt
 		UpdatedAt:       existingPack.UpdatedAt,      // Preserve existing UpdatedAt
 		SharingCode:     existingPack.SharingCode,    // Preserve existing SharingCode
+		IsFavorite:      existingPack.IsFavorite,     // Preserve existing IsFavorite
 		PackWeight:      existingPack.PackWeight,     // Preserve computed field
 		PackItemsCount:  existingPack.PackItemsCount, // Preserve computed field
 		HasImage:        existingPack.HasImage,       // Preserve computed field
@@ -1024,7 +1026,7 @@ func ShareMyPack(c *gin.Context) {
 	// Share the pack (idempotent)
 	sharingCode, err := sharePackByID(c.Request.Context(), id, userID)
 	if err != nil {
-		if err.Error() == "pack does not belong to user" {
+		if errors.Is(err, ErrPackNotOwned) {
 			c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 			return
 		}
@@ -1054,6 +1056,49 @@ func ShareMyPack(c *gin.Context) {
 // @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/mypack/{id}/share [delete]
 func UnshareMyPack(c *gin.Context) {
+	packAction(c, "unshare", unsharePackByID, "Pack unshared successfully")
+}
+
+// Favorite a pack by ID
+// @Summary Favorite a pack by ID
+// @Description Mark a pack as favorite. Only one pack per user can be favorite at a time (idempotent)
+// @Security Bearer
+// @Tags Packs
+// @Produce  json
+// @Param id path int true "Pack ID"
+// @Success 200 {object} apitypes.OkResponse "Pack favorited successfully"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This pack does not belong to you"
+// @Failure 404 {object} apitypes.ErrorResponse "Pack not found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
+// @Router /v1/mypack/{id}/favorite [post]
+func FavoriteMyPack(c *gin.Context) {
+	packAction(c, "favorite", favoritePackByID, "Pack favorited successfully")
+}
+
+// Unfavorite a pack by ID
+// @Summary Unfavorite a pack by ID
+// @Description Remove favorite status from a pack (idempotent)
+// @Security Bearer
+// @Tags Packs
+// @Produce  json
+// @Param id path int true "Pack ID"
+// @Success 200 {object} apitypes.OkResponse "Pack unfavorited successfully"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This pack does not belong to you"
+// @Failure 404 {object} apitypes.ErrorResponse "Pack not found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
+// @Router /v1/mypack/{id}/favorite [delete]
+func UnfavoriteMyPack(c *gin.Context) {
+	packAction(c, "unfavorite", unfavoritePackByID, "Pack unfavorited successfully")
+}
+
+// packAction is a shared helper for pack operations that follow the same pattern:
+// parse ID, extract token, check pack exists, call action, handle ownership error.
+func packAction(c *gin.Context, actionName string,
+	action func(ctx context.Context, packID, userID uint) error, successMsg string) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
@@ -1062,36 +1107,34 @@ func UnshareMyPack(c *gin.Context) {
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		helper.LogAndSanitize(err, "unshare my pack: extract token ID failed")
+		helper.LogAndSanitize(err, actionName+" my pack: extract token ID failed")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
 		return
 	}
 
-	// Check if pack exists
 	_, err = FindPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
 			return
 		}
-		helper.LogAndSanitize(err, "unshare my pack: find pack failed")
+		helper.LogAndSanitize(err, actionName+" my pack: find pack failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
-	// Unshare the pack (idempotent)
-	err = unsharePackByID(c.Request.Context(), id, userID)
+	err = action(c.Request.Context(), id, userID)
 	if err != nil {
-		if err.Error() == "pack does not belong to user" {
+		if errors.Is(err, ErrPackNotOwned) {
 			c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 			return
 		}
-		helper.LogAndSanitize(err, "unshare my pack: unshare pack failed")
+		helper.LogAndSanitize(err, actionName+" my pack: "+actionName+" pack failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
-	c.IndentedJSON(http.StatusOK, gin.H{"message": "Pack unshared successfully"})
+	c.IndentedJSON(http.StatusOK, gin.H{"message": successMsg})
 }
 
 // Import from lighterpack

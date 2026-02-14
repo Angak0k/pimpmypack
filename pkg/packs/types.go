@@ -12,6 +12,9 @@ var (
 
 	// ErrPackContentNotFound is returned when no items are found in a given pack
 	ErrPackContentNotFound = errors.New("pack content not found")
+
+	// ErrPackNotOwned is returned when a user tries to operate on a pack they don't own
+	ErrPackNotOwned = errors.New("pack does not belong to user")
 )
 
 // Pack represents a pack with its metadata
@@ -23,6 +26,7 @@ type Pack struct {
 	PackWeight      int       `json:"pack_weight"`
 	PackItemsCount  int       `json:"pack_items_count"`
 	SharingCode     *string   `json:"sharing_code,omitempty"`
+	IsFavorite      bool      `json:"is_favorite"`
 	HasImage        bool      `json:"has_image"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`

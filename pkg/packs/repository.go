@@ -20,7 +20,8 @@ func returnPacks(ctx context.Context) (Packs, error) {
 	var packs Packs
 
 	rows, err := database.DB().QueryContext(ctx,
-		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
+		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.is_favorite,
+		p.created_at, p.updated_at,
 		COALESCE(SUM(pc.quantity), 0) as items_count,
 		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight,
 		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image
@@ -28,7 +29,8 @@ func returnPacks(ctx context.Context) (Packs, error) {
 		LEFT JOIN pack_content pc ON p.id = pc.pack_id
 		LEFT JOIN inventory i ON pc.item_id = i.id
 		LEFT JOIN pack_images pi ON p.id = pi.pack_id
-		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at, pi.pack_id
+		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.is_favorite,
+		p.created_at, p.updated_at, pi.pack_id
 		ORDER BY p.id;`)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -46,6 +48,7 @@ func returnPacks(ctx context.Context) (Packs, error) {
 			&pack.PackName,
 			&pack.PackDescription,
 			&pack.SharingCode,
+			&pack.IsFavorite,
 			&pack.CreatedAt,
 			&pack.UpdatedAt,
 			&pack.PackItemsCount,
@@ -70,7 +73,8 @@ func findPackByID(ctx context.Context, id uint) (*Pack, error) {
 	var pack Pack
 
 	row := database.DB().QueryRowContext(ctx,
-		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
+		`SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.is_favorite,
+		p.created_at, p.updated_at,
 		COALESCE(SUM(pc.quantity), 0) as items_count,
 		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight,
 		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image
@@ -79,7 +83,8 @@ func findPackByID(ctx context.Context, id uint) (*Pack, error) {
 		LEFT JOIN inventory i ON pc.item_id = i.id
 		LEFT JOIN pack_images pi ON p.id = pi.pack_id
 		WHERE p.id = $1
-		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at, pi.pack_id;`,
+		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.is_favorite,
+		p.created_at, p.updated_at, pi.pack_id;`,
 		id)
 	err := row.Scan(
 		&pack.ID,
@@ -87,6 +92,7 @@ func findPackByID(ctx context.Context, id uint) (*Pack, error) {
 		&pack.PackName,
 		&pack.PackDescription,
 		&pack.SharingCode,
+		&pack.IsFavorite,
 		&pack.CreatedAt,
 		&pack.UpdatedAt,
 		&pack.PackItemsCount,
@@ -107,7 +113,8 @@ func findPacksByUserID(ctx context.Context, id uint) (*Packs, error) {
 	var packs Packs
 
 	rows, err := database.DB().QueryContext(ctx, `
-		SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.created_at, p.updated_at,
+		SELECT p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.is_favorite,
+		p.created_at, p.updated_at,
 		COALESCE(SUM(pc.quantity), 0) as items_count,
 		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight,
 		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image
@@ -116,7 +123,7 @@ func findPacksByUserID(ctx context.Context, id uint) (*Packs, error) {
 		LEFT JOIN inventory i ON pc.item_id = i.id
 		LEFT JOIN pack_images pi ON p.id = pi.pack_id
 		WHERE p.user_id = $1
-		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code,
+		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.is_favorite,
 		         p.created_at, p.updated_at, pi.pack_id;`, id)
 	if err != nil {
 		return nil, err
@@ -131,6 +138,7 @@ func findPacksByUserID(ctx context.Context, id uint) (*Packs, error) {
 			&pack.PackName,
 			&pack.PackDescription,
 			&pack.SharingCode,
+			&pack.IsFavorite,
 			&pack.CreatedAt,
 			&pack.UpdatedAt,
 			&pack.PackItemsCount,
@@ -268,7 +276,7 @@ func sharePackByID(ctx context.Context, packID uint, userID uint) (string, error
 		return "", err
 	}
 	if !owns {
-		return "", errors.New("pack does not belong to user")
+		return "", ErrPackNotOwned
 	}
 
 	// Check if pack already has a sharing code (idempotent behavior)
@@ -314,7 +322,7 @@ func unsharePackByID(ctx context.Context, packID uint, userID uint) error {
 		return err
 	}
 	if !owns {
-		return errors.New("pack does not belong to user")
+		return ErrPackNotOwned
 	}
 
 	// Set sharing_code to NULL (idempotent - no error if already NULL)
@@ -328,6 +336,74 @@ func unsharePackByID(ctx context.Context, packID uint, userID uint) error {
 	_, err = statement.ExecContext(ctx, time.Now().Truncate(time.Second), packID)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+// Pack favorite
+
+// favoritePackByID marks a pack as favorite for its owner (idempotent).
+// Any previously favorited pack for the same user is automatically unfavorited.
+func favoritePackByID(ctx context.Context, packID uint, userID uint) error {
+	owns, err := checkPackOwnership(ctx, packID, userID)
+	if err != nil {
+		return err
+	}
+	if !owns {
+		return ErrPackNotOwned
+	}
+
+	tx, err := database.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	now := time.Now().Truncate(time.Second)
+
+	// Unfavorite all packs for this user
+	_, err = tx.ExecContext(ctx,
+		"UPDATE pack SET is_favorite = false, updated_at = $1 WHERE user_id = $2 AND is_favorite = true",
+		now, userID)
+	if err != nil {
+		return fmt.Errorf("failed to unfavorite existing packs: %w", err)
+	}
+
+	// Favorite the target pack
+	_, err = tx.ExecContext(ctx,
+		"UPDATE pack SET is_favorite = true, updated_at = $1 WHERE id = $2",
+		now, packID)
+	if err != nil {
+		return fmt.Errorf("failed to favorite pack: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// unfavoritePackByID removes the favorite status from a pack (idempotent)
+func unfavoritePackByID(ctx context.Context, packID uint, userID uint) error {
+	owns, err := checkPackOwnership(ctx, packID, userID)
+	if err != nil {
+		return err
+	}
+	if !owns {
+		return ErrPackNotOwned
+	}
+
+	_, err = database.DB().ExecContext(ctx,
+		"UPDATE pack SET is_favorite = false, updated_at = $1 WHERE id = $2",
+		time.Now().Truncate(time.Second), packID)
+	if err != nil {
+		return fmt.Errorf("failed to unfavorite pack: %w", err)
 	}
 
 	return nil

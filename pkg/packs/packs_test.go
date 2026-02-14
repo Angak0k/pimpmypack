@@ -1571,3 +1571,234 @@ func TestSharedList(t *testing.T) {
 		}
 	})
 }
+
+func testFavoriteSuccess(t *testing.T, router *gin.Engine, token string) {
+	packID := FindPackIDByPackName(packs, "First Pack")
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/favorite", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+		return
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if response["message"] != "Pack favorited successfully" {
+		t.Errorf("Expected success message but got: %s", response["message"])
+	}
+
+	// Verify in DB
+	var isFavorite bool
+	err := database.DB().QueryRow("SELECT is_favorite FROM pack WHERE id = $1", packID).Scan(&isFavorite)
+	if err != nil {
+		t.Fatalf("Failed to query DB: %v", err)
+	}
+	if !isFavorite {
+		t.Error("Expected pack to be favorited in DB")
+	}
+}
+
+func testFavoriteIdempotent(t *testing.T, router *gin.Engine, token string) {
+	packID := FindPackIDByPackName(packs, "First Pack")
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/favorite", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d but got %d", http.StatusOK, w.Code)
+	}
+}
+
+func testFavoriteSwitches(t *testing.T, router *gin.Engine, token string) {
+	// First Pack is already favorited from previous test; now favorite Second Pack
+	firstPackID := FindPackIDByPackName(packs, "First Pack")
+	secondPackID := FindPackIDByPackName(packs, "Second Pack")
+
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/favorite", secondPackID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+		return
+	}
+
+	// Verify First Pack is no longer favorite
+	var firstFav bool
+	err := database.DB().QueryRow("SELECT is_favorite FROM pack WHERE id = $1", firstPackID).Scan(&firstFav)
+	if err != nil {
+		t.Fatalf("Failed to query DB: %v", err)
+	}
+	if firstFav {
+		t.Error("Expected First Pack to no longer be favorited")
+	}
+
+	// Verify Second Pack is now favorite
+	var secondFav bool
+	err = database.DB().QueryRow("SELECT is_favorite FROM pack WHERE id = $1", secondPackID).Scan(&secondFav)
+	if err != nil {
+		t.Fatalf("Failed to query DB: %v", err)
+	}
+	if !secondFav {
+		t.Error("Expected Second Pack to be favorited")
+	}
+}
+
+func testFavoriteForbidden(t *testing.T, router *gin.Engine, token string) {
+	packID := FindPackIDByPackName(packs, "Third Pack")
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/favorite", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden && w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d or %d but got %d", http.StatusForbidden, http.StatusNotFound, w.Code)
+	}
+}
+
+func testFavoriteNotFound(t *testing.T, router *gin.Engine, token string) {
+	req, _ := http.NewRequest(http.MethodPost, "/mypack/99999/favorite", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d but got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestFavoriteMyPack(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.POST("/mypack/:id/favorite", FavoriteMyPack)
+
+	token, err := security.GenerateToken(users[0].ID)
+	if err != nil {
+		t.Fatalf("Failed to generate token: %v", err)
+	}
+
+	t.Run("Successfully favorite a pack", func(t *testing.T) {
+		testFavoriteSuccess(t, router, token)
+	})
+	t.Run("Idempotent - favorite already favorited pack", func(t *testing.T) {
+		testFavoriteIdempotent(t, router, token)
+	})
+	t.Run("Switches favorite from one pack to another", func(t *testing.T) {
+		testFavoriteSwitches(t, router, token)
+	})
+	t.Run("Forbidden - pack does not belong to user", func(t *testing.T) {
+		testFavoriteForbidden(t, router, token)
+	})
+	t.Run("Pack not found", func(t *testing.T) {
+		testFavoriteNotFound(t, router, token)
+	})
+}
+
+func testUnfavoriteSuccess(t *testing.T, router *gin.Engine, token string) {
+	// Second Pack is favorited from TestFavoriteMyPack; unfavorite it
+	packID := FindPackIDByPackName(packs, "Second Pack")
+	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("/mypack/%d/favorite", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+		return
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if response["message"] != "Pack unfavorited successfully" {
+		t.Errorf("Expected success message but got: %s", response["message"])
+	}
+
+	// Verify in DB
+	var isFavorite bool
+	err := database.DB().QueryRow("SELECT is_favorite FROM pack WHERE id = $1", packID).Scan(&isFavorite)
+	if err != nil {
+		t.Fatalf("Failed to query DB: %v", err)
+	}
+	if isFavorite {
+		t.Error("Expected pack to not be favorited in DB")
+	}
+}
+
+func testUnfavoriteIdempotent(t *testing.T, router *gin.Engine, token string) {
+	packID := FindPackIDByPackName(packs, "First Pack")
+	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("/mypack/%d/favorite", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status %d but got %d", http.StatusOK, w.Code)
+	}
+}
+
+func testUnfavoriteForbidden(t *testing.T, router *gin.Engine, token string) {
+	packID := FindPackIDByPackName(packs, "Third Pack")
+	req, _ := http.NewRequest(http.MethodDelete, fmt.Sprintf("/mypack/%d/favorite", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden && w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d or %d but got %d", http.StatusForbidden, http.StatusNotFound, w.Code)
+	}
+}
+
+func testUnfavoriteNotFound(t *testing.T, router *gin.Engine, token string) {
+	req, _ := http.NewRequest(http.MethodDelete, "/mypack/99999/favorite", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d but got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func TestUnfavoriteMyPack(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.DELETE("/mypack/:id/favorite", UnfavoriteMyPack)
+
+	token, err := security.GenerateToken(users[0].ID)
+	if err != nil {
+		t.Fatalf("Failed to generate token: %v", err)
+	}
+
+	t.Run("Successfully unfavorite a pack", func(t *testing.T) {
+		testUnfavoriteSuccess(t, router, token)
+	})
+	t.Run("Idempotent - unfavorite non-favorite pack", func(t *testing.T) {
+		testUnfavoriteIdempotent(t, router, token)
+	})
+	t.Run("Forbidden - pack does not belong to user", func(t *testing.T) {
+		testUnfavoriteForbidden(t, router, token)
+	})
+	t.Run("Pack not found", func(t *testing.T) {
+		testUnfavoriteNotFound(t, router, token)
+	})
+}
