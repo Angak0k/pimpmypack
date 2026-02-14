@@ -229,6 +229,78 @@ scenarios:
       - type: status_code
         expected: 404
 
+  - name: "Favorite the pack"
+    request:
+      method: POST
+      endpoint: "/v1/mypack/{{pack_id}}/favorite"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.message"
+        equals: "Pack favorited successfully"
+
+  - name: "Verify pack is favorited"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.is_favorite"
+        equals: "true"
+
+  - name: "Favorite the pack again (idempotent)"
+    request:
+      method: POST
+      endpoint: "/v1/mypack/{{pack_id}}/favorite"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Unfavorite the pack"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id}}/favorite"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.message"
+        equals: "Pack unfavorited successfully"
+
+  - name: "Verify pack is no longer favorited"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.is_favorite"
+        equals: "false"
+
+  - name: "Unfavorite the pack again (idempotent)"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id}}/favorite"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
   - name: "Cleanup: Delete pack content"
     request:
       method: DELETE
