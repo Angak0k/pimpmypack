@@ -10,7 +10,7 @@ POSTGRES_VERSION=17
 
 start-db:
 	@echo "Starting PostgreSQL container (version $(POSTGRES_VERSION))..."
-	@docker rm -f $(POSTGRES_CONTAINER) 2>/dev/null || true
+	@docker rm -fv $(POSTGRES_CONTAINER) 2>/dev/null || true
 	@docker run --name $(POSTGRES_CONTAINER) \
 		-e POSTGRES_USER=$(POSTGRES_USER) \
 		-e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
@@ -28,7 +28,7 @@ stop-db:
 
 clean-db: stop-db
 	@echo "Removing PostgreSQL container..."
-	@docker rm $(POSTGRES_CONTAINER) || true
+	@docker rm -v $(POSTGRES_CONTAINER) || true
 
 test: start-db
 	@echo "Running tests..."

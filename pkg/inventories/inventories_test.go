@@ -359,12 +359,18 @@ func TestPostInventory(t *testing.T) {
 			t.Errorf("Expected status code %d but got %d", http.StatusCreated, w.Code)
 		}
 
-		// Query the database to get the inserted inventory
+		// Unmarshal the response body into an inventory struct
+		var receivedInventory Inventory
+		if err := json.Unmarshal(w.Body.Bytes(), &receivedInventory); err != nil {
+			t.Fatalf("Failed to unmarshal response body: %v", err)
+		}
+
+		// Query the database by the ID returned in the response for deterministic matching
 		var insertedInventory Inventory
 		row := database.DB().QueryRow(
 			`SELECT id, user_id, item_name, category, description, weight, url, price, currency, created_at, updated_at
-			 FROM inventory WHERE item_name = $1 AND user_id = $2;`,
-			newInventory.ItemName, newInventory.UserID)
+			 FROM inventory WHERE id = $1;`,
+			receivedInventory.ID)
 		err = row.Scan(
 			&insertedInventory.ID,
 			&insertedInventory.UserID,
@@ -382,12 +388,6 @@ func TestPostInventory(t *testing.T) {
 				fmt.Println("No rows were returned!")
 			}
 			t.Fatalf("Failed to run request: %v", err)
-		}
-
-		// Unmarshal the response body into an inventory struct
-		var receivedInventory Inventory
-		if err := json.Unmarshal(w.Body.Bytes(), &receivedInventory); err != nil {
-			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
 
 		// Compare the received inventory with the expected inventory data
