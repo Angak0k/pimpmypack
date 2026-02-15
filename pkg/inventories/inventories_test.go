@@ -361,7 +361,10 @@ func TestPostInventory(t *testing.T) {
 
 		// Query the database to get the inserted inventory
 		var insertedInventory Inventory
-		row := database.DB().QueryRow("SELECT * FROM inventory WHERE item_name = $1;", newInventory.ItemName)
+		row := database.DB().QueryRow(
+			`SELECT id, user_id, item_name, category, description, weight, url, price, currency, created_at, updated_at
+			 FROM inventory WHERE item_name = $1 AND user_id = $2;`,
+			newInventory.ItemName, newInventory.UserID)
 		err = row.Scan(
 			&insertedInventory.ID,
 			&insertedInventory.UserID,
@@ -459,7 +462,10 @@ func TestPutInventoryByID(t *testing.T) {
 
 		// Query the database to get the updated inventories
 		var updatedInventory Inventory
-		row := database.DB().QueryRow("SELECT * FROM inventory WHERE id = $1;", testUpdatedInventory.ID)
+		row := database.DB().QueryRow(
+			`SELECT id, user_id, item_name, category, description, weight, url, price, currency, created_at, updated_at
+			 FROM inventory WHERE id = $1;`,
+			testUpdatedInventory.ID)
 		err = row.Scan(
 			&updatedInventory.ID,
 			&updatedInventory.UserID,

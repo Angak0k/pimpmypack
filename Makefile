@@ -10,12 +10,13 @@ POSTGRES_VERSION=17
 
 start-db:
 	@echo "Starting PostgreSQL container (version $(POSTGRES_VERSION))..."
+	@docker rm -f $(POSTGRES_CONTAINER) 2>/dev/null || true
 	@docker run --name $(POSTGRES_CONTAINER) \
 		-e POSTGRES_USER=$(POSTGRES_USER) \
 		-e POSTGRES_PASSWORD=$(POSTGRES_PASSWORD) \
 		-e POSTGRES_DB=$(POSTGRES_DB) \
 		-p $(POSTGRES_PORT):5432 \
-		-d postgres:$(POSTGRES_VERSION) || true
+		-d postgres:$(POSTGRES_VERSION)
 	@echo "Waiting for PostgreSQL to be ready..."
 	@until docker exec $(POSTGRES_CONTAINER) pg_isready -h localhost -p 5432 -U $(POSTGRES_USER); do sleep 1; done
 	@echo "Waiting additional 10 seconds for database to be fully ready..."

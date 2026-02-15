@@ -2,6 +2,7 @@ package security
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"strconv"
 	"testing"
@@ -176,11 +177,12 @@ func TestCleanupExpiredTokens(t *testing.T) {
 	ctx := context.Background()
 	accountID := createTestAccount(t)
 
-	// Create an expired token by manually inserting
+	// Create an expired token by manually inserting with a unique token string
+	expiredTokenStr := fmt.Sprintf("expired-token-%d", time.Now().UnixNano())
 	_, err := database.DB().Exec(
 		`INSERT INTO refresh_token (token, account_id, expires_at, created_at)
          VALUES ($1, $2, $3, $4)`,
-		"expired-token-123",
+		expiredTokenStr,
 		accountID,
 		time.Now().Add(-time.Hour), // expired 1 hour ago
 		time.Now().Add(-25*time.Hour),
@@ -198,7 +200,7 @@ func TestCleanupExpiredTokens(t *testing.T) {
 	assert.GreaterOrEqual(t, deleted, int64(1))
 
 	// Verify expired token is gone
-	_, err = GetRefreshToken(ctx, "expired-token-123")
+	_, err = GetRefreshToken(ctx, expiredTokenStr)
 	require.Error(t, err)
 
 	// Verify valid token still exists
