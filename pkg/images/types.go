@@ -53,3 +53,20 @@ type ImageStorage interface {
 	// Exists checks if an image exists for a pack
 	Exists(ctx context.Context, packID uint) (bool, error)
 }
+
+// AccountImageStorage defines the interface for account profile image storage operations
+type AccountImageStorage interface {
+	// Save stores a profile image for an account
+	Save(ctx context.Context, accountID uint, data []byte, metadata ImageMetadata) error
+
+	// Get retrieves a profile image for an account
+	// Returns ErrNotFound if the image doesn't exist
+	Get(ctx context.Context, accountID uint) (*Image, error)
+
+	// Delete removes a profile image for an account
+	// Returns nil if the image doesn't exist (idempotent)
+	Delete(ctx context.Context, accountID uint) error
+
+	// Exists checks if a profile image exists for an account
+	Exists(ctx context.Context, accountID uint) (bool, error)
+}

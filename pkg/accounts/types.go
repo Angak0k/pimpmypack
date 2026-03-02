@@ -13,6 +13,9 @@ type Account struct {
 	Status              string    `json:"status"`
 	PreferredCurrency   string    `json:"preferred_currency"`
 	PreferredUnitSystem string    `json:"preferred_unit_system"`
+	YoutubeURL          *string   `json:"youtube_url"`
+	InstagramURL        *string   `json:"instagram_url"`
+	HasProfileImage     bool      `json:"has_profile_image"`
 	CreatedAt           time.Time `json:"created_at"`
 	UpdatedAt           time.Time `json:"updated_at"`
 }
@@ -68,11 +71,13 @@ type PasswordUpdateInput struct {
 // SECURITY: This type intentionally excludes role, status, username, and password fields
 // to prevent privilege escalation and unauthorized modifications
 type AccountUpdateInput struct {
-	Email               string `json:"email" binding:"required"`
-	Firstname           string `json:"firstname" binding:"required"`
-	Lastname            string `json:"lastname" binding:"required"`
-	PreferredCurrency   string `json:"preferred_currency"`
-	PreferredUnitSystem string `json:"preferred_unit_system"`
+	Email               string  `json:"email" binding:"required"`
+	Firstname           string  `json:"firstname" binding:"required"`
+	Lastname            string  `json:"lastname" binding:"required"`
+	PreferredCurrency   string  `json:"preferred_currency"`
+	PreferredUnitSystem string  `json:"preferred_unit_system"`
+	YoutubeURL          *string `json:"youtube_url"`
+	InstagramURL        *string `json:"instagram_url"`
 }
 
 // Token represents an authentication token

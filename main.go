@@ -111,6 +111,7 @@ func setupPublicRoutes(router *gin.Engine) {
 	public.POST("/forgotpassword", accounts.ForgotPassword)
 	public.GET("/sharedlist/:sharing_code", packs.SharedList)
 	public.GET("/v1/packs/:id/image", images.GetPackImage)
+	public.GET("/v1/accounts/:id/image", images.GetProfileImage)
 }
 
 func setupProtectedRoutes(router *gin.Engine) {
@@ -140,6 +141,8 @@ func setupProtectedRoutes(router *gin.Engine) {
 	protected.POST("/importfromlighterpack", packs.ImportFromLighterPack)
 	protected.POST("/mypack/:id/image", images.UploadPackImage)
 	protected.DELETE("/mypack/:id/image", images.DeletePackImage)
+	protected.POST("/myaccount/image", images.UploadMyProfileImage)
+	protected.DELETE("/myaccount/image", images.DeleteMyProfileImage)
 }
 
 func setupPrivateRoutes(router *gin.Engine) {

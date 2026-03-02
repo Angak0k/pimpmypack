@@ -18,6 +18,8 @@ const (
 	MaxProcessedSize = 5 * 1024 * 1024
 	// MaxDimension is the maximum width or height for processed images
 	MaxDimension = 1920
+	// MaxProfilePicDimension is the maximum width or height for profile pictures
+	MaxProfilePicDimension = 512
 	// JPEGQuality is the quality setting for JPEG encoding (0-100)
 	JPEGQuality = 85
 	// MimeTypeJPEG is the MIME type for JPEG images
@@ -65,28 +67,28 @@ func DecodeImage(data []byte) (image.Image, error) {
 	return img, nil
 }
 
-// ResizeImage resizes an image if it exceeds MaxDimension, maintaining aspect ratio
-func ResizeImage(img image.Image) image.Image {
+// ResizeImageWithMax resizes an image if it exceeds maxDim, maintaining aspect ratio
+func ResizeImageWithMax(img image.Image, maxDim int) image.Image {
 	bounds := img.Bounds()
 	width := bounds.Dx()
 	height := bounds.Dy()
 
 	// If image is within limits, return as-is
-	if width <= MaxDimension && height <= MaxDimension {
+	if width <= maxDim && height <= maxDim {
 		return img
 	}
 
 	// Calculate new dimensions maintaining aspect ratio
 	var newWidth, newHeight int
 	if width > height {
-		newWidth = MaxDimension
-		newHeight = (height * MaxDimension) / width
+		newWidth = maxDim
+		newHeight = (height * maxDim) / width
 		if newHeight < 1 {
 			newHeight = 1
 		}
 	} else {
-		newHeight = MaxDimension
-		newWidth = (width * MaxDimension) / height
+		newHeight = maxDim
+		newWidth = (width * maxDim) / height
 		if newWidth < 1 {
 			newWidth = 1
 		}
@@ -99,6 +101,11 @@ func ResizeImage(img image.Image) image.Image {
 	draw.CatmullRom.Scale(dst, dst.Rect, img, bounds, draw.Over, nil)
 
 	return dst
+}
+
+// ResizeImage resizes an image if it exceeds MaxDimension, maintaining aspect ratio
+func ResizeImage(img image.Image) image.Image {
+	return ResizeImageWithMax(img, MaxDimension)
 }
 
 // EncodeToJPEG encodes an image to JPEG format with specified quality
@@ -174,4 +181,57 @@ func ProcessImageFromReader(reader io.Reader) (*ProcessedImage, error) {
 	}
 
 	return ProcessImage(data)
+}
+
+// ProcessProfileImage validates and processes an uploaded profile picture
+// Uses MaxProfilePicDimension (512px) instead of MaxDimension (1920px)
+func ProcessProfileImage(data []byte) (*ProcessedImage, error) {
+	if len(data) > MaxUploadSize {
+		return nil, fmt.Errorf("%w: upload size %d exceeds %d bytes",
+			ErrTooLarge, len(data), MaxUploadSize)
+	}
+
+	_, err := ValidateImageFormat(data)
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := DecodeImage(data)
+	if err != nil {
+		return nil, err
+	}
+
+	img = ResizeImageWithMax(img, MaxProfilePicDimension)
+
+	processedData, err := EncodeToJPEG(img)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(processedData) > MaxProcessedSize {
+		return nil, fmt.Errorf("%w: processed size %d exceeds %d bytes",
+			ErrTooLarge, len(processedData), MaxProcessedSize)
+	}
+
+	bounds := img.Bounds()
+
+	return &ProcessedImage{
+		Data: processedData,
+		Metadata: ImageMetadata{
+			MimeType: MimeTypeJPEG,
+			FileSize: len(processedData),
+			Width:    bounds.Dx(),
+			Height:   bounds.Dy(),
+		},
+	}, nil
+}
+
+// ProcessProfileImageFromReader processes a profile image from an io.Reader
+func ProcessProfileImageFromReader(reader io.Reader) (*ProcessedImage, error) {
+	data, err := io.ReadAll(io.LimitReader(reader, MaxUploadSize+1))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read image data: %w", err)
+	}
+
+	return ProcessProfileImage(data)
 }
