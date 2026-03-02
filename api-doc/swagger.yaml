@@ -8,8 +8,12 @@ definitions:
         type: string
       firstname:
         type: string
+      has_profile_image:
+        type: boolean
       id:
         type: integer
+      instagram_url:
+        type: string
       lastname:
         type: string
       preferred_currency:
@@ -24,6 +28,8 @@ definitions:
         type: string
       username:
         type: string
+      youtube_url:
+        type: string
     type: object
   accounts.AccountUpdateInput:
     properties:
@@ -31,11 +37,15 @@ definitions:
         type: string
       firstname:
         type: string
+      instagram_url:
+        type: string
       lastname:
         type: string
       preferred_currency:
         type: string
       preferred_unit_system:
+        type: string
+      youtube_url:
         type: string
     required:
     - email
@@ -181,6 +191,8 @@ definitions:
         type: boolean
       id:
         type: integer
+      is_favorite:
+        type: boolean
       pack_description:
         type: string
       pack_items_count:
@@ -222,9 +234,13 @@ definitions:
       inventory_id:
         type: integer
       quantity:
+        minimum: 1
         type: integer
       worn:
         type: boolean
+    required:
+    - inventory_id
+    - quantity
     type: object
   packs.PackContentWithItem:
     properties:
@@ -508,6 +524,37 @@ paths:
       summary: Get shared pack with metadata
       tags:
       - Public
+  /v1/accounts/{id}/image:
+    get:
+      description: Get the profile image for a user account
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - image/jpeg
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Invalid account ID
+          schema:
+            type: string
+        "404":
+          description: No profile image found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get profile image
+      tags:
+      - Account Images
   /v1/importfromlighterpack:
     post:
       consumes:
@@ -606,6 +653,82 @@ paths:
       summary: Update account info
       tags:
       - Accounts
+  /v1/myaccount/image:
+    delete:
+      description: Delete the profile image for the currently logged-in user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Image deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete profile image
+      tags:
+      - Account Images
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload or update the profile image for the currently logged-in
+        user
+      parameters:
+      - description: Image file (JPEG, PNG, or WebP, max 5MB)
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Image uploaded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or image
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "413":
+          description: Payload too large
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Upload or update profile image
+      tags:
+      - Account Images
   /v1/myinventory:
     get:
       description: Retrieves a list of all inventories of the user
@@ -986,6 +1109,88 @@ paths:
       security:
       - Bearer: []
       summary: Update a pack by ID
+      tags:
+      - Packs
+  /v1/mypack/{id}/favorite:
+    delete:
+      description: Remove favorite status from a pack (idempotent)
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Pack unfavorited successfully
+          schema:
+            $ref: '#/definitions/apitypes.OkResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "403":
+          description: This pack does not belong to you
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "404":
+          description: Pack not found
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Unfavorite a pack by ID
+      tags:
+      - Packs
+    post:
+      description: Mark a pack as favorite. Only one pack per user can be favorite
+        at a time (idempotent)
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Pack favorited successfully
+          schema:
+            $ref: '#/definitions/apitypes.OkResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "403":
+          description: This pack does not belong to you
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "404":
+          description: Pack not found
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Favorite a pack by ID
       tags:
       - Packs
   /v1/mypack/{id}/image:
