@@ -209,7 +209,6 @@ func insertInventory(ctx context.Context, i *Inventory) error {
 		return errors.New("payload is empty")
 	}
 
-	//nolint:execinquery
 	err := database.DB().QueryRowContext(ctx,
 		`INSERT INTO inventory
 		(user_id, item_name, category, description, weight, url, price, currency, created_at, updated_at)

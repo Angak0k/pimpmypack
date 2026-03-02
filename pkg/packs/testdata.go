@@ -219,10 +219,9 @@ func loadAccounts(tx *sql.Tx) error {
 		}
 
 		// User doesn't exist, create them
-		//nolint:execinquery
 		err = tx.QueryRowContext(context.Background(),
-			`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at) 
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8) 
+			`INSERT INTO account (username, email, firstname, lastname, role, status, created_at, updated_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
 			RETURNING id;`,
 			users[i].Username,
 			users[i].Email,
@@ -247,7 +246,6 @@ func loadAccounts(tx *sql.Tx) error {
 		}
 
 		var passwordID uint
-		//nolint:execinquery
 		err = tx.QueryRowContext(context.Background(),
 			`INSERT INTO password (user_id, password, last_password, updated_at) VALUES ($1,$2,$3,$4)
 			RETURNING id;`,
@@ -300,12 +298,11 @@ func loadInventories(tx *sql.Tx) error {
 				inventoriesUserPack1[i].UserID)
 		}
 
-		//nolint:execinquery
 		err = tx.QueryRowContext(context.Background(),
-			`INSERT INTO inventory 
-			(user_id, item_name, category, description, weight, url, price, currency, 
-				created_at, updated_at) 
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) 
+			`INSERT INTO inventory
+			(user_id, item_name, category, description, weight, url, price, currency,
+				created_at, updated_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 			RETURNING id;`,
 			inventoriesUserPack1[i].UserID,
 			inventoriesUserPack1[i].ItemName,
@@ -340,10 +337,9 @@ func loadInventories(tx *sql.Tx) error {
 			return fmt.Errorf("foreign key violation: user_id %d does not exist in account table", packs[i].UserID)
 		}
 
-		//nolint:execinquery
 		err = tx.QueryRowContext(context.Background(),
-			`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at) 
-			VALUES ($1,$2,$3,$4,$5,$6) 
+			`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at)
+			VALUES ($1,$2,$3,$4,$5,$6)
 			RETURNING id;`,
 			packs[i].UserID,
 			packs[i].PackName,
@@ -426,10 +422,9 @@ func loadPackContents(tx *sql.Tx) error {
 			return fmt.Errorf("foreign key violation: item_id %d does not exist in inventory table", packItems[i].ItemID)
 		}
 
-		//nolint:execinquery
 		err = tx.QueryRowContext(context.Background(),
-			`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at) 
-			VALUES ($1,$2,$3,$4,$5,$6,$7) 
+			`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7)
 			RETURNING id;`,
 			packItems[i].PackID,
 			packItems[i].ItemID,

@@ -191,7 +191,6 @@ func insertPack(ctx context.Context, p *Pack) error {
 	p.UpdatedAt = time.Now().Truncate(time.Second)
 	// SharingCode is now NULL by default (pack is private)
 
-	//nolint:execinquery
 	err := database.DB().QueryRowContext(ctx,
 		`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at)
 		VALUES ($1,$2,$3,$4,$5,$6)
@@ -604,7 +603,6 @@ func insertPackContent(ctx context.Context, pc *PackContent) error {
 	pc.CreatedAt = time.Now().Truncate(time.Second)
 	pc.UpdatedAt = time.Now().Truncate(time.Second)
 
-	//nolint:execinquery
 	err := database.DB().QueryRowContext(ctx, `
 		INSERT INTO pack_content
 		(pack_id, item_id, quantity, worn, consumable, created_at, updated_at)

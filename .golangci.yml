@@ -57,6 +57,11 @@ linters:
     - wastedassign
     - whitespace
   settings:
+    gosec:
+      excludes:
+        - G701  # SQL taint analysis - false positives with parameterized queries ($N)
+        - G117  # Exported field matches secret pattern - legitimate API DTOs
+        - G704  # SSRF taint analysis - test HTTP client with dynamic URLs
     cyclop:
       max-complexity: 30
       package-average: 10
