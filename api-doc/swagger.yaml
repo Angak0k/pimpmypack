@@ -181,6 +181,8 @@ definitions:
         type: boolean
       id:
         type: integer
+      is_favorite:
+        type: boolean
       pack_description:
         type: string
       pack_items_count:
@@ -222,9 +224,13 @@ definitions:
       inventory_id:
         type: integer
       quantity:
+        minimum: 1
         type: integer
       worn:
         type: boolean
+    required:
+    - inventory_id
+    - quantity
     type: object
   packs.PackContentWithItem:
     properties:
@@ -986,6 +992,88 @@ paths:
       security:
       - Bearer: []
       summary: Update a pack by ID
+      tags:
+      - Packs
+  /v1/mypack/{id}/favorite:
+    delete:
+      description: Remove favorite status from a pack (idempotent)
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Pack unfavorited successfully
+          schema:
+            $ref: '#/definitions/apitypes.OkResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "403":
+          description: This pack does not belong to you
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "404":
+          description: Pack not found
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Unfavorite a pack by ID
+      tags:
+      - Packs
+    post:
+      description: Mark a pack as favorite. Only one pack per user can be favorite
+        at a time (idempotent)
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Pack favorited successfully
+          schema:
+            $ref: '#/definitions/apitypes.OkResponse'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "403":
+          description: This pack does not belong to you
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "404":
+          description: Pack not found
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Favorite a pack by ID
       tags:
       - Packs
   /v1/mypack/{id}/image:

@@ -1026,6 +1026,132 @@
                 }
             }
         },
+        "/v1/mypack/{id}/favorite": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Mark a pack as favorite. Only one pack per user can be favorite at a time (idempotent)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Packs"
+                ],
+                "summary": "Favorite a pack by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pack ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pack favorited successfully",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.OkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "This pack does not belong to you",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Pack not found",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Remove favorite status from a pack (idempotent)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Packs"
+                ],
+                "summary": "Unfavorite a pack by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pack ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Pack unfavorited successfully",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.OkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "This pack does not belong to you",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Pack not found",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/mypack/{id}/image": {
             "post": {
                 "security": [
@@ -1972,6 +2098,9 @@
                 "id": {
                     "type": "integer"
                 },
+                "is_favorite": {
+                    "type": "boolean"
+                },
                 "pack_description": {
                     "type": "string"
                 },
@@ -2026,6 +2155,10 @@
         },
         "packs.PackContentRequest": {
             "type": "object",
+            "required": [
+                "inventory_id",
+                "quantity"
+            ],
             "properties": {
                 "consumable": {
                     "type": "boolean"
@@ -2034,7 +2167,8 @@
                     "type": "integer"
                 },
                 "quantity": {
-                    "type": "integer"
+                    "type": "integer",
+                    "minimum": 1
                 },
                 "worn": {
                     "type": "boolean"
