@@ -20,7 +20,7 @@ func processUploadedProfileImage(c *gin.Context) (*ProcessedImage, error) {
 	}
 
 	if file.Size > MaxUploadSize {
-		return nil, fmt.Errorf("file size exceeds maximum allowed (%d bytes)", MaxUploadSize)
+		return nil, fmt.Errorf("%w: file size exceeds maximum allowed (%d bytes)", ErrTooLarge, MaxUploadSize)
 	}
 
 	fileReader, err := file.Open()
