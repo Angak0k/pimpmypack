@@ -281,9 +281,12 @@ func returnAccounts(ctx context.Context) (*Accounts, error) {
 	var accounts Accounts
 
 	rows, err := database.DB().QueryContext(ctx,
-		`SELECT id, username, email, firstname, lastname, role, status, preferred_currency, 
-		    preferred_unit_system, created_at, updated_at 
-		FROM account;`)
+		`SELECT a.id, a.username, a.email, a.firstname, a.lastname, a.role, a.status,
+		    a.preferred_currency, a.preferred_unit_system, a.youtube_url, a.instagram_url,
+		    CASE WHEN ai.account_id IS NOT NULL THEN true ELSE false END AS has_profile_image,
+		    a.created_at, a.updated_at
+		FROM account a
+		LEFT JOIN account_images ai ON a.id = ai.account_id;`)
 	if err != nil {
 		return nil, err
 	}
@@ -301,6 +304,9 @@ func returnAccounts(ctx context.Context) (*Accounts, error) {
 			&account.Status,
 			&account.PreferredCurrency,
 			&account.PreferredUnitSystem,
+			&account.YoutubeURL,
+			&account.InstagramURL,
+			&account.HasProfileImage,
 			&account.CreatedAt,
 			&account.UpdatedAt)
 		if err != nil {
@@ -320,10 +326,13 @@ func findAccountByID(ctx context.Context, id uint) (*Account, error) {
 	var account Account
 
 	row := database.DB().QueryRowContext(ctx,
-		`SELECT id, username, email, firstname, lastname, role, status, preferred_currency, 
-		    preferred_unit_system, created_at, updated_at 
-		FROM account 
-		WHERE id = $1;`,
+		`SELECT a.id, a.username, a.email, a.firstname, a.lastname, a.role, a.status,
+		    a.preferred_currency, a.preferred_unit_system, a.youtube_url, a.instagram_url,
+		    CASE WHEN ai.account_id IS NOT NULL THEN true ELSE false END AS has_profile_image,
+		    a.created_at, a.updated_at
+		FROM account a
+		LEFT JOIN account_images ai ON a.id = ai.account_id
+		WHERE a.id = $1;`,
 		id)
 	err := row.Scan(
 		&account.ID,
@@ -335,6 +344,9 @@ func findAccountByID(ctx context.Context, id uint) (*Account, error) {
 		&account.Status,
 		&account.PreferredCurrency,
 		&account.PreferredUnitSystem,
+		&account.YoutubeURL,
+		&account.InstagramURL,
+		&account.HasProfileImage,
 		&account.CreatedAt,
 		&account.UpdatedAt)
 
@@ -357,12 +369,12 @@ func insertAccount(ctx context.Context, a *Account) error {
 	a.UpdatedAt = time.Now().Truncate(time.Second)
 
 	err := database.DB().QueryRowContext(ctx,
-		`INSERT INTO account (username, email, firstname, lastname, role, status, preferred_currency, 
-		    preferred_unit_system, created_at, updated_at) 
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+		`INSERT INTO account (username, email, firstname, lastname, role, status, preferred_currency,
+		    preferred_unit_system, youtube_url, instagram_url, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 		RETURNING id;`,
-		a.Username, a.Email, a.Firstname, a.Lastname, a.Role, a.Status, "EUR", "METRIC", a.CreatedAt,
-		a.UpdatedAt).Scan(&a.ID)
+		a.Username, a.Email, a.Firstname, a.Lastname, a.Role, a.Status, "EUR", "METRIC",
+		a.YoutubeURL, a.InstagramURL, a.CreatedAt, a.UpdatedAt).Scan(&a.ID)
 
 	if err != nil {
 		return err
@@ -381,9 +393,9 @@ func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 	a.ID = id
 	a.UpdatedAt = time.Now().Truncate(time.Second)
 	statement, err := database.DB().PrepareContext(ctx,
-		`UPDATE account SET email=$1, firstname=$2, lastname=$3, status=$4, role=$5, preferred_currency=$6, 
-		    preferred_unit_system=$7, updated_at=$8 
-		WHERE id=$9 RETURNING username;`)
+		`UPDATE account SET email=$1, firstname=$2, lastname=$3, status=$4, role=$5, preferred_currency=$6,
+		    preferred_unit_system=$7, youtube_url=$8, instagram_url=$9, updated_at=$10
+		WHERE id=$11 RETURNING username;`)
 	if err != nil {
 		return err
 	}
@@ -391,16 +403,24 @@ func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 	defer statement.Close()
 
 	err = statement.QueryRowContext(ctx, a.Email, a.Firstname, a.Lastname, a.Status, a.Role, a.PreferredCurrency,
-		a.PreferredUnitSystem, a.UpdatedAt, a.ID).Scan(&a.Username)
+		a.PreferredUnitSystem, a.YoutubeURL, a.InstagramURL, a.UpdatedAt, a.ID).Scan(&a.Username)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
+// normalizeEmptyStringPtr converts empty string pointers to nil for clean DB storage
+func normalizeEmptyStringPtr(s *string) *string {
+	if s != nil && *s == "" {
+		return nil
+	}
+	return s
+}
+
 // updateMyAccount updates only user-controllable fields of an account
 // SECURITY: This function explicitly excludes role, status, username to prevent privilege escalation
-// Only safe fields can be updated: email, firstname, lastname, preferences
+// Only safe fields can be updated: email, firstname, lastname, preferences, social URLs
 func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput) (*Account, error) {
 	if input == nil {
 		return nil, errors.New("input is empty")
@@ -411,16 +431,21 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 		return nil, errors.New("invalid email format")
 	}
 
+	// Normalize empty strings to nil for optional URL fields
+	input.YoutubeURL = normalizeEmptyStringPtr(input.YoutubeURL)
+	input.InstagramURL = normalizeEmptyStringPtr(input.InstagramURL)
+
 	now := time.Now().Truncate(time.Second)
 
 	// Update ONLY safe fields - explicitly excludes role, status, username
 	statement, err := database.DB().PrepareContext(ctx,
 		`UPDATE account
 		 SET email=$1, firstname=$2, lastname=$3, preferred_currency=$4,
-		     preferred_unit_system=$5, updated_at=$6
-		 WHERE id=$7
+		     preferred_unit_system=$5, youtube_url=$6, instagram_url=$7, updated_at=$8
+		 WHERE id=$9
 		 RETURNING id, username, email, firstname, lastname, role, status,
-		           preferred_currency, preferred_unit_system, created_at, updated_at;`)
+		           preferred_currency, preferred_unit_system, youtube_url, instagram_url,
+		           created_at, updated_at;`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare statement: %w", err)
 	}
@@ -433,6 +458,8 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 		input.Lastname,
 		input.PreferredCurrency,
 		input.PreferredUnitSystem,
+		input.YoutubeURL,
+		input.InstagramURL,
 		now,
 		userID,
 	).Scan(
@@ -445,6 +472,8 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 		&account.Status,
 		&account.PreferredCurrency,
 		&account.PreferredUnitSystem,
+		&account.YoutubeURL,
+		&account.InstagramURL,
 		&account.CreatedAt,
 		&account.UpdatedAt,
 	)
@@ -455,6 +484,17 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 	if err != nil {
 		return nil, fmt.Errorf("failed to update account: %w", err)
 	}
+
+	// Compute has_profile_image separately
+	var hasProfileImage bool
+	err = database.DB().QueryRowContext(ctx,
+		`SELECT EXISTS(SELECT 1 FROM account_images WHERE account_id = $1)`,
+		userID,
+	).Scan(&hasProfileImage)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check profile image: %w", err)
+	}
+	account.HasProfileImage = hasProfileImage
 
 	return &account, nil
 }

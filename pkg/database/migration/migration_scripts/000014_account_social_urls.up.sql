@@ -1,0 +1,2 @@
+ALTER TABLE "account" ADD COLUMN IF NOT EXISTS youtube_url TEXT;
+ALTER TABLE "account" ADD COLUMN IF NOT EXISTS instagram_url TEXT;

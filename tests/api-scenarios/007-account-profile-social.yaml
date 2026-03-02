@@ -1,0 +1,191 @@
+name: "Account Profile: Social URLs and Profile Image"
+base_url: "http://localhost:8080/api"
+scenarios:
+  - name: "Register new user for profile testing"
+    request:
+      method: POST
+      endpoint: "/register"
+      body:
+        username: "test_profile_{{timestamp}}"
+        email: "profile_{{timestamp}}@example.com"
+        password: "ProfileTest123!"
+        firstname: "Profile"
+        lastname: "Tester"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      username: "{{request.body.username}}"
+      email: "{{request.body.email}}"
+      password: "{{request.body.password}}"
+
+  - name: "Confirm email"
+    request:
+      method: GET
+      endpoint: "/confirmemail?username={{username}}&email={{email}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Login to get access token"
+    request:
+      method: POST
+      endpoint: "/login"
+      body:
+        username: "{{username}}"
+        password: "{{password}}"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      access_token: "{{response.access_token}}"
+
+  - name: "Verify initial account has no social URLs and no profile image"
+    request:
+      method: GET
+      endpoint: "/v1/myaccount"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.youtube_url"
+        equals: "null"
+      - type: json_path
+        path: "$.instagram_url"
+        equals: "null"
+      - type: json_path
+        path: "$.has_profile_image"
+        equals: "false"
+    store:
+      user_id: "{{response.id}}"
+
+  - name: "Update account with YouTube and Instagram URLs"
+    request:
+      method: PUT
+      endpoint: "/v1/myaccount"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        email: "{{email}}"
+        firstname: "Profile"
+        lastname: "Tester"
+        youtube_url: "https://youtube.com/@testchannel"
+        instagram_url: "https://instagram.com/testuser"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.youtube_url"
+        equals: "https://youtube.com/@testchannel"
+      - type: json_path
+        path: "$.instagram_url"
+        equals: "https://instagram.com/testuser"
+
+  - name: "Verify social URLs are persisted"
+    request:
+      method: GET
+      endpoint: "/v1/myaccount"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.youtube_url"
+        equals: "https://youtube.com/@testchannel"
+      - type: json_path
+        path: "$.instagram_url"
+        equals: "https://instagram.com/testuser"
+
+  - name: "Clear YouTube URL by sending empty string"
+    request:
+      method: PUT
+      endpoint: "/v1/myaccount"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        email: "{{email}}"
+        firstname: "Profile"
+        lastname: "Tester"
+        youtube_url: ""
+        instagram_url: "https://instagram.com/testuser"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.youtube_url"
+        equals: "null"
+      - type: json_path
+        path: "$.instagram_url"
+        equals: "https://instagram.com/testuser"
+
+  - name: "Upload profile image"
+    request:
+      method: POST
+      endpoint: "/v1/myaccount/image"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      multipart:
+        image:
+          file: "fixtures/test-profile.jpg"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.message"
+        equals: "Profile image uploaded successfully"
+      - type: json_path
+        path: "$.mime_type"
+        equals: "image/jpeg"
+      - type: json_path
+        path: "$.width"
+        exists: true
+      - type: json_path
+        path: "$.height"
+        exists: true
+
+  - name: "Verify has_profile_image is true after upload"
+    request:
+      method: GET
+      endpoint: "/v1/myaccount"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.has_profile_image"
+        equals: "true"
+
+  - name: "Get profile image via public endpoint"
+    request:
+      method: GET
+      endpoint: "/v1/accounts/{{user_id}}/image"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: content_type
+        expected: "image/jpeg"
+
+  - name: "Delete profile image"
+    request:
+      method: DELETE
+      endpoint: "/v1/myaccount/image"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.message"
+        equals: "Profile image deleted successfully"
+
+  - name: "Verify profile image is gone (404)"
+    request:
+      method: GET
+      endpoint: "/v1/accounts/{{user_id}}/image"
+    assertions:
+      - type: status_code
+        expected: 404
