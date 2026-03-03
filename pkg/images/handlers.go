@@ -18,12 +18,12 @@ func processUploadedImage(c *gin.Context) (*ProcessedImage, error) {
 	// Get file from form data
 	file, err := c.FormFile("image")
 	if err != nil {
-		return nil, errors.New("no image file provided")
+		return nil, errors.New(ErrMsgNoImageProvided)
 	}
 
 	// Check file size (5MB limit)
 	if file.Size > MaxUploadSize {
-		return nil, fmt.Errorf("file size exceeds maximum allowed (%d bytes)", MaxUploadSize)
+		return nil, fmt.Errorf("file size exceeds maximum allowed (%d bytes): %w", MaxUploadSize, ErrTooLarge)
 	}
 
 	// Open file
@@ -118,7 +118,7 @@ func UploadPackImage(c *gin.Context) {
 			return
 		}
 		// Generic file upload errors
-		if err.Error() == "no image file provided" {
+		if err.Error() == ErrMsgNoImageProvided {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "No image file provided"})
 			return
 		}

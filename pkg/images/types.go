@@ -5,6 +5,11 @@ import (
 	"errors"
 )
 
+const (
+	// ErrMsgNoImageProvided is the error message when no image file is provided
+	ErrMsgNoImageProvided = "no image file provided"
+)
+
 var (
 	// ErrNotFound is returned when an image is not found
 	ErrNotFound = errors.New("image not found")
@@ -69,4 +74,21 @@ type AccountImageStorage interface {
 
 	// Exists checks if a profile image exists for an account
 	Exists(ctx context.Context, accountID uint) (bool, error)
+}
+
+// InventoryImageStorage defines the interface for inventory item image storage operations
+type InventoryImageStorage interface {
+	// Save stores an image for an inventory item
+	Save(ctx context.Context, itemID uint, data []byte, metadata ImageMetadata) error
+
+	// Get retrieves an image for an inventory item
+	// Returns ErrNotFound if the image doesn't exist
+	Get(ctx context.Context, itemID uint) (*Image, error)
+
+	// Delete removes an image for an inventory item
+	// Returns nil if the image doesn't exist (idempotent)
+	Delete(ctx context.Context, itemID uint) error
+
+	// Exists checks if an image exists for an inventory item
+	Exists(ctx context.Context, itemID uint) (bool, error)
 }

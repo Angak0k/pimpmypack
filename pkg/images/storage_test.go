@@ -11,7 +11,7 @@ import (
 	"github.com/Angak0k/pimpmypack/pkg/database"
 )
 
-var testStorage *DBImageStorage
+var testStorage *DBStorage
 
 func TestMain(m *testing.M) {
 	// Init env

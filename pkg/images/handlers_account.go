@@ -16,7 +16,7 @@ var accountStorage AccountImageStorage = NewDBAccountImageStorage()
 func processUploadedProfileImage(c *gin.Context) (*ProcessedImage, error) {
 	file, err := c.FormFile("image")
 	if err != nil {
-		return nil, errors.New("no image file provided")
+		return nil, errors.New(ErrMsgNoImageProvided)
 	}
 
 	if file.Size > MaxUploadSize {
@@ -75,7 +75,7 @@ func UploadMyProfileImage(c *gin.Context) {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Corrupted or invalid image file"})
 			return
 		}
-		if err.Error() == "no image file provided" {
+		if err.Error() == ErrMsgNoImageProvided {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "No image file provided"})
 			return
 		}
