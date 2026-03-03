@@ -19,11 +19,11 @@ var (
 
 // Allowed metadata values for pack categorization
 
-// AllowedSeasons defines the valid season values for a pack
-var AllowedSeasons = []string{"Winter", "3-Season", "Summer"}
+// allowedSeasons defines the valid season values for a pack
+var allowedSeasons = []string{"Winter", "3-Season", "Summer"}
 
-// AllowedTrails defines the valid trail values for a pack
-var AllowedTrails = []string{
+// allowedTrails defines the valid trail values for a pack
+var allowedTrails = []string{
 	"Appalachian Trail", "Pacific Crest Trail", "Continental Divide Trail",
 	"John Muir Trail", "Colorado Trail",
 	"GR20", "GR10", "GR34", "GR5", "GR54", "HRP", "Hexatrek", "Tour du Mont Blanc",
@@ -32,8 +32,8 @@ var AllowedTrails = []string{
 	"Te Araroa", "Milford Track", "Routeburn Track", "Tongariro Northern Circuit",
 }
 
-// AllowedAdventures defines the valid adventure type values for a pack
-var AllowedAdventures = []string{"Bikepacking", "Backpacking", "Thru-hike", "Backcountry Skiing"}
+// allowedAdventures defines the valid adventure type values for a pack
+var allowedAdventures = []string{"Bikepacking", "Backpacking", "Thru-hike", "Backcountry Skiing"}
 
 // Pack represents a pack with its metadata
 type Pack struct {
@@ -195,6 +195,15 @@ type PackOptionsResponse struct {
 	Seasons    []string `json:"seasons"`
 	Trails     []string `json:"trails"`
 	Adventures []string `json:"adventures"`
+}
+
+// GetPackOptionsValues returns a defensive copy of the allowed metadata values
+func GetPackOptionsValues() PackOptionsResponse {
+	return PackOptionsResponse{
+		Seasons:    append([]string{}, allowedSeasons...),
+		Trails:     append([]string{}, allowedTrails...),
+		Adventures: append([]string{}, allowedAdventures...),
+	}
 }
 
 // isAllowedValue checks if a value is in the allowed list.

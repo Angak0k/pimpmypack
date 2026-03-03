@@ -1832,14 +1832,15 @@ func TestGetPackOptions(t *testing.T) {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
 
-		if len(response.Seasons) != 3 {
-			t.Errorf("Expected 3 seasons but got %d", len(response.Seasons))
+		expectedOptions := GetPackOptionsValues()
+		if diff := cmp.Diff(expectedOptions.Seasons, response.Seasons); diff != "" {
+			t.Errorf("Seasons mismatch (-want +got):\n%s", diff)
 		}
-		if len(response.Trails) != 24 {
-			t.Errorf("Expected 24 trails but got %d", len(response.Trails))
+		if diff := cmp.Diff(expectedOptions.Trails, response.Trails); diff != "" {
+			t.Errorf("Trails mismatch (-want +got):\n%s", diff)
 		}
-		if len(response.Adventures) != 4 {
-			t.Errorf("Expected 4 adventures but got %d", len(response.Adventures))
+		if diff := cmp.Diff(expectedOptions.Adventures, response.Adventures); diff != "" {
+			t.Errorf("Adventures mismatch (-want +got):\n%s", diff)
 		}
 	})
 }

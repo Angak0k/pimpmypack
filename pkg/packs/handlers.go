@@ -1260,13 +1260,13 @@ func ImportFromLighterPack(c *gin.Context) {
 // validatePackMetadata checks that season, trail, and adventure values are allowed.
 // Returns nil if all values are valid or nil.
 func validatePackMetadata(season, trail, adventure *string) error {
-	if !isAllowedValue(season, AllowedSeasons) {
+	if !isAllowedValue(season, allowedSeasons) {
 		return errors.New("invalid season value")
 	}
-	if !isAllowedValue(trail, AllowedTrails) {
+	if !isAllowedValue(trail, allowedTrails) {
 		return errors.New("invalid trail value")
 	}
-	if !isAllowedValue(adventure, AllowedAdventures) {
+	if !isAllowedValue(adventure, allowedAdventures) {
 		return errors.New("invalid adventure value")
 	}
 	return nil
@@ -1277,15 +1277,11 @@ func validatePackMetadata(season, trail, adventure *string) error {
 // @Description Returns the allowed values for season, trail, and adventure fields
 // @Tags Packs
 // @Produce json
-// @Security BearerAuth
+// @Security Bearer
 // @Success 200 {object} PackOptionsResponse
 // @Router /v1/pack-options [get]
 func GetPackOptions(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, PackOptionsResponse{
-		Seasons:    AllowedSeasons,
-		Trails:     AllowedTrails,
-		Adventures: AllowedAdventures,
-	})
+	c.IndentedJSON(http.StatusOK, GetPackOptionsValues())
 }
 
 // SharedList gets pack metadata and contents for a shared pack

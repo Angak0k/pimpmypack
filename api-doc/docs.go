@@ -2883,7 +2883,7 @@ const docTemplate = `{
             "get": {
                 "security": [
                     {
-                        "BearerAuth": []
+                        "Bearer": []
                     }
                 ],
                 "description": "Returns the allowed values for season, trail, and adventure fields",

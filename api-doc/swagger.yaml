@@ -2296,7 +2296,7 @@ paths:
           schema:
             $ref: '#/definitions/packs.PackOptionsResponse'
       security:
-      - BearerAuth: []
+      - Bearer: []
       summary: Get allowed values for pack metadata
       tags:
       - Packs
