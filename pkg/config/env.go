@@ -43,6 +43,7 @@ var (
 	RefreshRateLimitRequests         int
 	RefreshRateLimitWindowMinutes    int
 	MailServerConfig                 MailServer
+	SeedOnStartup                    bool
 )
 
 type Config struct {
@@ -59,6 +60,7 @@ type Config struct {
 	RefreshRateLimitRequests         int
 	RefreshRateLimitWindowMinutes    int
 	MailServer                       MailServer
+	SeedOnStartup                    bool
 }
 
 func EnvInit(envFilePath string) error {
@@ -84,6 +86,7 @@ func EnvInit(envFilePath string) error {
 	RefreshRateLimitRequests = newConfig.RefreshRateLimitRequests
 	RefreshRateLimitWindowMinutes = newConfig.RefreshRateLimitWindowMinutes
 	MailServerConfig = newConfig.MailServer
+	SeedOnStartup = newConfig.SeedOnStartup
 
 	return nil
 }
@@ -164,6 +167,7 @@ func setEnvVars(cfg *Config) {
 	cfg.MailServer.MailPassword = os.Getenv("MAIL_PASSWORD")
 	cfg.MailServer.MailServer = os.Getenv("MAIL_SERVER")
 	cfg.MailServer.MailPort, _ = strconv.Atoi(ifEnvEmpty(os.Getenv("MAIL_PORT"), strconv.Itoa(cfg.MailServer.MailPort)))
+	cfg.SeedOnStartup = os.Getenv("SEED_ON_STARTUP") == "true"
 }
 
 func ifEnvEmpty(envVar, defaultValue string) string {

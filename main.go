@@ -10,6 +10,7 @@ import (
 	"github.com/Angak0k/pimpmypack/pkg/accounts"
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
+	"github.com/Angak0k/pimpmypack/pkg/database/seed"
 	"github.com/Angak0k/pimpmypack/pkg/images"
 	"github.com/Angak0k/pimpmypack/pkg/inventories"
 	"github.com/Angak0k/pimpmypack/pkg/packs"
@@ -41,6 +42,13 @@ func initApp() error {
 	err = database.Migrate()
 	if err != nil {
 		return fmt.Errorf("error migrating database : %w", err)
+	}
+
+	// seed DB for local development
+	if config.SeedOnStartup && config.Stage == envLocal {
+		if err := seed.Seed(context.Background()); err != nil {
+			log.Printf("WARNING: seed failed: %v", err)
+		}
 	}
 
 	return nil
