@@ -40,6 +40,25 @@ scenarios:
     store:
       access_token: "{{response.access_token}}"
 
+  - name: "Get pack options (authenticated endpoint)"
+    request:
+      method: GET
+      endpoint: "/v1/pack-options"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.seasons"
+        exists: true
+      - type: json_path
+        path: "$.trails"
+        exists: true
+      - type: json_path
+        path: "$.adventures"
+        exists: true
+
   - name: "Create a new pack"
     request:
       method: POST
@@ -49,6 +68,9 @@ scenarios:
       body:
         pack_name: "Weekend Hiking Pack"
         pack_description: "A lightweight pack for weekend hikes"
+        season: "3-Season"
+        trail: "GR20"
+        adventure: "Backpacking"
     assertions:
       - type: status_code
         expected: 201
@@ -58,6 +80,15 @@ scenarios:
       - type: json_path
         path: "$.pack_name"
         equals: "Weekend Hiking Pack"
+      - type: json_path
+        path: "$.season"
+        equals: "3-Season"
+      - type: json_path
+        path: "$.trail"
+        equals: "GR20"
+      - type: json_path
+        path: "$.adventure"
+        equals: "Backpacking"
     store:
       pack_id: "{{response.id}}"
 
@@ -76,6 +107,15 @@ scenarios:
       - type: json_path
         path: "$.pack_name"
         equals: "Weekend Hiking Pack"
+      - type: json_path
+        path: "$.season"
+        equals: "3-Season"
+      - type: json_path
+        path: "$.trail"
+        equals: "GR20"
+      - type: json_path
+        path: "$.adventure"
+        equals: "Backpacking"
 
   - name: "List all user packs"
     request:
@@ -92,6 +132,9 @@ scenarios:
       - type: json_path
         path: "$[0].pack_name"
         equals: "Weekend Hiking Pack"
+      - type: json_path
+        path: "$[0].season"
+        equals: "3-Season"
 
   - name: "Update pack details"
     request:
@@ -102,12 +145,24 @@ scenarios:
       body:
         pack_name: "Updated Weekend Pack"
         pack_description: "An updated description for the pack"
+        season: "Winter"
+        trail: "Pacific Crest Trail"
+        adventure: "Thru-hike"
     assertions:
       - type: status_code
         expected: 200
       - type: json_path
         path: "$.pack_name"
         equals: "Updated Weekend Pack"
+      - type: json_path
+        path: "$.season"
+        equals: "Winter"
+      - type: json_path
+        path: "$.trail"
+        equals: "Pacific Crest Trail"
+      - type: json_path
+        path: "$.adventure"
+        equals: "Thru-hike"
 
   - name: "Get pack contents (should be empty initially)"
     request:
@@ -207,6 +262,15 @@ scenarios:
       - type: json_path
         path: "$.pack.pack_name"
         equals: "Updated Weekend Pack"
+      - type: json_path
+        path: "$.pack.season"
+        equals: "Winter"
+      - type: json_path
+        path: "$.pack.trail"
+        equals: "Pacific Crest Trail"
+      - type: json_path
+        path: "$.pack.adventure"
+        equals: "Thru-hike"
       - type: json_path
         path: "$.contents"
         exists: true

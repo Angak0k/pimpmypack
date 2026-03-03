@@ -303,6 +303,70 @@ scenarios:
         path: "$[0].pack_content_id"
         equals: "{{pack_content_id}}"
 
+  # Test 14: Invalid season value returns 400
+  - name: "Security: Invalid season value returns 400"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        pack_name: "Invalid Season Pack"
+        pack_description: "Testing invalid season"
+        season: "Autumn"
+    assertions:
+      - type: status_code
+        expected: 400
+
+  # Test 15: Invalid trail value returns 400
+  - name: "Security: Invalid trail value returns 400"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        pack_name: "Invalid Trail Pack"
+        pack_description: "Testing invalid trail"
+        trail: "Unknown Trail"
+    assertions:
+      - type: status_code
+        expected: 400
+
+  # Test 16: Invalid adventure value returns 400
+  - name: "Security: Invalid adventure value returns 400"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        pack_name: "Invalid Adventure Pack"
+        pack_description: "Testing invalid adventure"
+        adventure: "Sailing"
+    assertions:
+      - type: status_code
+        expected: 400
+
+  # Test 17: Null metadata accepted (backward compatibility)
+  - name: "Security: Pack creation with null metadata succeeds"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      body:
+        pack_name: "No Metadata Pack"
+        pack_description: "Pack without metadata fields"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+    store:
+      pack_id_test17: "{{response.id}}"
+
   # Cleanup: Delete all test resources
   - name: "Cleanup: Delete pack content"
     request:
@@ -348,6 +412,16 @@ scenarios:
     request:
       method: DELETE
       endpoint: "/v1/mypack/{{pack_id_test11}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: Delete pack_id_test17"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id_test17}}"
       headers:
         Authorization: "Bearer {{access_token}}"
     assertions:

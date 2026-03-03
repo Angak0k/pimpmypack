@@ -97,10 +97,18 @@ func PostPack(c *gin.Context) {
 		return
 	}
 
+	if err := validatePackMetadata(input.Season, input.Trail, input.Adventure); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	newPack := Pack{
 		UserID:          input.UserID,
 		PackName:        input.PackName,
 		PackDescription: input.PackDescription,
+		Season:          input.Season,
+		Trail:           input.Trail,
+		Adventure:       input.Adventure,
 	}
 
 	err := insertPack(c.Request.Context(), &newPack)
@@ -139,6 +147,11 @@ func PutPackByID(c *gin.Context) {
 		return
 	}
 
+	if err := validatePackMetadata(input.Season, input.Trail, input.Adventure); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	// Fetch existing pack to preserve UserID and other fields
 	existingPack, err := findPackByID(c.Request.Context(), id)
 	if err != nil {
@@ -156,6 +169,9 @@ func PutPackByID(c *gin.Context) {
 		UserID:          existingPack.UserID, // Preserve existing UserID
 		PackName:        input.PackName,
 		PackDescription: input.PackDescription,
+		Season:          input.Season,
+		Trail:           input.Trail,
+		Adventure:       input.Adventure,
 		CreatedAt:       existingPack.CreatedAt,      // Preserve existing CreatedAt
 		UpdatedAt:       existingPack.UpdatedAt,      // Preserve existing UpdatedAt
 		SharingCode:     existingPack.SharingCode,    // Preserve existing SharingCode
@@ -318,10 +334,18 @@ func PostMyPack(c *gin.Context) {
 		return
 	}
 
+	if err := validatePackMetadata(input.Season, input.Trail, input.Adventure); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	newPack := Pack{
 		UserID:          userID, // From JWT, cannot be overridden
 		PackName:        input.PackName,
 		PackDescription: input.PackDescription,
+		Season:          input.Season,
+		Trail:           input.Trail,
+		Adventure:       input.Adventure,
 	}
 
 	err = insertPack(c.Request.Context(), &newPack)
@@ -371,6 +395,11 @@ func PutMyPackByID(c *gin.Context) {
 		return
 	}
 
+	if err := validatePackMetadata(input.Season, input.Trail, input.Adventure); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	// Check existence first
 	// Fetch existing pack to preserve fields like CreatedAt, UpdatedAt,
 	// SharingCode, PackWeight, PackItemsCount, and HasImage
@@ -396,6 +425,9 @@ func PutMyPackByID(c *gin.Context) {
 	updatedPack.UserID = userID
 	updatedPack.PackName = input.PackName
 	updatedPack.PackDescription = input.PackDescription
+	updatedPack.Season = input.Season
+	updatedPack.Trail = input.Trail
+	updatedPack.Adventure = input.Adventure
 
 	err = updatePackByID(c.Request.Context(), id, &updatedPack)
 	if err != nil {
@@ -1222,6 +1254,37 @@ func ImportFromLighterPack(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"message": "CSV data imported successfully",
 		"pack_id": packID,
+	})
+}
+
+// validatePackMetadata checks that season, trail, and adventure values are allowed.
+// Returns nil if all values are valid or nil.
+func validatePackMetadata(season, trail, adventure *string) error {
+	if !isAllowedValue(season, AllowedSeasons) {
+		return errors.New("invalid season value")
+	}
+	if !isAllowedValue(trail, AllowedTrails) {
+		return errors.New("invalid trail value")
+	}
+	if !isAllowedValue(adventure, AllowedAdventures) {
+		return errors.New("invalid adventure value")
+	}
+	return nil
+}
+
+// Get pack options
+// @Summary Get allowed values for pack metadata
+// @Description Returns the allowed values for season, trail, and adventure fields
+// @Tags Packs
+// @Produce json
+// @Security BearerAuth
+// @Success 200 {object} PackOptionsResponse
+// @Router /v1/pack-options [get]
+func GetPackOptions(c *gin.Context) {
+	c.IndentedJSON(http.StatusOK, PackOptionsResponse{
+		Seasons:    AllowedSeasons,
+		Trails:     AllowedTrails,
+		Adventures: AllowedAdventures,
 	})
 }
 
