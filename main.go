@@ -121,6 +121,7 @@ func setupProtectedRoutes(router *gin.Engine) {
 	protected.PUT("/myaccount", accounts.PutMyAccount)
 	protected.PUT("/mypassword", accounts.PutMyPassword)
 	protected.GET("/myinventory", inventories.GetMyInventory)
+	protected.GET("/pack-options", packs.GetPackOptions)
 	protected.GET("/mypacks", packs.GetMyPacks)
 	protected.GET("/mypack/:id", packs.GetMyPackByID)
 	protected.POST("/mypack", packs.PostMyPack)

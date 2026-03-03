@@ -1,0 +1,3 @@
+ALTER TABLE "pack" ADD COLUMN "season" TEXT;
+ALTER TABLE "pack" ADD COLUMN "trail" TEXT;
+ALTER TABLE "pack" ADD COLUMN "adventure" TEXT;

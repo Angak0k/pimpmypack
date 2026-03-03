@@ -260,8 +260,8 @@ func TestPostPack(t *testing.T) {
 		// Query the database to get the inserted pack
 		var insertedPack Pack
 		row := database.DB().QueryRow(
-			`SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at 
-			FROM pack 
+			`SELECT id, user_id, pack_name, pack_description, sharing_code, season, trail, adventure, created_at, updated_at
+			FROM pack
 			WHERE pack_name = $1;`,
 			newPack.PackName)
 		err = row.Scan(
@@ -270,6 +270,9 @@ func TestPostPack(t *testing.T) {
 			&insertedPack.PackName,
 			&insertedPack.PackDescription,
 			&insertedPack.SharingCode,
+			&insertedPack.Season,
+			&insertedPack.Trail,
+			&insertedPack.Adventure,
 			&insertedPack.CreatedAt,
 			&insertedPack.UpdatedAt)
 		if err != nil {
@@ -343,8 +346,8 @@ func TestPutPackByID(t *testing.T) {
 		// Query the database to get the updated pack
 		var updatedPack Pack
 		row := database.DB().QueryRow(
-			`SELECT id, user_id, pack_name, pack_description, sharing_code, created_at, updated_at 
-			FROM pack 
+			`SELECT id, user_id, pack_name, pack_description, sharing_code, season, trail, adventure, created_at, updated_at
+			FROM pack
 			WHERE id = $1;`,
 			packs[2].ID)
 		err = row.Scan(
@@ -353,6 +356,9 @@ func TestPutPackByID(t *testing.T) {
 			&updatedPack.PackName,
 			&updatedPack.PackDescription,
 			&updatedPack.SharingCode,
+			&updatedPack.Season,
+			&updatedPack.Trail,
+			&updatedPack.Adventure,
 			&updatedPack.CreatedAt,
 			&updatedPack.UpdatedAt)
 		if err != nil {
@@ -1800,5 +1806,202 @@ func TestUnfavoriteMyPack(t *testing.T) {
 	})
 	t.Run("Pack not found", func(t *testing.T) {
 		testUnfavoriteNotFound(t, router, token)
+	})
+}
+
+func TestGetPackOptions(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.GET("/pack-options", GetPackOptions)
+
+	t.Run("Returns all allowed values", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/pack-options", nil)
+		if err != nil {
+			t.Fatalf("Failed to create request: %v", err)
+		}
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
+		}
+
+		var response PackOptionsResponse
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to unmarshal response body: %v", err)
+		}
+
+		expectedOptions := GetPackOptionsValues()
+		if diff := cmp.Diff(expectedOptions.Seasons, response.Seasons); diff != "" {
+			t.Errorf("Seasons mismatch (-want +got):\n%s", diff)
+		}
+		if diff := cmp.Diff(expectedOptions.Trails, response.Trails); diff != "" {
+			t.Errorf("Trails mismatch (-want +got):\n%s", diff)
+		}
+		if diff := cmp.Diff(expectedOptions.Adventures, response.Adventures); diff != "" {
+			t.Errorf("Adventures mismatch (-want +got):\n%s", diff)
+		}
+	})
+}
+
+func testPostPackValidMetadata(t *testing.T, router *gin.Engine) {
+	season := "Winter"
+	trail := "GR20"
+	adventure := "Thru-hike"
+	newPack := PackCreateAdminRequest{
+		UserID:          users[0].ID,
+		PackName:        "MetadataPack",
+		PackDescription: "Pack with metadata",
+		Season:          &season,
+		Trail:           &trail,
+		Adventure:       &adventure,
+	}
+
+	jsonData, err := json.Marshal(newPack)
+	if err != nil {
+		t.Fatalf("Failed to marshal pack data: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/packs", bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected status code %d but got %d. Body: %s",
+			http.StatusCreated, w.Code, w.Body.String())
+		return
+	}
+
+	var receivedPack Pack
+	if err := json.Unmarshal(w.Body.Bytes(), &receivedPack); err != nil {
+		t.Fatalf("Failed to unmarshal response body: %v", err)
+	}
+
+	if receivedPack.Season == nil || *receivedPack.Season != "Winter" {
+		t.Errorf("Expected season 'Winter' but got %v", receivedPack.Season)
+	}
+	if receivedPack.Trail == nil || *receivedPack.Trail != "GR20" {
+		t.Errorf("Expected trail 'GR20' but got %v", receivedPack.Trail)
+	}
+	if receivedPack.Adventure == nil || *receivedPack.Adventure != "Thru-hike" {
+		t.Errorf("Expected adventure 'Thru-hike' but got %v", receivedPack.Adventure)
+	}
+
+	// Cleanup
+	if receivedPack.ID != 0 {
+		_, _ = database.DB().ExecContext(context.Background(),
+			"DELETE FROM pack WHERE id = $1", receivedPack.ID)
+	}
+}
+
+func testPostPackNilMetadata(t *testing.T, router *gin.Engine) {
+	newPack := PackCreateAdminRequest{
+		UserID:          users[0].ID,
+		PackName:        "NilMetadataPack",
+		PackDescription: "Pack without metadata",
+	}
+
+	jsonData, err := json.Marshal(newPack)
+	if err != nil {
+		t.Fatalf("Failed to marshal pack data: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/packs", bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Errorf("Expected status code %d but got %d. Body: %s",
+			http.StatusCreated, w.Code, w.Body.String())
+		return
+	}
+
+	var receivedPack Pack
+	if err := json.Unmarshal(w.Body.Bytes(), &receivedPack); err != nil {
+		t.Fatalf("Failed to unmarshal response body: %v", err)
+	}
+
+	if receivedPack.Season != nil {
+		t.Errorf("Expected nil season but got %v", *receivedPack.Season)
+	}
+	if receivedPack.Trail != nil {
+		t.Errorf("Expected nil trail but got %v", *receivedPack.Trail)
+	}
+	if receivedPack.Adventure != nil {
+		t.Errorf("Expected nil adventure but got %v", *receivedPack.Adventure)
+	}
+
+	// Cleanup
+	if receivedPack.ID != 0 {
+		_, _ = database.DB().ExecContext(context.Background(),
+			"DELETE FROM pack WHERE id = $1", receivedPack.ID)
+	}
+}
+
+func testPostPackInvalidMetadata(t *testing.T, router *gin.Engine,
+	field string, value string) {
+	input := PackCreateAdminRequest{
+		UserID:          users[0].ID,
+		PackName:        "Invalid" + field + "Pack",
+		PackDescription: "Pack with invalid " + field,
+	}
+	switch field {
+	case "season":
+		input.Season = &value
+	case "trail":
+		input.Trail = &value
+	case "adventure":
+		input.Adventure = &value
+	}
+
+	jsonData, err := json.Marshal(input)
+	if err != nil {
+		t.Fatalf("Failed to marshal pack data: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/packs", bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status code %d but got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func TestPostPackWithMetadata(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.POST("/packs", PostPack)
+
+	t.Run("Create pack with valid metadata", func(t *testing.T) {
+		testPostPackValidMetadata(t, router)
+	})
+	t.Run("Create pack with nil metadata (backward compat)", func(t *testing.T) {
+		testPostPackNilMetadata(t, router)
+	})
+	t.Run("Create pack with invalid season returns 400", func(t *testing.T) {
+		testPostPackInvalidMetadata(t, router, "season", "Autumn")
+	})
+	t.Run("Create pack with invalid trail returns 400", func(t *testing.T) {
+		testPostPackInvalidMetadata(t, router, "trail", "Unknown Trail")
+	})
+	t.Run("Create pack with invalid adventure returns 400", func(t *testing.T) {
+		testPostPackInvalidMetadata(t, router, "adventure", "Sailing")
 	})
 }

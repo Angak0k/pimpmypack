@@ -17,6 +17,24 @@ var (
 	ErrPackNotOwned = errors.New("pack does not belong to user")
 )
 
+// Allowed metadata values for pack categorization
+
+// allowedSeasons defines the valid season values for a pack
+var allowedSeasons = []string{"Winter", "3-Season", "Summer"}
+
+// allowedTrails defines the valid trail values for a pack
+var allowedTrails = []string{
+	"Appalachian Trail", "Pacific Crest Trail", "Continental Divide Trail",
+	"John Muir Trail", "Colorado Trail",
+	"GR20", "GR10", "GR34", "GR5", "GR54", "HRP", "Hexatrek", "Tour du Mont Blanc",
+	"Camino de Santiago", "Alta Via 1", "West Highland Way", "Kungsleden",
+	"Kumano Kodo", "Nakasendo Trail", "Shikoku Pilgrimage",
+	"Te Araroa", "Milford Track", "Routeburn Track", "Tongariro Northern Circuit",
+}
+
+// allowedAdventures defines the valid adventure type values for a pack
+var allowedAdventures = []string{"Bikepacking", "Backpacking", "Thru-hike", "Backcountry Skiing"}
+
 // Pack represents a pack with its metadata
 type Pack struct {
 	ID              uint      `json:"id"`
@@ -28,6 +46,9 @@ type Pack struct {
 	SharingCode     *string   `json:"sharing_code,omitempty"`
 	IsFavorite      bool      `json:"is_favorite"`
 	HasImage        bool      `json:"has_image"`
+	Season          *string   `json:"season,omitempty"`
+	Trail           *string   `json:"trail,omitempty"`
+	Adventure       *string   `json:"adventure,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 }
@@ -37,21 +58,30 @@ type Packs []Pack
 
 // PackCreateRequest represents the input for creating a pack (user endpoint)
 type PackCreateRequest struct {
-	PackName        string `json:"pack_name" binding:"required"`
-	PackDescription string `json:"pack_description"`
+	PackName        string  `json:"pack_name" binding:"required"`
+	PackDescription string  `json:"pack_description"`
+	Season          *string `json:"season"`
+	Trail           *string `json:"trail"`
+	Adventure       *string `json:"adventure"`
 }
 
 // PackCreateAdminRequest represents the input for creating a pack (admin endpoint)
 type PackCreateAdminRequest struct {
-	UserID          uint   `json:"user_id" binding:"required"`
-	PackName        string `json:"pack_name" binding:"required"`
-	PackDescription string `json:"pack_description"`
+	UserID          uint    `json:"user_id" binding:"required"`
+	PackName        string  `json:"pack_name" binding:"required"`
+	PackDescription string  `json:"pack_description"`
+	Season          *string `json:"season"`
+	Trail           *string `json:"trail"`
+	Adventure       *string `json:"adventure"`
 }
 
 // PackUpdateRequest represents the input for updating a pack
 type PackUpdateRequest struct {
-	PackName        string `json:"pack_name" binding:"required"`
-	PackDescription string `json:"pack_description"`
+	PackName        string  `json:"pack_name" binding:"required"`
+	PackDescription string  `json:"pack_description"`
+	Season          *string `json:"season"`
+	Trail           *string `json:"trail"`
+	Adventure       *string `json:"adventure"`
 }
 
 // PackContent represents an item in a pack
@@ -154,5 +184,38 @@ type SharedPackInfo struct {
 	PackName        string    `json:"pack_name"`
 	PackDescription string    `json:"pack_description"`
 	HasImage        bool      `json:"has_image"`
+	Season          *string   `json:"season,omitempty"`
+	Trail           *string   `json:"trail,omitempty"`
+	Adventure       *string   `json:"adventure,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
+}
+
+// PackOptionsResponse represents the allowed values for pack metadata fields
+type PackOptionsResponse struct {
+	Seasons    []string `json:"seasons"`
+	Trails     []string `json:"trails"`
+	Adventures []string `json:"adventures"`
+}
+
+// GetPackOptionsValues returns a defensive copy of the allowed metadata values
+func GetPackOptionsValues() PackOptionsResponse {
+	return PackOptionsResponse{
+		Seasons:    append([]string{}, allowedSeasons...),
+		Trails:     append([]string{}, allowedTrails...),
+		Adventures: append([]string{}, allowedAdventures...),
+	}
+}
+
+// isAllowedValue checks if a value is in the allowed list.
+// Returns true if value is nil (optional field) or found in allowed list.
+func isAllowedValue(value *string, allowed []string) bool {
+	if value == nil {
+		return true
+	}
+	for _, v := range allowed {
+		if *value == v {
+			return true
+		}
+	}
+	return false
 }

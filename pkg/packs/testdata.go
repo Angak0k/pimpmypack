@@ -76,18 +76,34 @@ var (
 	sharingCode3 = "share3-" + random.UniqueId()
 )
 
+var (
+	seasonWinter   = "Winter"
+	trailGR20      = "GR20"
+	adventureThru  = "Thru-hike"
+	season3Season  = "3-Season"
+	trailPCT       = "Pacific Crest Trail"
+	adventureBikeP = "Bikepacking"
+	adventureBackP = "Backpacking"
+)
+
 var packs = Packs{
 	{
 		UserID:          1,
 		PackName:        "First Pack",
 		PackDescription: "Description for the first pack",
 		SharingCode:     &sharingCode1, // Shared pack
+		Season:          &seasonWinter,
+		Trail:           &trailGR20,
+		Adventure:       &adventureThru,
 	},
 	{
 		UserID:          1,
 		PackName:        "Second Pack",
 		PackDescription: "Description for the second pack",
 		SharingCode:     &sharingCode2, // Shared pack
+		Season:          &season3Season,
+		Trail:           &trailPCT,
+		Adventure:       &adventureBikeP,
 	},
 	{
 		UserID:          2,
@@ -100,6 +116,7 @@ var packs = Packs{
 		PackName:        "Special Pack",
 		PackDescription: "Description for the special pack",
 		SharingCode:     nil, // Private pack (not shared)
+		Adventure:       &adventureBackP,
 	},
 }
 
@@ -338,13 +355,18 @@ func loadInventories(tx *sql.Tx) error {
 		}
 
 		err = tx.QueryRowContext(context.Background(),
-			`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at)
-			VALUES ($1,$2,$3,$4,$5,$6)
+			`INSERT INTO pack
+			(user_id, pack_name, pack_description, sharing_code, season, trail, adventure,
+			created_at, updated_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 			RETURNING id;`,
 			packs[i].UserID,
 			packs[i].PackName,
 			packs[i].PackDescription,
 			packs[i].SharingCode,
+			packs[i].Season,
+			packs[i].Trail,
+			packs[i].Adventure,
 			time.Now().Truncate(time.Second),
 			time.Now().Truncate(time.Second)).Scan(&packs[i].ID)
 		if err != nil {

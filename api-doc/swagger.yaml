@@ -185,6 +185,8 @@ definitions:
     type: object
   packs.Pack:
     properties:
+      adventure:
+        type: string
       created_at:
         type: string
       has_image:
@@ -201,7 +203,11 @@ definitions:
         type: string
       pack_weight:
         type: integer
+      season:
+        type: string
       sharing_code:
+        type: string
+      trail:
         type: string
       updated_at:
         type: string
@@ -227,6 +233,24 @@ definitions:
       worn:
         type: boolean
     type: object
+  packs.PackContentCreateRequest:
+    properties:
+      consumable:
+        type: boolean
+      item_id:
+        type: integer
+      pack_id:
+        type: integer
+      quantity:
+        minimum: 1
+        type: integer
+      worn:
+        type: boolean
+    required:
+    - item_id
+    - pack_id
+    - quantity
+    type: object
   packs.PackContentRequest:
     properties:
       consumable:
@@ -240,6 +264,24 @@ definitions:
         type: boolean
     required:
     - inventory_id
+    - quantity
+    type: object
+  packs.PackContentUpdateRequest:
+    properties:
+      consumable:
+        type: boolean
+      item_id:
+        type: integer
+      pack_id:
+        type: integer
+      quantity:
+        minimum: 1
+        type: integer
+      worn:
+        type: boolean
+    required:
+    - item_id
+    - pack_id
     - quantity
     type: object
   packs.PackContentWithItem:
@@ -271,26 +313,73 @@ definitions:
       worn:
         type: boolean
     type: object
-  packs.PackCreateRequest:
+  packs.PackCreateAdminRequest:
     properties:
+      adventure:
+        type: string
       pack_description:
         type: string
       pack_name:
+        type: string
+      season:
+        type: string
+      trail:
+        type: string
+      user_id:
+        type: integer
+    required:
+    - pack_name
+    - user_id
+    type: object
+  packs.PackCreateRequest:
+    properties:
+      adventure:
+        type: string
+      pack_description:
+        type: string
+      pack_name:
+        type: string
+      season:
+        type: string
+      trail:
         type: string
     required:
     - pack_name
     type: object
+  packs.PackOptionsResponse:
+    properties:
+      adventures:
+        items:
+          type: string
+        type: array
+      seasons:
+        items:
+          type: string
+        type: array
+      trails:
+        items:
+          type: string
+        type: array
+    type: object
   packs.PackUpdateRequest:
     properties:
+      adventure:
+        type: string
       pack_description:
         type: string
       pack_name:
+        type: string
+      season:
+        type: string
+      trail:
         type: string
     required:
     - pack_name
     type: object
   packs.SharedPackInfo:
     properties:
+      adventure:
+        type: string
       created_at:
         type: string
       has_image:
@@ -300,6 +389,10 @@ definitions:
       pack_description:
         type: string
       pack_name:
+        type: string
+      season:
+        type: string
+      trail:
         type: string
     type: object
   packs.SharedPackResponse:
@@ -346,6 +439,607 @@ info:
   title: PimpMyPack API
   version: "1.0"
 paths:
+  /admin/accounts:
+    get:
+      description: Get all accounts - for admin use only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/accounts.Account'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get all accounts'
+      tags:
+      - Internal
+    post:
+      consumes:
+      - application/json
+      description: Create a new account - for admin use only
+      parameters:
+      - description: Account Information
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/accounts.Account'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/accounts.Account'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Create a new account'
+      tags:
+      - Internal
+  /admin/accounts/{id}:
+    delete:
+      description: Delete account by ID - for admin use only
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apitypes.OkResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Delete account by ID'
+      tags:
+      - Internal
+    get:
+      description: Get account by ID - for admin use only
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/accounts.Account'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get account by ID'
+      tags:
+      - Internal
+    put:
+      consumes:
+      - application/json
+      description: Update account by ID - for admin use only
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Account Information
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/accounts.Account'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/accounts.Account'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Update account by ID'
+      tags:
+      - Internal
+  /admin/inventories:
+    get:
+      description: Retrieves a list of all inventories - for admin use only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of Inventories
+          schema:
+            items:
+              $ref: '#/definitions/inventories.Inventory'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get all inventories'
+      tags:
+      - Internal
+    post:
+      consumes:
+      - application/json
+      description: Creates an inventory - for admin use only
+      parameters:
+      - description: Inventory
+        in: body
+        name: inventory
+        required: true
+        schema:
+          $ref: '#/definitions/inventories.Inventory'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/inventories.Inventory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Create an inventory'
+      tags:
+      - Internal
+  /admin/inventories/{id}:
+    delete:
+      description: Deletes an inventory by ID - for admin use only
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Inventory deleted
+          schema:
+            $ref: '#/definitions/apitypes.OkResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Delete an inventory by ID'
+      tags:
+      - Internal
+    get:
+      description: Retrieves an inventory by ID - for admin use only
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventories.Inventory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get an inventory by ID'
+      tags:
+      - Internal
+    put:
+      consumes:
+      - application/json
+      description: Updates an inventory by ID - for admin use only
+      parameters:
+      - description: Inventory ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Inventory
+        in: body
+        name: inventory
+        required: true
+        schema:
+          $ref: '#/definitions/inventories.InventoryUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/inventories.Inventory'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Update an inventory by ID'
+      tags:
+      - Internal
+  /admin/packcontents:
+    get:
+      description: Get all pack contents - for admin use only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/packs.PackContent'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get all pack contents'
+      tags:
+      - Internal
+    post:
+      consumes:
+      - application/json
+      description: Create a new pack content - for admin use only
+      parameters:
+      - description: Pack Content
+        in: body
+        name: packcontent
+        required: true
+        schema:
+          $ref: '#/definitions/packs.PackContentCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/packs.PackContent'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Create a new pack content'
+      tags:
+      - Internal
+  /admin/packcontents/{id}:
+    delete:
+      description: Delete a pack content by ID - for admin use only
+      parameters:
+      - description: Pack Content ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: message
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Delete a pack content by ID'
+      tags:
+      - Internal
+    get:
+      description: Get pack content by ID - for admin use only
+      parameters:
+      - description: Pack Content ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/packs.PackContent'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get pack content by ID'
+      tags:
+      - Internal
+    put:
+      consumes:
+      - application/json
+      description: Update a pack content by ID - for admin use only
+      parameters:
+      - description: Pack Content ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Pack Content
+        in: body
+        name: packcontent
+        required: true
+        schema:
+          $ref: '#/definitions/packs.PackContentUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/packs.PackContent'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Update a pack content by ID'
+      tags:
+      - Internal
+  /admin/packs:
+    get:
+      description: Get all packs - for admin use only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/packs.Pack'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get all packs'
+      tags:
+      - Internal
+    post:
+      consumes:
+      - application/json
+      description: Create a new pack - for admin use only
+      parameters:
+      - description: Pack
+        in: body
+        name: pack
+        required: true
+        schema:
+          $ref: '#/definitions/packs.PackCreateAdminRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/packs.Pack'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Create a new pack'
+      tags:
+      - Internal
+  /admin/packs/:id/packcontents:
+    get:
+      description: Get all pack contents - for admin use only
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/packs.PackContent'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get all pack contents'
+      tags:
+      - Internal
+  /admin/packs/{id}:
+    get:
+      description: Get pack by ID - for admin use only
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/packs.Pack'
+        "400":
+          description: Invalid ID format
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "404":
+          description: Pack not found
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Get pack by ID'
+      tags:
+      - Internal
+    put:
+      consumes:
+      - application/json
+      description: Update a pack by ID - for admin use only
+      parameters:
+      - description: Pack ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Pack
+        in: body
+        name: pack
+        required: true
+        schema:
+          $ref: '#/definitions/packs.PackUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/packs.Pack'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: '[ADMIN] Update a pack by ID'
+      tags:
+      - Internal
   /auth/refresh:
     post:
       consumes:
@@ -1591,6 +2285,21 @@ paths:
       summary: Update password
       tags:
       - Accounts
+  /v1/pack-options:
+    get:
+      description: Returns the allowed values for season, trail, and adventure fields
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/packs.PackOptionsResponse'
+      security:
+      - Bearer: []
+      summary: Get allowed values for pack metadata
+      tags:
+      - Packs
   /v1/packs/{id}/image:
     get:
       description: Get the image for a pack. Public packs are accessible without authentication.
