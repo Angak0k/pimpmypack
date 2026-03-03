@@ -121,7 +121,6 @@ func setupProtectedRoutes(router *gin.Engine) {
 	protected.PUT("/myaccount", accounts.PutMyAccount)
 	protected.PUT("/mypassword", accounts.PutMyPassword)
 	protected.GET("/myinventory", inventories.GetMyInventory)
-	protected.GET("/pack-options", packs.GetPackOptions)
 	protected.GET("/mypacks", packs.GetMyPacks)
 	protected.GET("/mypack/:id", packs.GetMyPackByID)
 	protected.POST("/mypack", packs.PostMyPack)
@@ -144,6 +143,9 @@ func setupProtectedRoutes(router *gin.Engine) {
 	protected.DELETE("/mypack/:id/image", images.DeletePackImage)
 	protected.POST("/myaccount/image", images.UploadMyProfileImage)
 	protected.DELETE("/myaccount/image", images.DeleteMyProfileImage)
+	protected.POST("/myinventory/:id/image", images.UploadInventoryItemImage)
+	protected.GET("/myinventory/:id/image", images.GetInventoryItemImage)
+	protected.DELETE("/myinventory/:id/image", images.DeleteInventoryItemImage)
 }
 
 func setupPrivateRoutes(router *gin.Engine) {

@@ -16,22 +16,21 @@ func returnInventories(ctx context.Context) (*Inventories, error) {
 	var inventories Inventories
 
 	rows, err := database.DB().QueryContext(ctx,
-		`SELECT id,
-			user_id,
-			item_name,
-			category,
-			description,
-			weight,
-			url,
-			price,
-			currency,
-			created_at,
-			updated_at
-		FROM inventory;`)
+		`SELECT i.id,
+			i.user_id,
+			i.item_name,
+			i.category,
+			i.description,
+			i.weight,
+			i.url,
+			i.price,
+			i.currency,
+			CASE WHEN ii.item_id IS NOT NULL THEN true ELSE false END as has_image,
+			i.created_at,
+			i.updated_at
+		FROM inventory i
+		LEFT JOIN inventory_images ii ON i.id = ii.item_id;`)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, ErrNoItemFound
-		}
 		return nil, err
 	}
 	defer rows.Close()
@@ -48,6 +47,7 @@ func returnInventories(ctx context.Context) (*Inventories, error) {
 			&inventory.URL,
 			&inventory.Price,
 			&inventory.Currency,
+			&inventory.HasImage,
 			&inventory.CreatedAt,
 			&inventory.UpdatedAt)
 		if err != nil {
@@ -68,18 +68,21 @@ func returnInventoriesByUserID(ctx context.Context, userID uint) (*Inventories, 
 	var inventories Inventories
 
 	rows, err := database.DB().QueryContext(ctx,
-		`SELECT id,
-			user_id,
-			item_name,
-			category,
-			description,
-			weight,
-			url,
-			price,
-			currency,
-			created_at,
-			updated_at
-		FROM inventory WHERE user_id = $1 ORDER BY category;`,
+		`SELECT i.id,
+			i.user_id,
+			i.item_name,
+			i.category,
+			i.description,
+			i.weight,
+			i.url,
+			i.price,
+			i.currency,
+			CASE WHEN ii.item_id IS NOT NULL THEN true ELSE false END as has_image,
+			i.created_at,
+			i.updated_at
+		FROM inventory i
+		LEFT JOIN inventory_images ii ON i.id = ii.item_id
+		WHERE i.user_id = $1 ORDER BY i.category;`,
 		userID)
 	if err != nil {
 		return nil, err
@@ -98,6 +101,7 @@ func returnInventoriesByUserID(ctx context.Context, userID uint) (*Inventories, 
 			&inventory.URL,
 			&inventory.Price,
 			&inventory.Currency,
+			&inventory.HasImage,
 			&inventory.CreatedAt,
 			&inventory.UpdatedAt)
 		if err != nil {
@@ -118,18 +122,21 @@ func findInventoryByID(ctx context.Context, id uint) (*Inventory, error) {
 	var inventory Inventory
 
 	row := database.DB().QueryRowContext(ctx,
-		`SELECT id,
-			user_id,
-			item_name,
-			category,
-			description,
-			weight,
-			url,
-			price,
-			currency,
-			created_at,
-			updated_at
-		FROM inventory WHERE id = $1;`,
+		`SELECT i.id,
+			i.user_id,
+			i.item_name,
+			i.category,
+			i.description,
+			i.weight,
+			i.url,
+			i.price,
+			i.currency,
+			CASE WHEN ii.item_id IS NOT NULL THEN true ELSE false END as has_image,
+			i.created_at,
+			i.updated_at
+		FROM inventory i
+		LEFT JOIN inventory_images ii ON i.id = ii.item_id
+		WHERE i.id = $1;`,
 		id)
 	err := row.Scan(
 		&inventory.ID,
@@ -141,6 +148,7 @@ func findInventoryByID(ctx context.Context, id uint) (*Inventory, error) {
 		&inventory.URL,
 		&inventory.Price,
 		&inventory.Currency,
+		&inventory.HasImage,
 		&inventory.CreatedAt,
 		&inventory.UpdatedAt)
 
@@ -164,19 +172,21 @@ func findInventoryItemByAttributes(
 	var inventory Inventory
 
 	query := `
-		SELECT id,
-			user_id,
-			item_name,
-			category,
-			description,
-			weight,
-			url,
-			price,
-			currency,
-			created_at,
-			updated_at
-		FROM inventory
-		WHERE user_id = $1 AND item_name = $2 AND category = $3 AND description = $4
+		SELECT i.id,
+			i.user_id,
+			i.item_name,
+			i.category,
+			i.description,
+			i.weight,
+			i.url,
+			i.price,
+			i.currency,
+			CASE WHEN ii.item_id IS NOT NULL THEN true ELSE false END as has_image,
+			i.created_at,
+			i.updated_at
+		FROM inventory i
+		LEFT JOIN inventory_images ii ON i.id = ii.item_id
+		WHERE i.user_id = $1 AND i.item_name = $2 AND i.category = $3 AND i.description = $4
 		LIMIT 1`
 
 	row := database.DB().QueryRowContext(ctx, query, userID, itemName, category, description)
@@ -190,6 +200,7 @@ func findInventoryItemByAttributes(
 		&inventory.URL,
 		&inventory.Price,
 		&inventory.Currency,
+		&inventory.HasImage,
 		&inventory.CreatedAt,
 		&inventory.UpdatedAt)
 

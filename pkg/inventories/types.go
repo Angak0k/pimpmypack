@@ -17,6 +17,7 @@ type Inventory struct {
 	URL         string    `json:"url"`
 	Price       int       `json:"price"`
 	Currency    string    `json:"currency"`
+	HasImage    bool      `json:"has_image"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }

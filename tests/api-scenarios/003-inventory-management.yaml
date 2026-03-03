@@ -132,6 +132,93 @@ scenarios:
       - type: json_path
         path: "$.category"
         equals: "Shelter"
+      - type: json_path
+        path: "$.has_image"
+        equals: "false"
+
+  - name: "Upload image to inventory item"
+    request:
+      method: POST
+      endpoint: "/v1/myinventory/{{tent_id}}/image"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      multipart:
+        image:
+          file: "fixtures/test-profile.jpg"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.message"
+        equals: "Image uploaded successfully"
+      - type: json_path
+        path: "$.mime_type"
+        equals: "image/jpeg"
+      - type: json_path
+        path: "$.width"
+        exists: true
+      - type: json_path
+        path: "$.height"
+        exists: true
+
+  - name: "Verify has_image is true after upload"
+    request:
+      method: GET
+      endpoint: "/v1/myinventory/{{tent_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.has_image"
+        equals: "true"
+
+  - name: "Get inventory item image"
+    request:
+      method: GET
+      endpoint: "/v1/myinventory/{{tent_id}}/image"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Delete inventory item image"
+    request:
+      method: DELETE
+      endpoint: "/v1/myinventory/{{tent_id}}/image"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.message"
+        equals: "Image deleted successfully"
+
+  - name: "Verify has_image is false after delete"
+    request:
+      method: GET
+      endpoint: "/v1/myinventory/{{tent_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.has_image"
+        equals: "false"
+
+  - name: "Get image after delete returns 404"
+    request:
+      method: GET
+      endpoint: "/v1/myinventory/{{tent_id}}/image"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 404
 
   - name: "Update inventory item details"
     request:

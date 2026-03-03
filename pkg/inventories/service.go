@@ -23,6 +23,18 @@ func InsertInventory(ctx context.Context, i *Inventory) error {
 	return insertInventory(ctx, i)
 }
 
+// FindInventoryByID retrieves a single inventory item by ID.
+// Returns the item if found, nil with ErrNoItemFound if not found, or error if query fails.
+func FindInventoryByID(ctx context.Context, id uint) (*Inventory, error) {
+	return findInventoryByID(ctx, id)
+}
+
+// CheckInventoryOwnership verifies if an inventory item belongs to a specific user.
+// Returns true if the item belongs to the user, false otherwise.
+func CheckInventoryOwnership(ctx context.Context, id uint, userID uint) (bool, error) {
+	return checkInventoryOwnership(ctx, id, userID)
+}
+
 // FindItemIDByItemName finds an inventory item ID by its name
 // Returns 0 if not found
 func FindItemIDByItemName(inventories Inventories, itemname string) uint {

@@ -82,28 +82,40 @@ func (s *dbImageStore) exists(ctx context.Context, ownerID uint) (bool, error) {
 	return exists, nil
 }
 
-// DBImageStorage implements ImageStorage using PostgreSQL database (pack_images table)
-type DBImageStorage struct {
+// DBStorage wraps dbImageStore with exported methods, implementing
+// ImageStorage, AccountImageStorage, and InventoryImageStorage interfaces.
+// Use the specific constructor functions to create instances for each table.
+type DBStorage struct {
 	store dbImageStore
 }
 
+func (s *DBStorage) Save(ctx context.Context, id uint, data []byte, metadata ImageMetadata) error {
+	return s.store.save(ctx, id, data, metadata)
+}
+
+func (s *DBStorage) Get(ctx context.Context, id uint) (*Image, error) {
+	return s.store.get(ctx, id)
+}
+
+func (s *DBStorage) Delete(ctx context.Context, id uint) error {
+	return s.store.delete(ctx, id)
+}
+
+func (s *DBStorage) Exists(ctx context.Context, id uint) (bool, error) {
+	return s.store.exists(ctx, id)
+}
+
 // NewDBImageStorage creates a new database image storage instance for packs
-func NewDBImageStorage() *DBImageStorage {
-	return &DBImageStorage{store: dbImageStore{table: "pack_images", idColumn: "pack_id"}}
+func NewDBImageStorage() *DBStorage {
+	return &DBStorage{store: dbImageStore{table: "pack_images", idColumn: "pack_id"}}
 }
 
-func (s *DBImageStorage) Save(ctx context.Context, packID uint, data []byte, metadata ImageMetadata) error {
-	return s.store.save(ctx, packID, data, metadata)
+// NewDBAccountImageStorage creates a new database account image storage instance
+func NewDBAccountImageStorage() *DBStorage {
+	return &DBStorage{store: dbImageStore{table: "account_images", idColumn: "account_id"}}
 }
 
-func (s *DBImageStorage) Get(ctx context.Context, packID uint) (*Image, error) {
-	return s.store.get(ctx, packID)
-}
-
-func (s *DBImageStorage) Delete(ctx context.Context, packID uint) error {
-	return s.store.delete(ctx, packID)
-}
-
-func (s *DBImageStorage) Exists(ctx context.Context, packID uint) (bool, error) {
-	return s.store.exists(ctx, packID)
+// NewDBInventoryImageStorage creates a new database inventory image storage instance
+func NewDBInventoryImageStorage() *DBStorage {
+	return &DBStorage{store: dbImageStore{table: "inventory_images", idColumn: "item_id"}}
 }
