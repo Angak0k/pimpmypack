@@ -104,6 +104,43 @@ func sendConfirmationEmail(u User, code string) error {
 	return nil
 }
 
+func resendConfirmEmail(ctx context.Context, email string) error {
+	var user User
+	err := database.DB().QueryRowContext(ctx,
+		`SELECT id, username, email FROM account WHERE email = $1 AND status = 'pending'`,
+		email,
+	).Scan(&user.ID, &user.Username, &user.Email)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			// Email not found or not pending — return nil to prevent user enumeration
+			return nil
+		}
+		return fmt.Errorf("failed to query account: %w", err)
+	}
+
+	// Generate a new confirmation code (invalidates old one)
+	confirmationCode, err := helper.GenerateRandomCode(30)
+	if err != nil {
+		return fmt.Errorf("failed to generate confirmation code: %w", err)
+	}
+
+	// Update the confirmation code in DB
+	_, err = database.DB().ExecContext(ctx,
+		`UPDATE account SET confirmation_code = $1, updated_at = $2 WHERE id = $3`,
+		confirmationCode, time.Now().Truncate(time.Second), user.ID,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to update confirmation code: %w", err)
+	}
+
+	err = sendConfirmationEmail(user, confirmationCode)
+	if err != nil {
+		return fmt.Errorf("failed to send confirmation email: %w", err)
+	}
+
+	return nil
+}
+
 func confirmEmail(ctx context.Context, id string, code string) error {
 	// LOCAL mode: Accept any code
 	if config.Stage == stageLocal && code == "LOCAL_BYPASS" {

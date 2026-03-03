@@ -1185,6 +1185,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/resend-confirmemail": {
+            "post": {
+                "description": "Resend confirmation email to a pending user account. Always returns 200 to prevent user enumeration.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Public"
+                ],
+                "summary": "Resend confirmation email",
+                "parameters": [
+                    {
+                        "description": "Email Address",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/accounts.ResendConfirmEmailInput"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.OkResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/sharedlist/{sharing_code}": {
             "get": {
                 "description": "Retrieves pack metadata and contents using a sharing code",
@@ -3350,6 +3390,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "username": {
+                    "type": "string"
+                }
+            }
+        },
+        "accounts.ResendConfirmEmailInput": {
+            "type": "object",
+            "required": [
+                "email"
+            ],
+            "properties": {
+                "email": {
                     "type": "string"
                 }
             }

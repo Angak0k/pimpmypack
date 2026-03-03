@@ -26,41 +26,45 @@ type DBConfig struct {
 }
 
 var (
-	Scheme                           string
-	HostName                         string
-	DBHost                           string
-	DBUser                           string
-	DBPassword                       string
-	DBName                           string
-	DBPort                           int
-	Stage                            string
-	APISecret                        string
-	TokenLifespan                    int
-	AccessTokenMinutes               int
-	RefreshTokenDays                 int
-	RefreshTokenRememberMeDays       int
-	RefreshTokenCleanupIntervalHours int
-	RefreshRateLimitRequests         int
-	RefreshRateLimitWindowMinutes    int
-	MailServerConfig                 MailServer
-	SeedOnStartup                    bool
+	Scheme                              string
+	HostName                            string
+	DBHost                              string
+	DBUser                              string
+	DBPassword                          string
+	DBName                              string
+	DBPort                              int
+	Stage                               string
+	APISecret                           string
+	TokenLifespan                       int
+	AccessTokenMinutes                  int
+	RefreshTokenDays                    int
+	RefreshTokenRememberMeDays          int
+	RefreshTokenCleanupIntervalHours    int
+	RefreshRateLimitRequests            int
+	RefreshRateLimitWindowMinutes       int
+	ResendConfirmRateLimitRequests      int
+	ResendConfirmRateLimitWindowMinutes int
+	MailServerConfig                    MailServer
+	SeedOnStartup                       bool
 )
 
 type Config struct {
-	Scheme                           string
-	HostName                         string
-	DBConfig                         DBConfig
-	Stage                            string
-	APISecret                        string
-	TokenLifespan                    int
-	AccessTokenMinutes               int
-	RefreshTokenDays                 int
-	RefreshTokenRememberMeDays       int
-	RefreshTokenCleanupIntervalHours int
-	RefreshRateLimitRequests         int
-	RefreshRateLimitWindowMinutes    int
-	MailServer                       MailServer
-	SeedOnStartup                    bool
+	Scheme                              string
+	HostName                            string
+	DBConfig                            DBConfig
+	Stage                               string
+	APISecret                           string
+	TokenLifespan                       int
+	AccessTokenMinutes                  int
+	RefreshTokenDays                    int
+	RefreshTokenRememberMeDays          int
+	RefreshTokenCleanupIntervalHours    int
+	RefreshRateLimitRequests            int
+	RefreshRateLimitWindowMinutes       int
+	ResendConfirmRateLimitRequests      int
+	ResendConfirmRateLimitWindowMinutes int
+	MailServer                          MailServer
+	SeedOnStartup                       bool
 }
 
 func EnvInit(envFilePath string) error {
@@ -85,6 +89,8 @@ func EnvInit(envFilePath string) error {
 	RefreshTokenCleanupIntervalHours = newConfig.RefreshTokenCleanupIntervalHours
 	RefreshRateLimitRequests = newConfig.RefreshRateLimitRequests
 	RefreshRateLimitWindowMinutes = newConfig.RefreshRateLimitWindowMinutes
+	ResendConfirmRateLimitRequests = newConfig.ResendConfirmRateLimitRequests
+	ResendConfirmRateLimitWindowMinutes = newConfig.ResendConfirmRateLimitWindowMinutes
 	MailServerConfig = newConfig.MailServer
 	SeedOnStartup = newConfig.SeedOnStartup
 
@@ -119,17 +125,19 @@ func loadEnv(envFilePath string) error {
 // newConfig returns a new Config struct with default values
 func newConfig() Config {
 	return Config{
-		Scheme:                           "https",
-		TokenLifespan:                    1,
-		AccessTokenMinutes:               15,
-		RefreshTokenDays:                 1,
-		RefreshTokenRememberMeDays:       30,
-		RefreshTokenCleanupIntervalHours: 24,
-		RefreshRateLimitRequests:         10,
-		RefreshRateLimitWindowMinutes:    1,
-		APISecret:                        "defaultApiSecret",
-		Stage:                            "local",
-		HostName:                         "localhost",
+		Scheme:                              "https",
+		TokenLifespan:                       1,
+		AccessTokenMinutes:                  15,
+		RefreshTokenDays:                    1,
+		RefreshTokenRememberMeDays:          30,
+		RefreshTokenCleanupIntervalHours:    24,
+		RefreshRateLimitRequests:            10,
+		RefreshRateLimitWindowMinutes:       1,
+		ResendConfirmRateLimitRequests:      1,
+		ResendConfirmRateLimitWindowMinutes: 1,
+		APISecret:                           "defaultApiSecret",
+		Stage:                               "local",
+		HostName:                            "localhost",
 		DBConfig: DBConfig{
 			DBPort: 5432,
 		},
@@ -162,6 +170,11 @@ func setEnvVars(cfg *Config) {
 		ifEnvEmpty(os.Getenv("REFRESH_RATE_LIMIT_REQUESTS"), strconv.Itoa(cfg.RefreshRateLimitRequests)))
 	cfg.RefreshRateLimitWindowMinutes, _ = strconv.Atoi(
 		ifEnvEmpty(os.Getenv("REFRESH_RATE_LIMIT_WINDOW_MINUTES"), strconv.Itoa(cfg.RefreshRateLimitWindowMinutes)))
+	cfg.ResendConfirmRateLimitRequests, _ = strconv.Atoi(
+		ifEnvEmpty(os.Getenv("RESEND_CONFIRM_RATE_LIMIT_REQUESTS"), strconv.Itoa(cfg.ResendConfirmRateLimitRequests)))
+	resendWindowDefault := strconv.Itoa(cfg.ResendConfirmRateLimitWindowMinutes)
+	cfg.ResendConfirmRateLimitWindowMinutes, _ = strconv.Atoi(
+		ifEnvEmpty(os.Getenv("RESEND_CONFIRM_RATE_LIMIT_WINDOW_MINUTES"), resendWindowDefault))
 	cfg.MailServer.MailIdentity = os.Getenv("MAIL_IDENTITY")
 	cfg.MailServer.MailUsername = os.Getenv("MAIL_USERNAME")
 	cfg.MailServer.MailPassword = os.Getenv("MAIL_PASSWORD")

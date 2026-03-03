@@ -60,3 +60,24 @@ func RefreshRateLimiter(requestsPerMinute, burstSize int) gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// ResendConfirmRateLimiter creates a rate limiting middleware for /resend-confirmemail endpoint
+func ResendConfirmRateLimiter(requestsPerMinute, burstSize int) gin.HandlerFunc {
+	limiter := NewIPRateLimiter(requestsPerMinute, burstSize)
+
+	return func(c *gin.Context) {
+		clientIP := c.ClientIP()
+
+		if !limiter.GetLimiter(clientIP).Allow() {
+			AuditRateLimitExceeded(c, "/resend-confirmemail")
+			c.JSON(http.StatusTooManyRequests, gin.H{
+				"error":       "Rate limit exceeded",
+				"retry_after": 60,
+			})
+			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}

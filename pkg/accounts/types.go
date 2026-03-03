@@ -80,6 +80,11 @@ type AccountUpdateInput struct {
 	InstagramURL        *string `json:"instagram_url"`
 }
 
+// ResendConfirmEmailInput represents the data required to resend a confirmation email
+type ResendConfirmEmailInput struct {
+	Email string `json:"email" binding:"required"`
+}
+
 // Token represents an authentication token
 type Token struct {
 	Token string `json:"token"`
