@@ -179,29 +179,19 @@ func createPacks(
 			`INSERT INTO pack
 			(user_id, pack_name, pack_description,
 			 season, trail, adventure,
+			 is_favorite,
 			 created_at, updated_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
 			RETURNING id`,
 			userID, p.packName, p.packDescription,
-			p.season, p.trail, p.adventure, now, now,
+			p.season, p.trail, p.adventure, p.isFavorite,
+			now, now,
 		).Scan(&id)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"failed to create pack %q: %w", p.packName, err)
 		}
 		packIDs[i] = id
-
-		if p.isFavorite {
-			_, err = tx.ExecContext(ctx,
-				`UPDATE pack SET is_favorite = true WHERE id = $1`,
-				id,
-			)
-			if err != nil {
-				return nil, fmt.Errorf(
-					"failed to set favorite on pack %q: %w",
-					p.packName, err)
-			}
-		}
 	}
 
 	return packIDs, nil
