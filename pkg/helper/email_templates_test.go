@@ -72,6 +72,30 @@ func TestBuildPasswordResetEmailHTML(t *testing.T) {
 	}
 }
 
+func TestBuildConfirmationEmailText_UsernameInjection(t *testing.T) {
+	malicious := "alice\r\n\r\nInjected body content"
+	text := BuildConfirmationEmailText(malicious, "https://example.com/confirm")
+
+	// CRLF must be stripped so the username appears as a single token
+	if strings.Contains(text, "alice\r\n") || strings.Contains(text, "alice\n") {
+		t.Error("username with CRLF was not sanitized in plain-text email")
+	}
+	// After sanitization the username line should read "Welcome, aliceInjected body content!"
+	// (harmless concatenation, no extra lines injected)
+	if !strings.Contains(text, "Welcome, aliceInjected body content!") {
+		t.Error("expected sanitized username to be concatenated without newlines")
+	}
+}
+
+func TestBuildConfirmationEmailHTML_UsernameInjection(t *testing.T) {
+	malicious := "<script>alert('xss')</script>"
+	html := BuildConfirmationEmailHTML(malicious, "https://example.com/confirm")
+
+	if strings.Contains(html, "<script>") {
+		t.Error("HTML body must escape script tags in username")
+	}
+}
+
 func TestBuildPasswordResetEmailText(t *testing.T) {
 	text := BuildPasswordResetEmailText("s3cretP@ss")
 

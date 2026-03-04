@@ -189,6 +189,73 @@ func TestIsValidEmail(t *testing.T) {
 	}
 }
 
+func TestBuildMIMEMessage_HeaderInjection(t *testing.T) {
+	testCases := []struct {
+		name    string
+		to      string
+		subject string
+	}{
+		{
+			"CRLF in To prevents Bcc injection",
+			"victim@example.com\r\nBcc: attacker@evil.com",
+			"Normal Subject",
+		},
+		{
+			"LF in Subject prevents header injection",
+			"user@example.com",
+			"Hello\nBcc: attacker@evil.com",
+		},
+		{
+			"CR in To prevents Bcc injection",
+			"victim@example.com\rBcc: attacker@evil.com",
+			"Normal Subject",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			msg, err := BuildMIMEMessage(
+				"PimpMyPack", "noreply@pimpmypack.com",
+				tc.to, tc.subject,
+				"text body", "<p>html body</p>",
+			)
+			if err != nil {
+				t.Fatalf("BuildMIMEMessage failed: %v", err)
+			}
+			raw := string(msg)
+			// Verify no injected header line exists: no line should start with "Bcc:"
+			for _, line := range strings.Split(raw, "\n") {
+				trimmed := strings.TrimPrefix(line, "\r")
+				if strings.HasPrefix(trimmed, "Bcc:") {
+					t.Errorf("found injected Bcc header line: %q", line)
+				}
+			}
+		})
+	}
+}
+
+func TestSanitizeHeaderValue(t *testing.T) {
+	testCases := []struct {
+		input    string
+		expected string
+	}{
+		{"normal value", "normal value"},
+		{"has\rnewline", "hasnewline"},
+		{"has\nnewline", "hasnewline"},
+		{"has\r\nboth", "hasboth"},
+		{"", ""},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.input, func(t *testing.T) {
+			got := sanitizeHeaderValue(tc.input)
+			if got != tc.expected {
+				t.Errorf("sanitizeHeaderValue(%q) = %q, want %q", tc.input, got, tc.expected)
+			}
+		})
+	}
+}
+
 func TestIsValidUsername(t *testing.T) {
 	testCases := []struct {
 		name     string

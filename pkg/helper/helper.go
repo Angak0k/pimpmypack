@@ -122,9 +122,9 @@ func BuildMIMEMessage(
 		"MIME-Version: 1.0\r\n"+
 		"Content-Type: multipart/alternative; boundary=%s\r\n"+
 		"\r\n",
-		fromName, fromAddr,
-		to,
-		subject,
+		sanitizeHeaderValue(fromName), sanitizeHeaderValue(fromAddr),
+		sanitizeHeaderValue(to),
+		sanitizeHeaderValue(subject),
 		time.Now().Format(time.RFC1123Z),
 		messageID,
 		writer.Boundary(),
@@ -166,6 +166,13 @@ func BuildMIMEMessage(
 	msg.Write(buf.Bytes())
 
 	return msg.Bytes(), nil
+}
+
+// sanitizeHeaderValue strips \r and \n characters to prevent SMTP header injection.
+func sanitizeHeaderValue(v string) string {
+	v = strings.ReplaceAll(v, "\r", "")
+	v = strings.ReplaceAll(v, "\n", "")
+	return v
 }
 
 func extractDomain(email string) string {
