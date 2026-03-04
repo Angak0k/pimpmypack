@@ -65,21 +65,23 @@ type MockEmailSender struct {
 
 // Email represents an email message for testing.
 type Email struct {
-	To      string
-	Subject string
-	Body    string
+	To       string
+	Subject  string
+	TextBody string
+	HTMLBody string
 }
 
-// SendMail records the email sending action without actually sending an email.
-func (m *MockEmailSender) SendEmail(to, subject, body string) error {
-	m.SentEmails = append(m.SentEmails, Email{To: to, Subject: subject, Body: body})
+// SendEmail records the email sending action without actually sending an email.
+func (m *MockEmailSender) SendEmail(to, subject, textBody, htmlBody string) error {
+	m.SentEmails = append(m.SentEmails, Email{To: to, Subject: subject, TextBody: textBody, HTMLBody: htmlBody})
 	return nil // Return nil to simulate a successful send
 }
+
 func TestSendEmail(t *testing.T) {
 	// Create a new instance of the mock
 	mockSender := &MockEmailSender{}
 
-	err := mockSender.SendEmail("example@example.com", "Test Subject", "This is a test.")
+	err := mockSender.SendEmail("example@example.com", "Test Subject", "This is a test.", "<p>This is a test.</p>")
 	if err != nil {
 		t.Errorf("SendMail failed: %v", err)
 	}
@@ -87,6 +89,14 @@ func TestSendEmail(t *testing.T) {
 	// Verify that the email was "sent"
 	if len(mockSender.SentEmails) != 1 {
 		t.Errorf("Expected 1 email to be sent, got %d", len(mockSender.SentEmails))
+	}
+
+	sent := mockSender.SentEmails[0]
+	if sent.TextBody != "This is a test." {
+		t.Errorf("Expected text body 'This is a test.', got '%s'", sent.TextBody)
+	}
+	if sent.HTMLBody != "<p>This is a test.</p>" {
+		t.Errorf("Expected HTML body '<p>This is a test.</p>', got '%s'", sent.HTMLBody)
 	}
 }
 
