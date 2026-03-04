@@ -77,11 +77,13 @@ type SMTPClient struct {
 }
 
 // SendEmail sends an email using the SMTP protocol with proper MIME multipart/alternative formatting.
+// MailIdentity must be a valid email address (validated at startup) — used as envelope sender and From address.
+// MailUsername is the SMTP authentication login credential.
 func (s *SMTPClient) SendEmail(to, subject, textBody, htmlBody string) error {
 	auth := smtp.PlainAuth("", s.Server.MailUsername, s.Server.MailPassword, s.Server.MailServer)
 
 	msg, err := BuildMIMEMessage(
-		s.Server.MailIdentity, s.Server.MailUsername,
+		"PimpMyPack", s.Server.MailIdentity,
 		to, subject, textBody, htmlBody,
 	)
 	if err != nil {
@@ -91,7 +93,7 @@ func (s *SMTPClient) SendEmail(to, subject, textBody, htmlBody string) error {
 	return smtp.SendMail(
 		s.Server.MailServer+":"+strconv.Itoa(s.Server.MailPort),
 		auth,
-		s.Server.MailUsername,
+		s.Server.MailIdentity,
 		[]string{to},
 		msg,
 	)

@@ -175,6 +175,27 @@ func TestEnvInit(t *testing.T) {
 			wantError: true,
 		},
 		{
+			name: "Invalid Mail Identity Format (no domain)",
+			envSlice: []string{
+				"SCHEME=http",
+				"HOSTNAME=localhost",
+				"DB_HOST=hostname",
+				"DB_USER=db_user",
+				"DB_PASSWORD=password",
+				"DB_NAME=db_name",
+				"DB_PORT=5432",
+				"STAGE=dev",
+				"API_SECRET=API_SECRET",
+				"TOKEN_HOUR_LIFESPAN=1",
+				"MAIL_IDENTITY=PimpMyPack",
+				"MAIL_USERNAME=username",
+				"MAIL_PASSWORD=password",
+				"MAIL_SERVER=smtp.exemple.com",
+				"MAIL_PORT=587",
+			},
+			wantError: true,
+		},
+		{
 			name: "Invalid Mail user Configuration",
 			envSlice: []string{
 				"SCHEME=http",

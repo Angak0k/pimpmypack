@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"net/mail"
 	"os"
 	"strconv"
 
@@ -202,6 +203,8 @@ func validateConfig(cfg Config) error {
 		return errors.New("DB_NAME is not set")
 	case cfg.MailServer.MailIdentity == "":
 		return errors.New("MAIL_IDENTITY is not set")
+	case !isValidMailAddress(cfg.MailServer.MailIdentity):
+		return errors.New("MAIL_IDENTITY must be a valid email address (used as sender address)")
 	case cfg.MailServer.MailUsername == "":
 		return errors.New("MAIL_USERNAME is not set")
 	case cfg.MailServer.MailPassword == "":
@@ -210,4 +213,14 @@ func validateConfig(cfg Config) error {
 		return errors.New("MAIL_SERVER is not set")
 	}
 	return nil
+}
+
+// isValidMailAddress validates an email address using net/mail.ParseAddress.
+func isValidMailAddress(address string) bool {
+	addr, err := mail.ParseAddress(address)
+	if err != nil {
+		return false
+	}
+	// ParseAddress accepts bare names like "John" — ensure we got a real address
+	return addr.Address == address
 }
