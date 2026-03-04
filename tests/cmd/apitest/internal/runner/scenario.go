@@ -23,13 +23,19 @@ type Step struct {
 	Store      map[string]string `yaml:"store"`
 }
 
+// MultipartFile defines a file reference within a multipart upload
+type MultipartFile struct {
+	File string `yaml:"file"`
+}
+
 // Request defines an HTTP request to be made
 type Request struct {
-	Method   string            `yaml:"method"`
-	Endpoint string            `yaml:"endpoint"`
-	Headers  map[string]string `yaml:"headers,omitempty"`
-	Body     map[string]any    `yaml:"body,omitempty"`
-	File     *FileUpload       `yaml:"file,omitempty"`
+	Method    string                    `yaml:"method"`
+	Endpoint  string                    `yaml:"endpoint"`
+	Headers   map[string]string         `yaml:"headers,omitempty"`
+	Body      map[string]any            `yaml:"body,omitempty"`
+	File      *FileUpload               `yaml:"file,omitempty"`
+	Multipart map[string]*MultipartFile `yaml:"multipart,omitempty"`
 }
 
 // FileUpload defines a file to be uploaded

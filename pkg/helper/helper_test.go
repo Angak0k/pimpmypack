@@ -188,3 +188,28 @@ func TestIsValidEmail(t *testing.T) {
 		})
 	}
 }
+
+func TestIsValidUsername(t *testing.T) {
+	testCases := []struct {
+		name     string
+		username string
+		expected bool
+	}{
+		{"simple username", "johndoe", true},
+		{"username with numbers", "john123", true},
+		{"username with hyphens", "john-doe", true},
+		{"username with underscores", "john_doe", true},
+		{"email-like username", "john@example.com", false},
+		{"username with @ in middle", "john@doe", false},
+		{"username starting with @", "@johndoe", false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			output := IsValidUsername(tc.username)
+			if output != tc.expected {
+				t.Errorf("IsValidUsername(%s): expected %t, got %t", tc.username, tc.expected, output)
+			}
+		})
+	}
+}

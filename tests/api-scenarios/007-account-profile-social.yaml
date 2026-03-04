@@ -51,10 +51,10 @@ scenarios:
         expected: 200
       - type: json_path
         path: "$.youtube_url"
-        equals: "null"
+        equals: "<nil>"
       - type: json_path
         path: "$.instagram_url"
-        equals: "null"
+        equals: "<nil>"
       - type: json_path
         path: "$.has_profile_image"
         equals: "false"
@@ -116,7 +116,7 @@ scenarios:
         expected: 200
       - type: json_path
         path: "$.youtube_url"
-        equals: "null"
+        equals: "<nil>"
       - type: json_path
         path: "$.instagram_url"
         equals: "https://instagram.com/testuser"

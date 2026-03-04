@@ -22,6 +22,8 @@ import (
 // @Param   input  body    RegisterInput  true  "Register Informations"
 // @Success 200 {object} apitypes.OkResponse
 // @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 409 {object} apitypes.ErrorResponse "Email already in use"
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /register [post]
 func Register(c *gin.Context) {
 	var input RegisterInput
@@ -32,37 +34,46 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	user := User{}
-
-	if helper.IsValidEmail(input.Email) {
-		user.Email = input.Email
-		user.Username = input.Username
-		user.Password = input.Password
-		user.Firstname = input.Firstname
-		user.Lastname = input.Lastname
-		user.Role = "standard"
-		user.Status = "pending"
-		user.CreatedAt = time.Now().Truncate(time.Second)
-		user.UpdatedAt = time.Now().Truncate(time.Second)
-
-		emailSended, err := registerUser(c.Request.Context(), user)
-
-		if err != nil {
-			helper.LogAndSanitize(err, "register: user registration failed")
-			c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInternalServer})
-			return
-		}
-
-		if !emailSended {
-			c.JSON(http.StatusAccepted, gin.H{"message": "registration succeed but failed to send confirmation email"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "registration succeed, please check your email to confirm your account"})
-	} else {
+	if !helper.IsValidEmail(input.Email) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
 		return
 	}
+
+	if !helper.IsValidUsername(input.Username) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "username must not contain @"})
+		return
+	}
+
+	user := User{
+		Email:     input.Email,
+		Username:  input.Username,
+		Password:  input.Password,
+		Firstname: input.Firstname,
+		Lastname:  input.Lastname,
+		Role:      "standard",
+		Status:    "pending",
+		CreatedAt: time.Now().Truncate(time.Second),
+		UpdatedAt: time.Now().Truncate(time.Second),
+	}
+
+	emailSended, err := registerUser(c.Request.Context(), user)
+
+	if err != nil {
+		if errors.Is(err, ErrEmailAlreadyExists) {
+			c.JSON(http.StatusConflict, gin.H{"error": "email already in use"})
+			return
+		}
+		helper.LogAndSanitize(err, "register: user registration failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	if !emailSended {
+		c.JSON(http.StatusAccepted, gin.H{"message": "registration succeed but failed to send confirmation email"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "registration succeed, please check your email to confirm your account"})
 }
 
 // Confirm email address
@@ -187,7 +198,8 @@ func ResendConfirmEmail(c *gin.Context) {
 
 // User login
 // @Summary User login
-// @Description Log in a user by providing username and password
+// @Description Log in a user by providing username (or email) and password
+// @Description The username field accepts either a username or an email address
 // @Description Returns access token (short-lived) and refresh token (long-lived)
 // @Description Use remember_me to extend refresh token lifetime
 // @Tags Public
@@ -452,20 +464,25 @@ func PostAccount(c *gin.Context) {
 		return
 	}
 
-	if helper.IsValidEmail(newAccount.Email) {
-		// Insert the new account into the database.
-		err := insertAccount(c.Request.Context(), &newAccount)
-		if err != nil {
-			helper.LogAndSanitize(err, "post account: insert account failed")
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
-			return
-		}
-
-		c.IndentedJSON(http.StatusCreated, newAccount)
-	} else {
+	if !helper.IsValidEmail(newAccount.Email) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
 		return
 	}
+
+	if !helper.IsValidUsername(newAccount.Username) {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "username must not contain @"})
+		return
+	}
+
+	// Insert the new account into the database.
+	err := insertAccount(c.Request.Context(), &newAccount)
+	if err != nil {
+		helper.LogAndSanitize(err, "post account: insert account failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	c.IndentedJSON(http.StatusCreated, newAccount)
 }
 
 // Update account by ID

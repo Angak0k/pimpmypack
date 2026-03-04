@@ -1139,7 +1139,8 @@ paths:
       consumes:
       - application/json
       description: |-
-        Log in a user by providing username and password
+        Log in a user by providing username (or email) and password
+        The username field accepts either a username or an email address
         Returns access token (short-lived) and refresh token (long-lived)
         Use remember_me to extend refresh token lifetime
       parameters:
@@ -1193,6 +1194,14 @@ paths:
             $ref: '#/definitions/apitypes.OkResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "409":
+          description: Email already in use
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/apitypes.ErrorResponse'
       summary: Register new user

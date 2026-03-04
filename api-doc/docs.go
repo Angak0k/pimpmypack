@@ -1095,7 +1095,7 @@ const docTemplate = `{
         },
         "/login": {
             "post": {
-                "description": "Log in a user by providing username and password\nReturns access token (short-lived) and refresh token (long-lived)\nUse remember_me to extend refresh token lifetime",
+                "description": "Log in a user by providing username (or email) and password\nThe username field accepts either a username or an email address\nReturns access token (short-lived) and refresh token (long-lived)\nUse remember_me to extend refresh token lifetime",
                 "consumes": [
                     "application/json"
                 ],
@@ -1178,6 +1178,18 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Email already in use",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/apitypes.ErrorResponse"
                         }

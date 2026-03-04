@@ -9,15 +9,29 @@ import (
 )
 
 // ValidateAssertion checks if a response matches the assertion criteria
-func ValidateAssertion(assertion Assertion, statusCode int, body []byte) error {
+func ValidateAssertion(assertion Assertion, statusCode int, body []byte, contentType string) error {
 	switch assertion.Type {
 	case "status_code":
 		return validateStatusCode(assertion, statusCode)
 	case "json_path":
 		return validateJSONPath(assertion, body)
+	case "content_type":
+		return validateContentType(assertion, contentType)
 	default:
 		return fmt.Errorf("unknown assertion type: %s", assertion.Type)
 	}
+}
+
+// validateContentType checks the Content-Type response header
+func validateContentType(assertion Assertion, actual string) error {
+	expected, ok := assertion.Expected.(string)
+	if !ok {
+		return fmt.Errorf("content_type expected value must be a string, got %T", assertion.Expected)
+	}
+	if !strings.HasPrefix(actual, expected) {
+		return fmt.Errorf("expected content type '%s', got '%s'", expected, actual)
+	}
+	return nil
 }
 
 // validateStatusCode checks the HTTP status code

@@ -13,6 +13,7 @@ import (
 	"github.com/Angak0k/pimpmypack/pkg/database"
 	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/Angak0k/pimpmypack/pkg/security"
+	"github.com/lib/pq"
 )
 
 // ErrNoAccountFound is returned when no account is found for a given ID.
@@ -23,6 +24,9 @@ const stageLocal = "LOCAL"
 
 // ErrInvalidCredentials is returned when login credentials are invalid.
 var ErrInvalidCredentials = errors.New("invalid credentials")
+
+// ErrEmailAlreadyExists is returned when a registration is attempted with an already-used email.
+var ErrEmailAlreadyExists = errors.New("email already exists")
 
 func registerUser(ctx context.Context, u User) (bool, error) {
 	var id int
@@ -47,6 +51,10 @@ func registerUser(ctx context.Context, u User) (bool, error) {
 		u.CreatedAt,
 		u.UpdatedAt).Scan(&id)
 	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == "account_email_unique" {
+			return false, ErrEmailAlreadyExists
+		}
 		return false, fmt.Errorf("failed to insert user: %w", err)
 	}
 
@@ -252,7 +260,7 @@ func loginCheck(
 	row := database.DB().QueryRowContext(ctx,
 		`SELECT p.password, p.user_id, a.status
 		FROM password AS p JOIN account AS a ON p.user_id = a.id
-		WHERE a.username = $1;`,
+		WHERE a.username = $1 OR a.email = $1;`,
 		username)
 	err = row.Scan(&storedPassword, &id, &status)
 
