@@ -1181,6 +1181,18 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
+                    },
+                    "409": {
+                        "description": "Email already in use",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
                     }
                 }
             }

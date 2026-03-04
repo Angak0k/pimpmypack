@@ -66,6 +66,11 @@ func IsValidEmail(email string) bool {
 	return emailRegex.MatchString(email)
 }
 
+// IsValidUsername checks that a username does not contain '@' to avoid ambiguity with email login.
+func IsValidUsername(username string) bool {
+	return !strings.Contains(username, "@")
+}
+
 // EmailSender defines the interface for sending emails. Needed for testing without real SMTP server.
 type EmailSender interface {
 	SendEmail(to, subject, textBody, htmlBody string) error

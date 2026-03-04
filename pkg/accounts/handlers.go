@@ -22,6 +22,8 @@ import (
 // @Param   input  body    RegisterInput  true  "Register Informations"
 // @Success 200 {object} apitypes.OkResponse
 // @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 409 {object} apitypes.ErrorResponse "Email already in use"
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /register [post]
 func Register(c *gin.Context) {
 	var input RegisterInput
@@ -34,6 +36,11 @@ func Register(c *gin.Context) {
 
 	if !helper.IsValidEmail(input.Email) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
+		return
+	}
+
+	if !helper.IsValidUsername(input.Username) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "username must not contain @"})
 		return
 	}
 
@@ -57,7 +64,7 @@ func Register(c *gin.Context) {
 			return
 		}
 		helper.LogAndSanitize(err, "register: user registration failed")
-		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInternalServer})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -457,20 +464,25 @@ func PostAccount(c *gin.Context) {
 		return
 	}
 
-	if helper.IsValidEmail(newAccount.Email) {
-		// Insert the new account into the database.
-		err := insertAccount(c.Request.Context(), &newAccount)
-		if err != nil {
-			helper.LogAndSanitize(err, "post account: insert account failed")
-			c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
-			return
-		}
-
-		c.IndentedJSON(http.StatusCreated, newAccount)
-	} else {
+	if !helper.IsValidEmail(newAccount.Email) {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
 		return
 	}
+
+	if !helper.IsValidUsername(newAccount.Username) {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "username must not contain @"})
+		return
+	}
+
+	// Insert the new account into the database.
+	err := insertAccount(c.Request.Context(), &newAccount)
+	if err != nil {
+		helper.LogAndSanitize(err, "post account: insert account failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	c.IndentedJSON(http.StatusCreated, newAccount)
 }
 
 // Update account by ID

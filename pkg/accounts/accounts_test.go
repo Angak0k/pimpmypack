@@ -471,73 +471,117 @@ func TestRegisterKO(t *testing.T) {
 	// Define the endpoint for Register handler
 	router.POST("/register", Register)
 	t.Run("Register account with duplicate email", func(t *testing.T) {
-		// Use the email of the first user in the dataset (already exists)
-		newAccount := RegisterInput{
-			Username:  "user-" + random.UniqueId(),
-			Password:  "password",
-			Email:     users[0].Email,
-			Firstname: "Duplicate",
-			Lastname:  "Email",
-		}
-
-		jsonData, err := json.Marshal(newAccount)
-		if err != nil {
-			t.Fatalf("Failed to marshal account data: %v", err)
-		}
-
-		req, err := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(jsonData))
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		if w.Code != http.StatusConflict {
-			t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusConflict, w.Code, w.Body.String())
-		}
-
-		var response map[string]string
-		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
-			t.Fatalf("Failed to unmarshal response: %v", err)
-		}
-		if response["error"] != "email already in use" {
-			t.Errorf("Expected error 'email already in use' but got '%s'", response["error"])
-		}
+		testRegisterWithDuplicateEmail(t, router)
 	})
-
+	t.Run("Register account with @ in username", func(t *testing.T) {
+		testRegisterWithAtInUsername(t, router)
+	})
 	t.Run("Register account with bad email", func(t *testing.T) {
-		// Sample account data
-		newAccount := RegisterInput{
-			Username:  "user-" + random.UniqueId(),
-			Password:  "password",
-			Email:     "jane.doe@exemple",
-			Firstname: "Jane",
-			Lastname:  "Doe",
-		}
-
-		// Convert account data to JSON
-		jsonData, err := json.Marshal(newAccount)
-		if err != nil {
-			t.Fatalf("Failed to marshal account data: %v", err)
-		}
-
-		// Set up a test scenario: sending a POST request with JSON data
-		req, err := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(jsonData))
-		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-
-		// Check the HTTP status code
-		if w.Code != http.StatusBadRequest {
-			t.Errorf("Expected status code %d but got %d", http.StatusBadRequest, w.Code)
-		}
+		testRegisterWithBadEmail(t, router)
 	})
+}
+
+func testRegisterWithDuplicateEmail(t *testing.T, router *gin.Engine) {
+	t.Helper()
+	newAccount := RegisterInput{
+		Username:  "user-" + random.UniqueId(),
+		Password:  "password",
+		Email:     users[0].Email,
+		Firstname: "Duplicate",
+		Lastname:  "Email",
+	}
+
+	jsonData, err := json.Marshal(newAccount)
+	if err != nil {
+		t.Fatalf("Failed to marshal account data: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusConflict {
+		t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusConflict, w.Code, w.Body.String())
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if response["error"] != "email already in use" {
+		t.Errorf("Expected error 'email already in use' but got '%s'", response["error"])
+	}
+}
+
+func testRegisterWithAtInUsername(t *testing.T, router *gin.Engine) {
+	t.Helper()
+	newAccount := RegisterInput{
+		Username:  "user@example.com",
+		Password:  "password",
+		Email:     "valid-" + random.UniqueId() + "@example.com",
+		Firstname: "At",
+		Lastname:  "Username",
+	}
+
+	jsonData, err := json.Marshal(newAccount)
+	if err != nil {
+		t.Fatalf("Failed to marshal account data: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusBadRequest, w.Code, w.Body.String())
+	}
+
+	var response map[string]string
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if response["error"] != "username must not contain @" {
+		t.Errorf("Expected error 'username must not contain @' but got '%s'", response["error"])
+	}
+}
+
+func testRegisterWithBadEmail(t *testing.T, router *gin.Engine) {
+	t.Helper()
+	newAccount := RegisterInput{
+		Username:  "user-" + random.UniqueId(),
+		Password:  "password",
+		Email:     "jane.doe@exemple",
+		Firstname: "Jane",
+		Lastname:  "Doe",
+	}
+
+	jsonData, err := json.Marshal(newAccount)
+	if err != nil {
+		t.Fatalf("Failed to marshal account data: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/register", bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status code %d but got %d", http.StatusBadRequest, w.Code)
+	}
 }
 
 func testLoginWithInvalidUsername(t *testing.T, router *gin.Engine) {

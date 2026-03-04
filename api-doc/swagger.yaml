@@ -1196,6 +1196,14 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/apitypes.ErrorResponse'
+        "409":
+          description: Email already in use
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
       summary: Register new user
       tags:
       - Public
