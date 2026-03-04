@@ -80,8 +80,19 @@ type SMTPClient struct {
 func (s *SMTPClient) SendEmail(to, subject, textBody, htmlBody string) error {
 	auth := smtp.PlainAuth("", s.Server.MailUsername, s.Server.MailPassword, s.Server.MailServer)
 
+	// Determine the sender address and display name.
+	// MailIdentity may be an email (production) or a display name (.env.sample).
+	// MailUsername may be a plain login or an email address.
+	fromAddr := s.Server.MailIdentity
+	fromName := "PimpMyPack"
+	if !strings.Contains(fromAddr, "@") {
+		// MailIdentity is a display name, fall back to MailUsername as address
+		fromName = s.Server.MailIdentity
+		fromAddr = s.Server.MailUsername
+	}
+
 	msg, err := BuildMIMEMessage(
-		s.Server.MailIdentity, s.Server.MailUsername,
+		fromName, fromAddr,
 		to, subject, textBody, htmlBody,
 	)
 	if err != nil {
@@ -91,7 +102,7 @@ func (s *SMTPClient) SendEmail(to, subject, textBody, htmlBody string) error {
 	return smtp.SendMail(
 		s.Server.MailServer+":"+strconv.Itoa(s.Server.MailPort),
 		auth,
-		s.Server.MailUsername,
+		fromAddr,
 		[]string{to},
 		msg,
 	)
