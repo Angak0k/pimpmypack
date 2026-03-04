@@ -719,10 +719,16 @@ func testLoginWithNonexistentEmail(t *testing.T, router *gin.Engine) {
 	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
-	if errMsg, ok := response["error"].(string); ok {
-		if errMsg != "credentials are incorrect" {
-			t.Errorf("Expected generic error message but got: %s", errMsg)
-		}
+	errorVal, exists := response["error"]
+	if !exists {
+		t.Fatalf("Expected 'error' field in response but it was missing. Full response: %+v", response)
+	}
+	errMsg, ok := errorVal.(string)
+	if !ok {
+		t.Fatalf("Expected 'error' field to be a string but got %T. Value: %v", errorVal, errorVal)
+	}
+	if errMsg != "credentials are incorrect" {
+		t.Errorf("Expected generic error message %q but got: %q", "credentials are incorrect", errMsg)
 	}
 }
 
