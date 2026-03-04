@@ -32,37 +32,41 @@ func Register(c *gin.Context) {
 		return
 	}
 
-	user := User{}
-
-	if helper.IsValidEmail(input.Email) {
-		user.Email = input.Email
-		user.Username = input.Username
-		user.Password = input.Password
-		user.Firstname = input.Firstname
-		user.Lastname = input.Lastname
-		user.Role = "standard"
-		user.Status = "pending"
-		user.CreatedAt = time.Now().Truncate(time.Second)
-		user.UpdatedAt = time.Now().Truncate(time.Second)
-
-		emailSended, err := registerUser(c.Request.Context(), user)
-
-		if err != nil {
-			helper.LogAndSanitize(err, "register: user registration failed")
-			c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInternalServer})
-			return
-		}
-
-		if !emailSended {
-			c.JSON(http.StatusAccepted, gin.H{"message": "registration succeed but failed to send confirmation email"})
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"message": "registration succeed, please check your email to confirm your account"})
-	} else {
+	if !helper.IsValidEmail(input.Email) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
 		return
 	}
+
+	user := User{
+		Email:     input.Email,
+		Username:  input.Username,
+		Password:  input.Password,
+		Firstname: input.Firstname,
+		Lastname:  input.Lastname,
+		Role:      "standard",
+		Status:    "pending",
+		CreatedAt: time.Now().Truncate(time.Second),
+		UpdatedAt: time.Now().Truncate(time.Second),
+	}
+
+	emailSended, err := registerUser(c.Request.Context(), user)
+
+	if err != nil {
+		if errors.Is(err, ErrEmailAlreadyExists) {
+			c.JSON(http.StatusConflict, gin.H{"error": "email already in use"})
+			return
+		}
+		helper.LogAndSanitize(err, "register: user registration failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	if !emailSended {
+		c.JSON(http.StatusAccepted, gin.H{"message": "registration succeed but failed to send confirmation email"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "registration succeed, please check your email to confirm your account"})
 }
 
 // Confirm email address
