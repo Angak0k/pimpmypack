@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -202,6 +203,8 @@ func validateConfig(cfg Config) error {
 		return errors.New("DB_NAME is not set")
 	case cfg.MailServer.MailIdentity == "":
 		return errors.New("MAIL_IDENTITY is not set")
+	case !strings.Contains(cfg.MailServer.MailIdentity, "@"):
+		return errors.New("MAIL_IDENTITY must be a valid email address (used as sender address)")
 	case cfg.MailServer.MailUsername == "":
 		return errors.New("MAIL_USERNAME is not set")
 	case cfg.MailServer.MailPassword == "":
