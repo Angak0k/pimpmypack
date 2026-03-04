@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"path/filepath"
 	"time"
 
 	"github.com/Angak0k/pimpmypack/tests/cmd/apitest/internal/client"
@@ -12,10 +13,11 @@ import (
 
 // Runner executes test scenarios
 type Runner struct {
-	client    *client.HTTPClient
-	state     *State
-	formatter *output.Formatter
-	verbose   bool
+	client      *client.HTTPClient
+	state       *State
+	formatter   *output.Formatter
+	verbose     bool
+	scenarioDir string
 
 	TotalTests  int
 	PassedTests int
@@ -56,6 +58,7 @@ func (r *Runner) Run(scenarioFile string) error {
 		return fmt.Errorf("failed to load scenario: %w", err)
 	}
 
+	r.scenarioDir = filepath.Dir(scenarioFile)
 	r.formatter.PrintHeader("Scenario: " + scenario.Name)
 
 	startTime := time.Now()
@@ -93,14 +96,30 @@ func (r *Runner) executeStep(step Step) (int, error) {
 	// 1. Substitute variables in request
 	req := r.substituteRequest(step.Request)
 
+	// Convert multipart to File if present
+	if req.File == nil && len(req.Multipart) > 0 {
+		for fieldName, mf := range req.Multipart {
+			filePath := mf.File
+			if !filepath.IsAbs(filePath) {
+				filePath = filepath.Join(r.scenarioDir, filePath)
+			}
+			req.File = &FileUpload{
+				Field: fieldName,
+				Path:  filePath,
+			}
+			break // Only one file upload per request
+		}
+	}
+
 	// 2. Make HTTP request (with file upload if specified)
 	var statusCode int
 	var body []byte
+	var contentType string
 	var err error
 
 	if req.File != nil {
 		// File upload request
-		statusCode, body, err = r.client.MakeRequestWithFile(
+		statusCode, body, contentType, err = r.client.MakeRequestWithFile(
 			ctx,
 			req.Method,
 			req.Endpoint,
@@ -110,7 +129,7 @@ func (r *Runner) executeStep(step Step) (int, error) {
 		)
 	} else {
 		// Regular JSON request
-		statusCode, body, err = r.client.MakeRequest(ctx, req.Method, req.Endpoint, req.Headers, req.Body)
+		statusCode, body, contentType, err = r.client.MakeRequest(ctx, req.Method, req.Endpoint, req.Headers, req.Body)
 	}
 
 	if err != nil {
@@ -121,7 +140,7 @@ func (r *Runner) executeStep(step Step) (int, error) {
 	for _, assertion := range step.Assertions {
 		// Substitute variables in assertion values
 		substitutedAssertion := r.substituteAssertion(assertion)
-		if err := ValidateAssertion(substitutedAssertion, statusCode, body); err != nil {
+		if err := ValidateAssertion(substitutedAssertion, statusCode, body, contentType); err != nil {
 			return statusCode, err
 		}
 	}
@@ -137,11 +156,12 @@ func (r *Runner) executeStep(step Step) (int, error) {
 // substituteRequest replaces variables in a request
 func (r *Runner) substituteRequest(req Request) Request {
 	return Request{
-		Method:   req.Method,
-		Endpoint: r.state.Substitute(req.Endpoint),
-		Headers:  r.state.SubstituteStringMap(req.Headers),
-		Body:     r.state.SubstituteMap(req.Body),
-		File:     req.File, // Preserve file upload info
+		Method:    req.Method,
+		Endpoint:  r.state.Substitute(req.Endpoint),
+		Headers:   r.state.SubstituteStringMap(req.Headers),
+		Body:      r.state.SubstituteMap(req.Body),
+		File:      req.File, // Preserve file upload info
+		Multipart: req.Multipart,
 	}
 }
 
