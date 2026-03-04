@@ -88,15 +88,17 @@ func sendConfirmationEmail(u User, code string) error {
 	}
 
 	// Send confirmation email
+	confirmURL := config.Scheme + "://" + config.HostName + "/confirmemail.html?id=" +
+		strconv.FormatUint(uint64(u.ID), 10) + "&code=" + code
+
 	mailRcpt := u.Email
 	mailSubject := "PimpMyPack - Confirm your email address"
-	mailBody := "Please confirm your email address by clicking on the following link: " +
-		config.Scheme + "://" + config.HostName + "/confirmemail.html?id=" +
-		strconv.FormatUint(uint64(u.ID), 10) + "&code=" + code
+	mailTextBody := helper.BuildConfirmationEmailText(u.Username, confirmURL)
+	mailHTMLBody := helper.BuildConfirmationEmailHTML(u.Username, confirmURL)
 
 	smtpClient := helper.SMTPClient{Server: config.MailServerConfig}
 
-	err := smtpClient.SendEmail(mailRcpt, mailSubject, mailBody)
+	err := smtpClient.SendEmail(mailRcpt, mailSubject, mailTextBody, mailHTMLBody)
 	if err != nil {
 		return fmt.Errorf("failed to send confirmation email: %w", err)
 	}
@@ -227,12 +229,12 @@ func forgotPassword(ctx context.Context, email string) error {
 
 	mailRcpt := email
 	mailSubject := "PimpMyPack - Your password has been reset"
-	mailBody := "Hi! your password has been reset. If you did not request this, " +
-		"please contact us.\n\nYour new password is: " + newPassword
+	mailTextBody := helper.BuildPasswordResetEmailText(newPassword)
+	mailHTMLBody := helper.BuildPasswordResetEmailHTML(newPassword)
 
 	smtpClient := helper.SMTPClient{Server: config.MailServerConfig}
 
-	err = smtpClient.SendEmail(mailRcpt, mailSubject, mailBody)
+	err = smtpClient.SendEmail(mailRcpt, mailSubject, mailTextBody, mailHTMLBody)
 	if err != nil {
 		return fmt.Errorf("failed to send password reset email: %w", err)
 	}
