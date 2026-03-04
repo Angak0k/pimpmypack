@@ -252,7 +252,7 @@ func loginCheck(
 	row := database.DB().QueryRowContext(ctx,
 		`SELECT p.password, p.user_id, a.status
 		FROM password AS p JOIN account AS a ON p.user_id = a.id
-		WHERE a.username = $1;`,
+		WHERE a.username = $1 OR a.email = $1;`,
 		username)
 	err = row.Scan(&storedPassword, &id, &status)
 

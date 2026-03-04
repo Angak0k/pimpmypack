@@ -589,6 +589,106 @@ func testLoginWithIncorrectPassword(t *testing.T, router *gin.Engine, username s
 	}
 }
 
+func testLoginWithEmail(t *testing.T, router *gin.Engine, user User) {
+	// Reset user status to active
+	_, err := database.DB().Exec("UPDATE account SET status = 'active' WHERE username = $1;", user.Username)
+	if err != nil {
+		t.Fatalf("failed to reset user status: %v", err)
+	}
+
+	emailLogin := LoginInput{
+		Username: user.Email,
+		Password: user.Password,
+	}
+	emailJSON, err := json.Marshal(emailLogin)
+	if err != nil {
+		t.Fatalf("Failed to marshal login data: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(emailJSON))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var response map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response body: %v", err)
+	}
+	validateTokenPairResponse(t, response)
+}
+
+func testLoginWithEmailPendingUser(t *testing.T, router *gin.Engine, user User) {
+	// Set status to pending
+	_, err := database.DB().Exec("UPDATE account SET status = 'pending' WHERE username = $1;", user.Username)
+	if err != nil {
+		t.Fatalf("failed to set user status to pending: %v", err)
+	}
+
+	emailLogin := LoginInput{
+		Username: user.Email,
+		Password: user.Password,
+	}
+	emailJSON, err := json.Marshal(emailLogin)
+	if err != nil {
+		t.Fatalf("Failed to marshal login data: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(emailJSON))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusUnauthorized, w.Code, w.Body.String())
+	}
+}
+
+func testLoginWithNonexistentEmail(t *testing.T, router *gin.Engine) {
+	emailLogin := LoginInput{
+		Username: "nonexistent-" + random.UniqueId() + "@example.com",
+		Password: "anypassword",
+	}
+	emailJSON, err := json.Marshal(emailLogin)
+	if err != nil {
+		t.Fatalf("Failed to marshal login data: %v", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "/login", bytes.NewBuffer(emailJSON))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusUnauthorized, w.Code, w.Body.String())
+	}
+
+	var response map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if errMsg, ok := response["error"].(string); ok {
+		if errMsg != "credentials are incorrect" {
+			t.Errorf("Expected generic error message but got: %s", errMsg)
+		}
+	}
+}
+
 // validateTokenPairResponse validates the token pair response format
 func validateTokenPairResponse(t *testing.T, response map[string]interface{}) {
 	t.Helper()
@@ -666,6 +766,18 @@ func TestLogin(t *testing.T) {
 		if w.Code != http.StatusUnauthorized {
 			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
 		}
+	})
+
+	t.Run("Login with email", func(t *testing.T) {
+		testLoginWithEmail(t, router, newUser)
+	})
+
+	t.Run("Login with email of pending user", func(t *testing.T) {
+		testLoginWithEmailPendingUser(t, router, newUser)
+	})
+
+	t.Run("Login with nonexistent email", func(t *testing.T) {
+		testLoginWithNonexistentEmail(t, router)
 	})
 
 	t.Run("Login with invalid username", func(t *testing.T) {

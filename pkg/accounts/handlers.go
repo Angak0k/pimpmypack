@@ -187,7 +187,8 @@ func ResendConfirmEmail(c *gin.Context) {
 
 // User login
 // @Summary User login
-// @Description Log in a user by providing username and password
+// @Description Log in a user by providing username (or email) and password
+// @Description The username field accepts either a username or an email address
 // @Description Returns access token (short-lived) and refresh token (long-lived)
 // @Description Use remember_me to extend refresh token lifetime
 // @Tags Public
