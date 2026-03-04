@@ -101,6 +101,13 @@ definitions:
     - password
     - username
     type: object
+  accounts.ResendConfirmEmailInput:
+    properties:
+      email:
+        type: string
+    required:
+    - email
+    type: object
   apitypes.ErrorResponse:
     properties:
       error:
@@ -1189,6 +1196,33 @@ paths:
           schema:
             $ref: '#/definitions/apitypes.ErrorResponse'
       summary: Register new user
+      tags:
+      - Public
+  /resend-confirmemail:
+    post:
+      consumes:
+      - application/json
+      description: Resend confirmation email to a pending user account. Always returns
+        200 to prevent user enumeration.
+      parameters:
+      - description: Email Address
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/accounts.ResendConfirmEmailInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apitypes.OkResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      summary: Resend confirmation email
       tags:
       - Public
   /sharedlist/{sharing_code}:

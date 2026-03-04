@@ -677,6 +677,92 @@ func TestLogin(t *testing.T) {
 	})
 }
 
+func TestResendConfirmEmail(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.POST("/resend-confirmemail", ResendConfirmEmail)
+
+	// The second user in the dataset has status "pending"
+	pendingUser := users[1]
+
+	t.Run("Resend for pending account returns 200", func(t *testing.T) {
+		input := ResendConfirmEmailInput{Email: pendingUser.Email}
+		jsonData, _ := json.Marshal(input)
+		req, _ := http.NewRequest(http.MethodPost, "/resend-confirmemail", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+		}
+
+		var response map[string]string
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Fatalf("Failed to unmarshal response: %v", err)
+		}
+		if response["message"] == "" {
+			t.Error("Expected a message in response")
+		}
+	})
+
+	t.Run("Resend for non-existent email returns 200 (anti-enumeration)", func(t *testing.T) {
+		input := ResendConfirmEmailInput{Email: "nonexistent@example.com"}
+		jsonData, _ := json.Marshal(input)
+		req, _ := http.NewRequest(http.MethodPost, "/resend-confirmemail", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
+		}
+	})
+
+	t.Run("Resend for active account returns 200 (anti-enumeration)", func(t *testing.T) {
+		// The first user in the dataset has status "active"
+		input := ResendConfirmEmailInput{Email: users[0].Email}
+		jsonData, _ := json.Marshal(input)
+		req, _ := http.NewRequest(http.MethodPost, "/resend-confirmemail", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
+		}
+	})
+
+	t.Run("Resend with invalid email format returns 400", func(t *testing.T) {
+		input := ResendConfirmEmailInput{Email: "not-an-email"}
+		jsonData, _ := json.Marshal(input)
+		req, _ := http.NewRequest(http.MethodPost, "/resend-confirmemail", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code %d but got %d", http.StatusBadRequest, w.Code)
+		}
+	})
+
+	t.Run("Resend with empty body returns 400", func(t *testing.T) {
+		req, _ := http.NewRequest(http.MethodPost, "/resend-confirmemail", bytes.NewBufferString("{}"))
+		req.Header.Set("Content-Type", "application/json")
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code %d but got %d", http.StatusBadRequest, w.Code)
+		}
+	})
+}
+
 func TestPutMyPassword(t *testing.T) {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)

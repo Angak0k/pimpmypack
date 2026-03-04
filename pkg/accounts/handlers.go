@@ -150,6 +150,41 @@ func ForgotPassword(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "new password sent"})
 }
 
+// Resend confirmation email
+// @Summary Resend confirmation email
+// @Description Resend confirmation email to a pending user account. Always returns 200 to prevent user enumeration.
+// @Tags Public
+// @Accept  json
+// @Produce  json
+// @Param   input  body    ResendConfirmEmailInput  true  "Email Address"
+// @Success 200 {object} apitypes.OkResponse
+// @Failure 400 {object} apitypes.ErrorResponse "Bad Request"
+// @Router /resend-confirmemail [post]
+func ResendConfirmEmail(c *gin.Context) {
+	var input ResendConfirmEmailInput
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		helper.LogAndSanitize(err, "resend confirm email: bind JSON failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
+		return
+	}
+
+	if !helper.IsValidEmail(input.Email) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
+		return
+	}
+
+	err := resendConfirmEmail(c.Request.Context(), input.Email)
+	if err != nil {
+		helper.LogAndSanitize(err, "resend confirm email failed")
+	}
+
+	// Always return 200 to prevent user enumeration
+	msg := "if your email is registered and pending confirmation, " +
+		"a new confirmation email has been sent"
+	c.JSON(http.StatusOK, gin.H{"message": msg})
+}
+
 // User login
 // @Summary User login
 // @Description Log in a user by providing username and password

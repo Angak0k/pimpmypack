@@ -129,6 +129,49 @@ func TestRefreshRateLimiter_ResetAfterWindow(t *testing.T) {
 	assert.Equal(t, http.StatusOK, w2.Code, "Request after window should succeed")
 }
 
+func TestResendConfirmRateLimiter_AllowsUnderLimit(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	// Rate limiter: 1 request per minute
+	router.POST("/test", ResendConfirmRateLimiter(1, 1), func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	})
+
+	// First request should succeed
+	req := httptest.NewRequest(http.MethodPost, "/test", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code, "First request should succeed")
+}
+
+func TestResendConfirmRateLimiter_BlocksOverLimit(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+
+	// Rate limiter: 1 request per minute
+	router.POST("/test", ResendConfirmRateLimiter(1, 1), func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "success"})
+	})
+
+	// First request should succeed
+	req := httptest.NewRequest(http.MethodPost, "/test", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code, "First request should succeed")
+
+	// Second request should be rate limited
+	req2 := httptest.NewRequest(http.MethodPost, "/test", nil)
+	w2 := httptest.NewRecorder()
+	router.ServeHTTP(w2, req2)
+
+	assert.Equal(t, http.StatusTooManyRequests, w2.Code, "Second request should be rate limited")
+	assert.Contains(t, w2.Body.String(), "Rate limit exceeded")
+	assert.Contains(t, w2.Body.String(), "retry_after")
+}
+
 func TestIPRateLimiter_GetLimiter(t *testing.T) {
 	limiter := NewIPRateLimiter(10, 10)
 

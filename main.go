@@ -117,6 +117,12 @@ func setupPublicRoutes(router *gin.Engine) {
 		security.RefreshTokenHandler)
 	public.GET("/confirmemail", accounts.ConfirmEmail)
 	public.POST("/forgotpassword", accounts.ForgotPassword)
+	public.POST("/resend-confirmemail",
+		security.ResendConfirmRateLimiter(
+			config.ResendConfirmRateLimitRequests,
+			config.ResendConfirmRateLimitRequests,
+		),
+		accounts.ResendConfirmEmail)
 	public.GET("/sharedlist/:sharing_code", packs.SharedList)
 	public.GET("/v1/packs/:id/image", images.GetPackImage)
 	public.GET("/v1/accounts/:id/image", images.GetProfileImage)
