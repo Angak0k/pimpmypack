@@ -13,7 +13,7 @@ func TestBuildConfirmationEmailHTML(t *testing.T) {
 		substr string
 	}{
 		{"username", "testuser"},
-		{"confirm URL href", `href="https://example.com/confirm?id=1&code=abc"`},
+		{"confirm URL href", `href="https://example.com/confirm?id=1&amp;code=abc"`},
 		{"CTA button text", "Confirm my email"},
 		{"branding", "PimpMyPack"},
 		{"brand header color", "#14532d"},

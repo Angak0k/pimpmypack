@@ -1,9 +1,15 @@
 package helper
 
-import "fmt"
+import (
+	"fmt"
+	"html"
+)
 
 // BuildEmailHTML wraps body content in a branded HTML email layout.
+// title and preheaderText are HTML-escaped; bodyContent is trusted pre-built HTML.
 func BuildEmailHTML(title, preheaderText, bodyContent string) string {
+	safeTitle := html.EscapeString(title)
+	safePreheader := html.EscapeString(preheaderText)
 	return fmt.Sprintf(`<!DOCTYPE html>
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
@@ -44,11 +50,13 @@ font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
 </td></tr>
 </table>
 </body>
-</html>`, title, preheaderText, bodyContent)
+</html>`, safeTitle, safePreheader, bodyContent)
 }
 
 // BuildConfirmationEmailHTML returns the branded HTML body for a confirmation email.
 func BuildConfirmationEmailHTML(username, confirmURL string) string {
+	safeName := html.EscapeString(username)
+	safeURL := html.EscapeString(confirmURL)
 	body := fmt.Sprintf(`<h1 style="margin:0 0 16px;font-size:22px;color:#292524;">Welcome, %s!</h1>
 <p style="margin:0 0 24px;font-size:16px;color:#292524;line-height:1.6;">
 Thanks for signing up for PimpMyPack. Please confirm your email address to activate your account.
@@ -64,7 +72,7 @@ border-radius:8px;">Confirm my email</a>
 <p style="margin:0;font-size:13px;color:#78716c;line-height:1.5;word-break:break-all;">
 If the button doesn't work, copy and paste this link into your browser:<br>
 <a href="%s" style="color:#16a34a;">%s</a>
-</p>`, username, confirmURL, confirmURL, confirmURL)
+</p>`, safeName, safeURL, safeURL, safeURL)
 
 	return BuildEmailHTML(
 		"Confirm your email — PimpMyPack",
@@ -89,6 +97,7 @@ PimpMyPack - Optimize your pack, enjoy the trail.
 
 // BuildPasswordResetEmailHTML returns the branded HTML body for a password reset email.
 func BuildPasswordResetEmailHTML(newPassword string) string {
+	safePassword := html.EscapeString(newPassword)
 	body := fmt.Sprintf(`<h1 style="margin:0 0 16px;font-size:22px;color:#292524;">Password Reset</h1>
 <p style="margin:0 0 16px;font-size:16px;color:#292524;line-height:1.6;">
 Your password has been reset. Here is your new temporary password:
@@ -104,7 +113,7 @@ We recommend changing your password after logging in.
 </p>
 <p style="margin:0;font-size:13px;color:#78716c;line-height:1.5;">
 If you did not request this password reset, please contact us immediately.
-</p>`, newPassword)
+</p>`, safePassword)
 
 	return BuildEmailHTML(
 		"Password Reset — PimpMyPack",

@@ -3,6 +3,7 @@ package helper
 import (
 	"log"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
@@ -83,7 +84,7 @@ func TestSendEmail(t *testing.T) {
 
 	err := mockSender.SendEmail("example@example.com", "Test Subject", "This is a test.", "<p>This is a test.</p>")
 	if err != nil {
-		t.Errorf("SendMail failed: %v", err)
+		t.Errorf("SendEmail failed: %v", err)
 	}
 
 	// Verify that the email was "sent"
@@ -97,6 +98,45 @@ func TestSendEmail(t *testing.T) {
 	}
 	if sent.HTMLBody != "<p>This is a test.</p>" {
 		t.Errorf("Expected HTML body '<p>This is a test.</p>', got '%s'", sent.HTMLBody)
+	}
+}
+
+func TestBuildMIMEMessage(t *testing.T) {
+	msg, err := BuildMIMEMessage(
+		"PimpMyPack", "noreply@pimpmypack.com",
+		"user@example.com", "Test Subject",
+		"Plain text body", "<p>HTML body</p>",
+	)
+	if err != nil {
+		t.Fatalf("BuildMIMEMessage failed: %v", err)
+	}
+
+	raw := string(msg)
+
+	checks := []struct {
+		name   string
+		substr string
+	}{
+		{"From header", "From: PimpMyPack <noreply@pimpmypack.com>"},
+		{"To header", "To: user@example.com"},
+		{"Subject header", "Subject: Test Subject"},
+		{"Date header", "Date: "},
+		{"Message-ID header", "Message-ID: <"},
+		{"MIME-Version", "MIME-Version: 1.0"},
+		{"multipart boundary", "Content-Type: multipart/alternative; boundary="},
+		{"text/plain part", "Content-Type: text/plain; charset=utf-8"},
+		{"text/html part", "Content-Type: text/html; charset=utf-8"},
+		{"text body", "Plain text body"},
+		{"html body", "<p>HTML body</p>"},
+		{"8bit encoding", "Content-Transfer-Encoding: 8bit"},
+	}
+
+	for _, c := range checks {
+		t.Run(c.name, func(t *testing.T) {
+			if !strings.Contains(raw, c.substr) {
+				t.Errorf("expected message to contain %q", c.substr)
+			}
+		})
 	}
 }
 
