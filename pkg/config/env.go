@@ -137,7 +137,7 @@ func newConfig() Config {
 		ResendConfirmRateLimitRequests:      1,
 		ResendConfirmRateLimitWindowMinutes: 1,
 		APISecret:                           "defaultApiSecret",
-		Stage:                               "local",
+		Stage:                               "DEV",
 		HostName:                            "localhost",
 		DBConfig: DBConfig{
 			DBPort: 5432,

@@ -20,6 +20,13 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+// mockEmailSender is a no-op email sender for tests.
+type mockEmailSender struct{}
+
+func (m *mockEmailSender) SendEmail(_, _, _, _ string) error {
+	return nil
+}
+
 func TestMain(m *testing.M) {
 	// init env
 	err := config.EnvInit("../../.env")
@@ -38,6 +45,9 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		log.Fatalf("Error migrating database : %v", err)
 	}
+
+	// inject mock email sender to avoid real SMTP calls in tests
+	setEmailSender(&mockEmailSender{})
 
 	// init dataset
 	println("Loading Account dataset...")
