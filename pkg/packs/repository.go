@@ -726,7 +726,9 @@ func readLineFromCSV(record []string) (LighterPackItem, error) {
 	return lighterPackItem, nil
 }
 
-func insertLighterPack(ctx context.Context, lp *LighterPack, userID uint) (uint, error) {
+func insertLighterPack(
+	ctx context.Context, lp *LighterPack, userID uint, packName, packDescription string,
+) (uint, error) {
 	if lp == nil || len(*lp) == 0 {
 		return 0, errors.New("payload is empty")
 	}
@@ -734,8 +736,8 @@ func insertLighterPack(ctx context.Context, lp *LighterPack, userID uint) (uint,
 	// Create new pack
 	var newPack Pack
 	newPack.UserID = userID
-	newPack.PackName = "LighterPack Import"
-	newPack.PackDescription = "LighterPack Import"
+	newPack.PackName = packName
+	newPack.PackDescription = packDescription
 	err := insertPack(ctx, &newPack)
 	if err != nil {
 		return 0, err
@@ -770,7 +772,10 @@ func insertLighterPack(ctx context.Context, lp *LighterPack, userID uint) (uint,
 			i.Weight = item.Weight
 			i.URL = item.URL
 			i.Price = item.Price
-			i.Currency = "USD"
+			i.Currency = item.Currency
+			if i.Currency == "" {
+				i.Currency = "USD"
+			}
 			err := inventories.InsertInventory(ctx, &i)
 			if err != nil {
 				return 0, err

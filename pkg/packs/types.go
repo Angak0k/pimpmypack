@@ -156,8 +156,14 @@ type LighterPackItem struct {
 	Unit       string `json:"unit"`
 	URL        string `json:"url"`
 	Price      int    `json:"price"`
+	Currency   string `json:"currency"`
 	Worn       bool   `json:"worn"`
 	Consumable bool   `json:"consumable"`
+}
+
+// ImportFromURLRequest represents the request body for importing from a LighterPack URL
+type ImportFromURLRequest struct {
+	URL string `json:"url" binding:"required"`
 }
 
 // LighterPack represents a collection of LighterPack items

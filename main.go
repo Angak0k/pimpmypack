@@ -154,6 +154,7 @@ func setupProtectedRoutes(router *gin.Engine) {
 	protected.DELETE("/myinventory/:id", inventories.DeleteMyInventoryByID)
 	protected.GET("/pack-options", packs.GetPackOptions)
 	protected.POST("/importfromlighterpack", packs.ImportFromLighterPack)
+	protected.POST("/importfromlighterpackurl", packs.ImportFromLighterPackURL)
 	protected.POST("/mypack/:id/image", images.UploadPackImage)
 	protected.DELETE("/mypack/:id/image", images.DeletePackImage)
 	protected.POST("/myaccount/image", images.UploadMyProfileImage)
