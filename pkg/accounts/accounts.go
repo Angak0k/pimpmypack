@@ -31,8 +31,8 @@ var ErrEmailAlreadyExists = errors.New("email already exists")
 // emailSender is the package-level email sender, replaceable for testing.
 var emailSender helper.EmailSender
 
-// SetEmailSender sets the email sender (used in tests to inject a mock).
-func SetEmailSender(s helper.EmailSender) {
+// setEmailSender sets the email sender (used in tests to inject a mock).
+func setEmailSender(s helper.EmailSender) {
 	emailSender = s
 }
 
