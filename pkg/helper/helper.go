@@ -85,6 +85,10 @@ type SMTPClient struct {
 // MailIdentity must be a valid email address (validated at startup) — used as envelope sender and From address.
 // MailUsername is the SMTP authentication login credential.
 func (s *SMTPClient) SendEmail(to, subject, textBody, htmlBody string) error {
+	if !IsValidEmail(to) {
+		return fmt.Errorf("invalid recipient email address: %s", to)
+	}
+
 	auth := smtp.PlainAuth("", s.Server.MailUsername, s.Server.MailPassword, s.Server.MailServer)
 
 	msg, err := BuildMIMEMessage(
