@@ -3,6 +3,7 @@ package helper
 import (
 	"fmt"
 	"html"
+	"strings"
 )
 
 // BuildEmailHTML wraps body content in a branded HTML email layout.
@@ -81,6 +82,13 @@ If the button doesn't work, copy and paste this link into your browser:<br>
 	)
 }
 
+// sanitizeTextContent strips \r and \n to prevent content injection in plain-text emails.
+func sanitizeTextContent(v string) string {
+	v = strings.ReplaceAll(v, "\r", "")
+	v = strings.ReplaceAll(v, "\n", "")
+	return v
+}
+
 // BuildConfirmationEmailText returns the plain-text body for a confirmation email.
 func BuildConfirmationEmailText(username, confirmURL string) string {
 	return fmt.Sprintf(`Welcome, %s!
@@ -92,7 +100,7 @@ Confirm your email:
 
 --
 PimpMyPack - Optimize your pack, enjoy the trail.
-`, username, confirmURL)
+`, sanitizeTextContent(username), confirmURL)
 }
 
 // BuildPasswordResetEmailHTML returns the branded HTML body for a password reset email.
