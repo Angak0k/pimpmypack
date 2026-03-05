@@ -28,6 +28,22 @@ var ErrInvalidCredentials = errors.New("invalid credentials")
 // ErrEmailAlreadyExists is returned when a registration is attempted with an already-used email.
 var ErrEmailAlreadyExists = errors.New("email already exists")
 
+// emailSender is the package-level email sender, replaceable for testing.
+var emailSender helper.EmailSender
+
+// SetEmailSender sets the email sender (used in tests to inject a mock).
+func SetEmailSender(s helper.EmailSender) {
+	emailSender = s
+}
+
+// getEmailSender returns the configured email sender, defaulting to SMTP.
+func getEmailSender() helper.EmailSender {
+	if emailSender != nil {
+		return emailSender
+	}
+	return &helper.SMTPClient{Server: config.MailServerConfig}
+}
+
 func registerUser(ctx context.Context, u User) (bool, error) {
 	var id int
 
@@ -104,9 +120,7 @@ func sendConfirmationEmail(u User, code string) error {
 	mailTextBody := helper.BuildConfirmationEmailText(u.Username, confirmURL)
 	mailHTMLBody := helper.BuildConfirmationEmailHTML(u.Username, confirmURL)
 
-	smtpClient := helper.SMTPClient{Server: config.MailServerConfig}
-
-	err := smtpClient.SendEmail(mailRcpt, mailSubject, mailTextBody, mailHTMLBody)
+	err := getEmailSender().SendEmail(mailRcpt, mailSubject, mailTextBody, mailHTMLBody)
 	if err != nil {
 		return fmt.Errorf("failed to send confirmation email: %w", err)
 	}
@@ -240,9 +254,7 @@ func forgotPassword(ctx context.Context, email string) error {
 	mailTextBody := helper.BuildPasswordResetEmailText(newPassword)
 	mailHTMLBody := helper.BuildPasswordResetEmailHTML(newPassword)
 
-	smtpClient := helper.SMTPClient{Server: config.MailServerConfig}
-
-	err = smtpClient.SendEmail(mailRcpt, mailSubject, mailTextBody, mailHTMLBody)
+	err = getEmailSender().SendEmail(mailRcpt, mailSubject, mailTextBody, mailHTMLBody)
 	if err != nil {
 		return fmt.Errorf("failed to send password reset email: %w", err)
 	}

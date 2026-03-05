@@ -39,6 +39,9 @@ func TestMain(m *testing.M) {
 		log.Fatalf("Error migrating database : %v", err)
 	}
 
+	// inject mock email sender to avoid real SMTP calls in tests
+	SetEmailSender(&mockEmailSender{})
+
 	// init dataset
 	println("Loading Account dataset...")
 	err = loadingAccountDataset()

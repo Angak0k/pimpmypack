@@ -13,6 +13,13 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
+// mockEmailSender is a no-op email sender for tests.
+type mockEmailSender struct{}
+
+func (m *mockEmailSender) SendEmail(_, _, _, _ string) error {
+	return nil
+}
+
 var users = []User{
 	{
 		Username:            "user-" + random.UniqueId(),
