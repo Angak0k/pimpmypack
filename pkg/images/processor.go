@@ -20,8 +20,12 @@ const (
 	MaxDimension = 1920
 	// MaxProfilePicDimension is the maximum width or height for profile pictures
 	MaxProfilePicDimension = 512
+	// MaxInventoryItemDimension is the maximum width or height for inventory item pictures
+	MaxInventoryItemDimension = 400
 	// JPEGQuality is the quality setting for JPEG encoding (0-100)
 	JPEGQuality = 85
+	// InventoryItemJPEGQuality is the quality setting for inventory item images (0-100)
+	InventoryItemJPEGQuality = 70
 	// MimeTypeJPEG is the MIME type for JPEG images
 	MimeTypeJPEG = "image/jpeg"
 	// MimeTypePNG is the MIME type for PNG images
@@ -108,18 +112,23 @@ func ResizeImage(img image.Image) image.Image {
 	return ResizeImageWithMax(img, MaxDimension)
 }
 
-// EncodeToJPEG encodes an image to JPEG format with specified quality
+// EncodeToJPEGWithQuality encodes an image to JPEG format with the given quality (0-100)
 // This also effectively strips EXIF data as we're re-encoding from scratch
-func EncodeToJPEG(img image.Image) ([]byte, error) {
+func EncodeToJPEGWithQuality(img image.Image, quality int) ([]byte, error) {
 	var buf bytes.Buffer
 
-	opts := &jpeg.Options{Quality: JPEGQuality}
+	opts := &jpeg.Options{Quality: quality}
 	err := jpeg.Encode(&buf, img, opts)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encode JPEG: %w", err)
 	}
 
 	return buf.Bytes(), nil
+}
+
+// EncodeToJPEG encodes an image to JPEG format with default quality (JPEGQuality)
+func EncodeToJPEG(img image.Image) ([]byte, error) {
+	return EncodeToJPEGWithQuality(img, JPEGQuality)
 }
 
 // ProcessImage validates and processes an uploaded image
@@ -234,4 +243,57 @@ func ProcessProfileImageFromReader(reader io.Reader) (*ProcessedImage, error) {
 	}
 
 	return ProcessProfileImage(data)
+}
+
+// ProcessInventoryItemImage validates and processes an uploaded inventory item picture
+// Uses MaxInventoryItemDimension (400px) and InventoryItemJPEGQuality (70%)
+func ProcessInventoryItemImage(data []byte) (*ProcessedImage, error) {
+	if len(data) > MaxUploadSize {
+		return nil, fmt.Errorf("%w: upload size %d exceeds %d bytes",
+			ErrTooLarge, len(data), MaxUploadSize)
+	}
+
+	_, err := ValidateImageFormat(data)
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := DecodeImage(data)
+	if err != nil {
+		return nil, err
+	}
+
+	img = ResizeImageWithMax(img, MaxInventoryItemDimension)
+
+	processedData, err := EncodeToJPEGWithQuality(img, InventoryItemJPEGQuality)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(processedData) > MaxProcessedSize {
+		return nil, fmt.Errorf("%w: processed size %d exceeds %d bytes",
+			ErrTooLarge, len(processedData), MaxProcessedSize)
+	}
+
+	bounds := img.Bounds()
+
+	return &ProcessedImage{
+		Data: processedData,
+		Metadata: ImageMetadata{
+			MimeType: MimeTypeJPEG,
+			FileSize: len(processedData),
+			Width:    bounds.Dx(),
+			Height:   bounds.Dy(),
+		},
+	}, nil
+}
+
+// ProcessInventoryItemImageFromReader processes an inventory item image from an io.Reader
+func ProcessInventoryItemImageFromReader(reader io.Reader) (*ProcessedImage, error) {
+	data, err := io.ReadAll(io.LimitReader(reader, MaxUploadSize+1))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read image data: %w", err)
+	}
+
+	return ProcessInventoryItemImage(data)
 }

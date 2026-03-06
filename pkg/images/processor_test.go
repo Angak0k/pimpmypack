@@ -400,3 +400,74 @@ func TestProcessImageFromReader(t *testing.T) {
 		t.Errorf("Expected height 600, got %d", result.Metadata.Height)
 	}
 }
+
+func TestEncodeToJPEGWithQuality(t *testing.T) {
+	img := image.NewRGBA(image.Rect(0, 0, 200, 200))
+
+	// Encode at high quality
+	highQ, err := EncodeToJPEGWithQuality(img, 95)
+	if err != nil {
+		t.Fatalf("Failed to encode at quality 95: %v", err)
+	}
+
+	// Encode at low quality
+	lowQ, err := EncodeToJPEGWithQuality(img, 30)
+	if err != nil {
+		t.Fatalf("Failed to encode at quality 30: %v", err)
+	}
+
+	// Lower quality should produce smaller file
+	if len(lowQ) >= len(highQ) {
+		t.Errorf("Expected lower quality to produce smaller file: high=%d, low=%d", len(highQ), len(lowQ))
+	}
+
+	// Both should be valid JPEG
+	for _, data := range [][]byte{highQ, lowQ} {
+		mimeType, err := ValidateImageFormat(data)
+		if err != nil {
+			t.Fatalf("Encoded data is not a valid image: %v", err)
+		}
+		if mimeType != "image/jpeg" {
+			t.Errorf("Expected image/jpeg, got %s", mimeType)
+		}
+	}
+}
+
+func TestProcessInventoryItemImage_ResizesLargeImage(t *testing.T) {
+	data := createTestJPEG(800, 600)
+
+	result, err := ProcessInventoryItemImage(data)
+	if err != nil {
+		t.Fatalf("Failed to process inventory item image: %v", err)
+	}
+
+	// 800x600 exceeds MaxInventoryItemDimension (400), should be resized
+	if result.Metadata.Width > MaxInventoryItemDimension || result.Metadata.Height > MaxInventoryItemDimension {
+		t.Errorf("Image not resized properly: %dx%d (max %d)",
+			result.Metadata.Width, result.Metadata.Height, MaxInventoryItemDimension)
+	}
+
+	// Largest dimension should be MaxInventoryItemDimension
+	if result.Metadata.Width != MaxInventoryItemDimension && result.Metadata.Height != MaxInventoryItemDimension {
+		t.Errorf("Neither dimension is MaxInventoryItemDimension: %dx%d",
+			result.Metadata.Width, result.Metadata.Height)
+	}
+
+	if result.Metadata.MimeType != "image/jpeg" {
+		t.Errorf("Expected mime type image/jpeg, got %s", result.Metadata.MimeType)
+	}
+}
+
+func TestProcessInventoryItemImage_SmallImageUnchangedDimensions(t *testing.T) {
+	data := createTestJPEG(200, 150)
+
+	result, err := ProcessInventoryItemImage(data)
+	if err != nil {
+		t.Fatalf("Failed to process inventory item image: %v", err)
+	}
+
+	// 200x150 is within MaxInventoryItemDimension, dimensions should be preserved
+	if result.Metadata.Width != 200 || result.Metadata.Height != 150 {
+		t.Errorf("Expected 200x150, got %dx%d", result.Metadata.Width, result.Metadata.Height)
+	}
+}
