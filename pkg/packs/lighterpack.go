@@ -84,11 +84,11 @@ func parseLighterPackHTML(data []byte) (string, string, ExternalPack, error) {
 		}
 	}
 
-	// Extract pack description from span.lpListDescription
+	// Extract pack description from div#lpListDescription
 	packDescription := packName
-	descNodes := findNodesByClass(doc, "span", "lpListDescription")
-	if len(descNodes) > 0 {
-		desc := strings.TrimSpace(textContent(descNodes[0]))
+	descNode := findNodeByID(doc, "lpListDescription")
+	if descNode != nil {
+		desc := strings.TrimSpace(textContent(descNode))
 		if desc != "" {
 			packDescription = desc
 		}
@@ -279,6 +279,29 @@ func textContent(node *xhtml.Node) string {
 		sb.WriteString(textContent(child))
 	}
 	return sb.String()
+}
+
+// findNodeByID finds the first descendant element with the given id attribute.
+func findNodeByID(node *xhtml.Node, id string) *xhtml.Node {
+	if node == nil {
+		return nil
+	}
+	var result *xhtml.Node
+	var walk func(*xhtml.Node)
+	walk = func(n *xhtml.Node) {
+		if result != nil {
+			return
+		}
+		if n.Type == xhtml.ElementNode && getAttr(n, "id") == id {
+			result = n
+			return
+		}
+		for child := n.FirstChild; child != nil; child = child.NextSibling {
+			walk(child)
+		}
+	}
+	walk(node)
+	return result
 }
 
 // findNodesByClass finds all descendant elements matching the given tag and class.
