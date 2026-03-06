@@ -1281,7 +1281,8 @@ func ImportFromLighterPackURL(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&input); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "url field is required"})
+		helper.LogAndSanitize(err, "import from lighterpack url: bind json failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 

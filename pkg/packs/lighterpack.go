@@ -1,11 +1,13 @@
 package packs
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"html"
 	"io"
+	"math"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -30,9 +32,9 @@ func fetchLighterPackPage(ctx context.Context, rawURL string) ([]byte, error) {
 	client := &http.Client{
 		Timeout: 15 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			// Only allow redirects within lighterpack.com
-			if req.URL.Host != "lighterpack.com" {
-				return errors.New("redirect to external domain blocked")
+			// Only allow HTTPS redirects within lighterpack.com
+			if req.URL.Scheme != "https" || req.URL.Host != "lighterpack.com" {
+				return errors.New("redirect to external or insecure URL blocked")
 			}
 			if len(via) >= 3 {
 				return errors.New("too many redirects")
@@ -67,7 +69,7 @@ func fetchLighterPackPage(ctx context.Context, rawURL string) ([]byte, error) {
 
 // parseLighterPackHTML parses a LighterPack HTML page and extracts pack data.
 func parseLighterPackHTML(data []byte) (string, string, LighterPack, error) {
-	doc, err := xhtml.Parse(strings.NewReader(string(data)))
+	doc, err := xhtml.Parse(bytes.NewReader(data))
 	if err != nil {
 		return "", "", nil, fmt.Errorf("failed to parse HTML: %w", err)
 	}
@@ -158,7 +160,7 @@ func extractItemWeight(node *xhtml.Node, item *LighterPackItem) {
 	if len(mgNodes) > 0 {
 		valStr := getAttr(mgNodes[0], "value")
 		if mg, err := strconv.ParseFloat(valStr, 64); err == nil {
-			item.Weight = int(mg / 1000) // milligrams to grams
+			item.Weight = int(math.Round(mg / 1000)) // milligrams to grams
 		}
 	}
 }
@@ -232,7 +234,7 @@ func parsePrice(s string) (int, string) {
 		return 0, currency
 	}
 
-	return int(f * 100), currency
+	return int(math.Round(f * 100)), currency
 }
 
 // HTML helper functions
