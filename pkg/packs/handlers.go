@@ -1245,7 +1245,7 @@ func ImportFromLighterPack(c *gin.Context) {
 	}
 
 	// Perform database insertion
-	packID, err := insertLighterPack(c.Request.Context(), &lighterPack, userID)
+	packID, err := insertLighterPack(c.Request.Context(), &lighterPack, userID, "LighterPack Import", "LighterPack Import")
 	if err != nil {
 		helper.LogAndSanitize(err, "import from lighterpack: insert lighterpack failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -1253,6 +1253,67 @@ func ImportFromLighterPack(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"message": "CSV data imported successfully",
+		"pack_id": packID,
+	})
+}
+
+// Import from LighterPack URL
+// @Summary Import a pack from a LighterPack sharing URL
+// @Description Import items from a LighterPack sharing URL into a new pack
+// @Tags Packs
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param input body ImportFromURLRequest true "LighterPack URL"
+// @Success 200 {object} ImportLighterPackResponse
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid URL"
+// @Failure 422 {object} apitypes.ErrorResponse "Failed to parse page"
+// @Failure 502 {object} apitypes.ErrorResponse "Failed to fetch page"
+// @Router /v1/importfromlighterpackurl [post]
+func ImportFromLighterPackURL(c *gin.Context) {
+	var input ImportFromURLRequest
+
+	userID, err := security.ExtractTokenID(c)
+	if err != nil {
+		helper.LogAndSanitize(err, "import from lighterpack url: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
+		return
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		helper.LogAndSanitize(err, "import from lighterpack url: bind json failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
+		return
+	}
+
+	if err := validateLighterPackURL(input.URL); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	body, err := fetchLighterPackPage(c.Request.Context(), input.URL)
+	if err != nil {
+		helper.LogAndSanitize(err, "import from lighterpack url: fetch page failed")
+		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to fetch LighterPack page"})
+		return
+	}
+
+	packName, packDescription, items, err := parseLighterPackHTML(body)
+	if err != nil {
+		helper.LogAndSanitize(err, "import from lighterpack url: parse HTML failed")
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "failed to parse LighterPack page: " + err.Error()})
+		return
+	}
+
+	packID, err := insertLighterPack(c.Request.Context(), &items, userID, packName, packDescription)
+	if err != nil {
+		helper.LogAndSanitize(err, "import from lighterpack url: insert lighterpack failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "LighterPack URL imported successfully",
 		"pack_id": packID,
 	})
 }
