@@ -1055,3 +1055,134 @@ func TestPutMyPassword(t *testing.T) {
 		}
 	})
 }
+
+func TestPutMyAccountImagePosition(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.PUT("/v1/myaccount", PutMyAccount)
+	router.GET("/v1/myaccount", GetMyAccount)
+
+	testUser := users[0]
+	token, err := security.GenerateToken(testUser.ID)
+	if err != nil {
+		t.Fatalf("failed to generate token: %v", err)
+	}
+
+	t.Run("Default image position is 50/50", func(t *testing.T) {
+		testDefaultImagePosition(t, router, token)
+	})
+	t.Run("Update image position to 30/70", func(t *testing.T) {
+		testUpdateImagePosition(t, router, token, testUser)
+	})
+	t.Run("Omitting image position keeps existing values", func(t *testing.T) {
+		testOmittedImagePositionPreserved(t, router, token, testUser)
+	})
+	t.Run("Out of range image position returns 400", func(t *testing.T) {
+		testImagePositionOutOfRange(t, router, token, testUser)
+	})
+}
+
+func testDefaultImagePosition(t *testing.T, router *gin.Engine, token string) {
+	t.Helper()
+	req, _ := http.NewRequest(http.MethodGet, "/v1/myaccount", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200 but got %d: %s", w.Code, w.Body.String())
+	}
+
+	var account Account
+	if err := json.Unmarshal(w.Body.Bytes(), &account); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+	if account.ImagePositionX != 50 || account.ImagePositionY != 50 {
+		t.Errorf("Expected default position 50/50 but got %d/%d",
+			account.ImagePositionX, account.ImagePositionY)
+	}
+}
+
+func testUpdateImagePosition(t *testing.T, router *gin.Engine, token string, user User) {
+	t.Helper()
+	posX := 30
+	posY := 70
+	input := AccountUpdateInput{
+		Email:          user.Email,
+		Firstname:      user.Firstname,
+		Lastname:       user.Lastname,
+		ImagePositionX: &posX,
+		ImagePositionY: &posY,
+	}
+	jsonData, _ := json.Marshal(input)
+	req, _ := http.NewRequest(http.MethodPut, "/v1/myaccount", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200 but got %d: %s", w.Code, w.Body.String())
+	}
+
+	var account Account
+	if err := json.Unmarshal(w.Body.Bytes(), &account); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+	if account.ImagePositionX != 30 || account.ImagePositionY != 70 {
+		t.Errorf("Expected position 30/70 but got %d/%d",
+			account.ImagePositionX, account.ImagePositionY)
+	}
+}
+
+func testOmittedImagePositionPreserved(t *testing.T, router *gin.Engine, token string, user User) {
+	t.Helper()
+	input := AccountUpdateInput{
+		Email:     user.Email,
+		Firstname: user.Firstname,
+		Lastname:  user.Lastname,
+	}
+	jsonData, _ := json.Marshal(input)
+	req, _ := http.NewRequest(http.MethodPut, "/v1/myaccount", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200 but got %d: %s", w.Code, w.Body.String())
+	}
+
+	var account Account
+	if err := json.Unmarshal(w.Body.Bytes(), &account); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+	// Should still be 30/70 from previous test
+	if account.ImagePositionX != 30 || account.ImagePositionY != 70 {
+		t.Errorf("Expected position 30/70 preserved but got %d/%d",
+			account.ImagePositionX, account.ImagePositionY)
+	}
+}
+
+func testImagePositionOutOfRange(t *testing.T, router *gin.Engine, token string, user User) {
+	t.Helper()
+	posX := 150
+	posY := 50
+	input := AccountUpdateInput{
+		Email:          user.Email,
+		Firstname:      user.Firstname,
+		Lastname:       user.Lastname,
+		ImagePositionX: &posX,
+		ImagePositionY: &posY,
+	}
+	jsonData, _ := json.Marshal(input)
+	req, _ := http.NewRequest(http.MethodPut, "/v1/myaccount", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected 400 but got %d: %s", w.Code, w.Body.String())
+	}
+}

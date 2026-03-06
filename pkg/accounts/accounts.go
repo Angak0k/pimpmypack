@@ -343,6 +343,7 @@ func returnAccounts(ctx context.Context) (*Accounts, error) {
 		`SELECT a.id, a.username, a.email, a.firstname, a.lastname, a.role, a.status,
 		    a.preferred_currency, a.preferred_unit_system, a.youtube_url, a.instagram_url,
 		    CASE WHEN ai.account_id IS NOT NULL THEN true ELSE false END AS has_profile_image,
+		    a.image_position_x, a.image_position_y,
 		    a.created_at, a.updated_at
 		FROM account a
 		LEFT JOIN account_images ai ON a.id = ai.account_id;`)
@@ -366,6 +367,8 @@ func returnAccounts(ctx context.Context) (*Accounts, error) {
 			&account.YoutubeURL,
 			&account.InstagramURL,
 			&account.HasProfileImage,
+			&account.ImagePositionX,
+			&account.ImagePositionY,
 			&account.CreatedAt,
 			&account.UpdatedAt)
 		if err != nil {
@@ -388,6 +391,7 @@ func findAccountByID(ctx context.Context, id uint) (*Account, error) {
 		`SELECT a.id, a.username, a.email, a.firstname, a.lastname, a.role, a.status,
 		    a.preferred_currency, a.preferred_unit_system, a.youtube_url, a.instagram_url,
 		    CASE WHEN ai.account_id IS NOT NULL THEN true ELSE false END AS has_profile_image,
+		    a.image_position_x, a.image_position_y,
 		    a.created_at, a.updated_at
 		FROM account a
 		LEFT JOIN account_images ai ON a.id = ai.account_id
@@ -406,6 +410,8 @@ func findAccountByID(ctx context.Context, id uint) (*Account, error) {
 		&account.YoutubeURL,
 		&account.InstagramURL,
 		&account.HasProfileImage,
+		&account.ImagePositionX,
+		&account.ImagePositionY,
 		&account.CreatedAt,
 		&account.UpdatedAt)
 
@@ -453,8 +459,9 @@ func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 	a.UpdatedAt = time.Now().Truncate(time.Second)
 	statement, err := database.DB().PrepareContext(ctx,
 		`UPDATE account SET email=$1, firstname=$2, lastname=$3, status=$4, role=$5, preferred_currency=$6,
-		    preferred_unit_system=$7, youtube_url=$8, instagram_url=$9, updated_at=$10
-		WHERE id=$11 RETURNING username;`)
+		    preferred_unit_system=$7, youtube_url=$8, instagram_url=$9, image_position_x=$10,
+		    image_position_y=$11, updated_at=$12
+		WHERE id=$13 RETURNING username;`)
 	if err != nil {
 		return err
 	}
@@ -462,11 +469,20 @@ func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 	defer statement.Close()
 
 	err = statement.QueryRowContext(ctx, a.Email, a.Firstname, a.Lastname, a.Status, a.Role, a.PreferredCurrency,
-		a.PreferredUnitSystem, a.YoutubeURL, a.InstagramURL, a.UpdatedAt, a.ID).Scan(&a.Username)
+		a.PreferredUnitSystem, a.YoutubeURL, a.InstagramURL, a.ImagePositionX, a.ImagePositionY,
+		a.UpdatedAt, a.ID).Scan(&a.Username)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+// isValidationError checks if the error is a user input validation error
+func isValidationError(err error) bool {
+	msg := err.Error()
+	return msg == "invalid email format" ||
+		msg == "image_position_x must be between 0 and 100" ||
+		msg == "image_position_y must be between 0 and 100"
 }
 
 // normalizeEmptyStringPtr converts empty string pointers to nil for clean DB storage
@@ -494,16 +510,29 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 	input.YoutubeURL = normalizeEmptyStringPtr(input.YoutubeURL)
 	input.InstagramURL = normalizeEmptyStringPtr(input.InstagramURL)
 
+	// Validate image position range when provided
+	if input.ImagePositionX != nil && (*input.ImagePositionX < 0 || *input.ImagePositionX > 100) {
+		return nil, errors.New("image_position_x must be between 0 and 100")
+	}
+	if input.ImagePositionY != nil && (*input.ImagePositionY < 0 || *input.ImagePositionY > 100) {
+		return nil, errors.New("image_position_y must be between 0 and 100")
+	}
+
 	now := time.Now().Truncate(time.Second)
 
 	// Update ONLY safe fields - explicitly excludes role, status, username
+	// COALESCE keeps existing image_position values when client omits them (nil)
 	statement, err := database.DB().PrepareContext(ctx,
 		`UPDATE account
 		 SET email=$1, firstname=$2, lastname=$3, preferred_currency=$4,
-		     preferred_unit_system=$5, youtube_url=$6, instagram_url=$7, updated_at=$8
-		 WHERE id=$9
+		     preferred_unit_system=$5, youtube_url=$6, instagram_url=$7,
+		     image_position_x=COALESCE($8, image_position_x),
+		     image_position_y=COALESCE($9, image_position_y),
+		     updated_at=$10
+		 WHERE id=$11
 		 RETURNING id, username, email, firstname, lastname, role, status,
 		           preferred_currency, preferred_unit_system, youtube_url, instagram_url,
+		           image_position_x, image_position_y,
 		           created_at, updated_at;`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare statement: %w", err)
@@ -519,6 +548,8 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 		input.PreferredUnitSystem,
 		input.YoutubeURL,
 		input.InstagramURL,
+		input.ImagePositionX,
+		input.ImagePositionY,
 		now,
 		userID,
 	).Scan(
@@ -533,6 +564,8 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 		&account.PreferredUnitSystem,
 		&account.YoutubeURL,
 		&account.InstagramURL,
+		&account.ImagePositionX,
+		&account.ImagePositionY,
 		&account.CreatedAt,
 		&account.UpdatedAt,
 	)

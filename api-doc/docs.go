@@ -2440,6 +2440,12 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "image_position_x": {
+                    "type": "integer"
+                },
+                "image_position_y": {
+                    "type": "integer"
+                },
                 "instagram_url": {
                     "type": "string"
                 },
@@ -2482,6 +2488,12 @@ const docTemplate = `{
                 },
                 "firstname": {
                     "type": "string"
+                },
+                "image_position_x": {
+                    "type": "integer"
+                },
+                "image_position_y": {
+                    "type": "integer"
                 },
                 "instagram_url": {
                     "type": "string"

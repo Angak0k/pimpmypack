@@ -374,6 +374,15 @@ func PutMyAccount(c *gin.Context) {
 	// Update only safe fields (excludes role, status, username)
 	account, err := updateMyAccount(c.Request.Context(), userID, &input)
 	if err != nil {
+		if errors.Is(err, ErrNoAccountFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+			return
+		}
+		// Return validation errors as 400
+		if isValidationError(err) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
 		helper.LogAndSanitize(err, "put my account: update account failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
