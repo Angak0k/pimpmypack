@@ -684,50 +684,50 @@ func deletePackContentByID(ctx context.Context, id uint) error {
 
 // Import/CSV
 
-// readLineFromCSV takes a record from csv.NewReader and returns a LighterPackItem
-func readLineFromCSV(record []string) (LighterPackItem, error) {
-	var lighterPackItem LighterPackItem
+// readLineFromCSV takes a record from csv.NewReader and returns an ExternalPackItem
+func readLineFromCSV(record []string) (ExternalPackItem, error) {
+	var item ExternalPackItem
 
-	lighterPackItem.ItemName = record[0]
-	lighterPackItem.Category = record[1]
-	lighterPackItem.Desc = record[2]
-	lighterPackItem.Unit = record[5]
-	lighterPackItem.URL = record[6]
+	item.ItemName = record[0]
+	item.Category = record[1]
+	item.Desc = record[2]
+	item.Unit = record[5]
+	item.URL = record[6]
 
 	qty, err := strconv.Atoi(record[3])
 	if err != nil {
-		return lighterPackItem, errors.New("invalid CSV format - failed to convert qty to number")
+		return item, errors.New("invalid CSV format - failed to convert qty to number")
 	}
 
-	lighterPackItem.Qty = qty
+	item.Qty = qty
 
 	weightRaw, err := strconv.ParseFloat(record[4], 64)
 	if err != nil {
-		return lighterPackItem, errors.New("invalid CSV format - failed to convert weight to number")
+		return item, errors.New("invalid CSV format - failed to convert weight to number")
 	}
 
-	lighterPackItem.Weight = int(math.Round(helper.ConvertToGrams(weightRaw, record[5])))
+	item.Weight = int(math.Round(helper.ConvertToGrams(weightRaw, record[5])))
 
 	price, err := strconv.Atoi(record[7])
 	if err != nil {
-		return lighterPackItem, errors.New("invalid CSV format - failed to convert price to number")
+		return item, errors.New("invalid CSV format - failed to convert price to number")
 	}
 
-	lighterPackItem.Price = price
+	item.Price = price
 
 	if record[8] == "Worn" {
-		lighterPackItem.Worn = true
+		item.Worn = true
 	}
 
 	if record[9] == "Consumable" {
-		lighterPackItem.Consumable = true
+		item.Consumable = true
 	}
 
-	return lighterPackItem, nil
+	return item, nil
 }
 
-func insertLighterPack(
-	ctx context.Context, lp *LighterPack, userID uint, packName, packDescription string,
+func insertExternalPack(
+	ctx context.Context, lp *ExternalPack, userID uint, packName, packDescription string,
 ) (uint, error) {
 	if lp == nil || len(*lp) == 0 {
 		return 0, errors.New("payload is empty")

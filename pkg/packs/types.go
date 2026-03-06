@@ -146,8 +146,8 @@ type PackContentUpdateRequest struct {
 	Consumable bool `json:"consumable"`
 }
 
-// LighterPackItem represents an item imported from LighterPack format
-type LighterPackItem struct {
+// ExternalPackItem represents an item imported from an external source (LighterPack, PimpMyPack, etc.)
+type ExternalPackItem struct {
 	ItemName   string `json:"item_name"`
 	Category   string `json:"category"`
 	Desc       string `json:"desc"`
@@ -166,11 +166,11 @@ type ImportFromURLRequest struct {
 	URL string `json:"url" binding:"required"`
 }
 
-// LighterPack represents a collection of LighterPack items
-type LighterPack []LighterPackItem
+// ExternalPack represents a collection of external pack items
+type ExternalPack []ExternalPackItem
 
-// ImportLighterPackResponse represents the response when importing from LighterPack
-type ImportLighterPackResponse struct {
+// ImportExternalPackResponse represents the response when importing from an external source
+type ImportExternalPackResponse struct {
 	Message string `json:"message"`
 	PackID  uint   `json:"pack_id"`
 }
