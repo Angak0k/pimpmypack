@@ -435,13 +435,11 @@ func insertAccount(ctx context.Context, a *Account) error {
 
 	err := database.DB().QueryRowContext(ctx,
 		`INSERT INTO account (username, email, firstname, lastname, role, status, preferred_currency,
-		    preferred_unit_system, youtube_url, instagram_url, image_position_x, image_position_y,
-		    created_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+		    preferred_unit_system, youtube_url, instagram_url, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
 		RETURNING id;`,
 		a.Username, a.Email, a.Firstname, a.Lastname, a.Role, a.Status, "EUR", "METRIC",
-		a.YoutubeURL, a.InstagramURL, a.ImagePositionX, a.ImagePositionY,
-		a.CreatedAt, a.UpdatedAt).Scan(&a.ID)
+		a.YoutubeURL, a.InstagramURL, a.CreatedAt, a.UpdatedAt).Scan(&a.ID)
 
 	if err != nil {
 		return err
@@ -479,6 +477,14 @@ func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 	return nil
 }
 
+// isValidationError checks if the error is a user input validation error
+func isValidationError(err error) bool {
+	msg := err.Error()
+	return msg == "invalid email format" ||
+		msg == "image_position_x must be between 0 and 100" ||
+		msg == "image_position_y must be between 0 and 100"
+}
+
 // normalizeEmptyStringPtr converts empty string pointers to nil for clean DB storage
 func normalizeEmptyStringPtr(s *string) *string {
 	if s != nil && *s == "" {
@@ -504,14 +510,25 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 	input.YoutubeURL = normalizeEmptyStringPtr(input.YoutubeURL)
 	input.InstagramURL = normalizeEmptyStringPtr(input.InstagramURL)
 
+	// Validate image position range when provided
+	if input.ImagePositionX != nil && (*input.ImagePositionX < 0 || *input.ImagePositionX > 100) {
+		return nil, errors.New("image_position_x must be between 0 and 100")
+	}
+	if input.ImagePositionY != nil && (*input.ImagePositionY < 0 || *input.ImagePositionY > 100) {
+		return nil, errors.New("image_position_y must be between 0 and 100")
+	}
+
 	now := time.Now().Truncate(time.Second)
 
 	// Update ONLY safe fields - explicitly excludes role, status, username
+	// COALESCE keeps existing image_position values when client omits them (nil)
 	statement, err := database.DB().PrepareContext(ctx,
 		`UPDATE account
 		 SET email=$1, firstname=$2, lastname=$3, preferred_currency=$4,
 		     preferred_unit_system=$5, youtube_url=$6, instagram_url=$7,
-		     image_position_x=$8, image_position_y=$9, updated_at=$10
+		     image_position_x=COALESCE($8, image_position_x),
+		     image_position_y=COALESCE($9, image_position_y),
+		     updated_at=$10
 		 WHERE id=$11
 		 RETURNING id, username, email, firstname, lastname, role, status,
 		           preferred_currency, preferred_unit_system, youtube_url, instagram_url,

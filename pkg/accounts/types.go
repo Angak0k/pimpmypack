@@ -80,8 +80,8 @@ type AccountUpdateInput struct {
 	PreferredUnitSystem string  `json:"preferred_unit_system"`
 	YoutubeURL          *string `json:"youtube_url"`
 	InstagramURL        *string `json:"instagram_url"`
-	ImagePositionX      int     `json:"image_position_x"`
-	ImagePositionY      int     `json:"image_position_y"`
+	ImagePositionX      *int    `json:"image_position_x"`
+	ImagePositionY      *int    `json:"image_position_y"`
 }
 
 // ResendConfirmEmailInput represents the data required to resend a confirmation email
