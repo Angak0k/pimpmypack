@@ -2,21 +2,44 @@ package packs
 
 import (
 	"errors"
+	"net/url"
 	"regexp"
 )
 
-var pimpMyPackURLPattern = regexp.MustCompile(
-	`^https://app\.alki\.earth/(?:sharedlist|api/sharedlist)/([BILMPTaceghikmnprsty]{30})$`,
+var pimpMyPackPathPattern = regexp.MustCompile(
+	`^/(?:sharedlist|api/sharedlist)/([BILMPTaceghikmnprsty]{30})$`,
+)
+
+var pimpMyPackCodePattern = regexp.MustCompile(
+	`^[BILMPTaceghikmnprsty]{30}$`,
 )
 
 // validatePimpMyPackURL checks that the URL is a valid PimpMyPack sharing URL
 // and returns the sharing code.
+// Supported formats:
+//   - https://app.alki.earth/sharedlist/<code>
+//   - https://app.alki.earth/api/sharedlist/<code>
+//   - https://app.alki.earth/public-pack.html?code=<code>
 func validatePimpMyPackURL(rawURL string) (string, error) {
-	matches := pimpMyPackURLPattern.FindStringSubmatch(rawURL)
-	if matches == nil {
-		return "", errors.New("invalid PimpMyPack URL: must match https://app.alki.earth/sharedlist/<code>")
+	parsed, err := url.Parse(rawURL)
+	if err != nil || parsed.Scheme != "https" || parsed.Host != "app.alki.earth" {
+		return "", errors.New("invalid PimpMyPack URL: must be from https://app.alki.earth")
 	}
-	return matches[1], nil
+
+	// Try path-based format: /sharedlist/<code> or /api/sharedlist/<code>
+	if matches := pimpMyPackPathPattern.FindStringSubmatch(parsed.Path); matches != nil {
+		return matches[1], nil
+	}
+
+	// Try query-based format: /public-pack.html?code=<code>
+	if parsed.Path == "/public-pack.html" {
+		code := parsed.Query().Get("code")
+		if pimpMyPackCodePattern.MatchString(code) {
+			return code, nil
+		}
+	}
+
+	return "", errors.New("invalid PimpMyPack URL: must match https://app.alki.earth/sharedlist/<code> or https://app.alki.earth/public-pack.html?code=<code>")
 }
 
 // convertSharedPackToExternalPack converts a SharedPackResponse into an ExternalPack

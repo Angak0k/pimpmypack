@@ -93,6 +93,44 @@ func TestValidatePimpMyPackURL(t *testing.T) {
 		wantErr:  false,
 	})
 
+	// public-pack.html?code= variant
+	publicPackURL := "https://app.alki.earth/public-pack.html?code=" + validCode
+	tests = append(tests, struct {
+		name     string
+		url      string
+		wantCode string
+		wantErr  bool
+	}{
+		name:     "valid public-pack.html URL",
+		url:      publicPackURL,
+		wantCode: validCode,
+		wantErr:  false,
+	})
+
+	// public-pack.html with invalid code
+	tests = append(tests, struct {
+		name     string
+		url      string
+		wantCode string
+		wantErr  bool
+	}{
+		name:    "public-pack.html with invalid code",
+		url:     "https://app.alki.earth/public-pack.html?code=123invalid",
+		wantErr: true,
+	})
+
+	// public-pack.html without code param
+	tests = append(tests, struct {
+		name     string
+		url      string
+		wantCode string
+		wantErr  bool
+	}{
+		name:    "public-pack.html without code param",
+		url:     "https://app.alki.earth/public-pack.html",
+		wantErr: true,
+	})
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			code, err := validatePimpMyPackURL(tt.url)
