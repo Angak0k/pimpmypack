@@ -684,9 +684,9 @@ func deletePackContentByID(ctx context.Context, id uint) error {
 
 // Import/CSV
 
-// readLineFromCSV takes a record from csv.NewReader and returns a LighterPackItem
-func readLineFromCSV(record []string) (LighterPackItem, error) {
-	var lighterPackItem LighterPackItem
+// readLineFromCSV takes a record from csv.NewReader and returns an ExternalPackItem
+func readLineFromCSV(record []string) (ExternalPackItem, error) {
+	var lighterPackItem ExternalPackItem
 
 	lighterPackItem.ItemName = record[0]
 	lighterPackItem.Category = record[1]
@@ -726,8 +726,8 @@ func readLineFromCSV(record []string) (LighterPackItem, error) {
 	return lighterPackItem, nil
 }
 
-func insertLighterPack(
-	ctx context.Context, lp *LighterPack, userID uint, packName, packDescription string,
+func insertExternalPack(
+	ctx context.Context, lp *ExternalPack, userID uint, packName, packDescription string,
 ) (uint, error) {
 	if lp == nil || len(*lp) == 0 {
 		return 0, errors.New("payload is empty")

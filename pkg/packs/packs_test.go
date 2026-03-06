@@ -941,7 +941,7 @@ item2,category2,description2,2,150,g,http://example2.com,20,,consumable`
 func verifyImportResponse(t *testing.T, responseBody []byte) {
 	t.Helper()
 
-	var response ImportLighterPackResponse
+	var response ImportExternalPackResponse
 	if err := json.Unmarshal(responseBody, &response); err != nil {
 		t.Fatalf("Failed to parse response JSON: %v", err)
 	}

@@ -68,7 +68,7 @@ func fetchLighterPackPage(ctx context.Context, rawURL string) ([]byte, error) {
 }
 
 // parseLighterPackHTML parses a LighterPack HTML page and extracts pack data.
-func parseLighterPackHTML(data []byte) (string, string, LighterPack, error) {
+func parseLighterPackHTML(data []byte) (string, string, ExternalPack, error) {
 	doc, err := xhtml.Parse(bytes.NewReader(data))
 	if err != nil {
 		return "", "", nil, fmt.Errorf("failed to parse HTML: %w", err)
@@ -95,7 +95,7 @@ func parseLighterPackHTML(data []byte) (string, string, LighterPack, error) {
 	}
 
 	// Extract items by category
-	var items LighterPack
+	var items ExternalPack
 	categoryNodes := findNodesByClass(doc, "li", "lpCategory")
 
 	for _, catNode := range categoryNodes {
@@ -122,8 +122,8 @@ func parseLighterPackHTML(data []byte) (string, string, LighterPack, error) {
 }
 
 // parseLighterPackItem extracts a single item from an li.lpItem node.
-func parseLighterPackItem(node *xhtml.Node, category string) LighterPackItem {
-	item := LighterPackItem{
+func parseLighterPackItem(node *xhtml.Node, category string) ExternalPackItem {
+	item := ExternalPackItem{
 		Category: category,
 		Qty:      1,
 		Currency: "EUR", // default
@@ -140,7 +140,7 @@ func parseLighterPackItem(node *xhtml.Node, category string) LighterPackItem {
 	return item
 }
 
-func extractItemName(node *xhtml.Node, item *LighterPackItem) {
+func extractItemName(node *xhtml.Node, item *ExternalPackItem) {
 	nameNodes := findNodesByClass(node, "span", "lpName")
 	if len(nameNodes) > 0 {
 		item.URL = extractItemURL(nameNodes[0])
@@ -148,14 +148,14 @@ func extractItemName(node *xhtml.Node, item *LighterPackItem) {
 	}
 }
 
-func extractItemDescription(node *xhtml.Node, item *LighterPackItem) {
+func extractItemDescription(node *xhtml.Node, item *ExternalPackItem) {
 	descNodes := findNodesByClass(node, "span", "lpDescription")
 	if len(descNodes) > 0 {
 		item.Desc = strings.TrimSpace(textContent(descNodes[0]))
 	}
 }
 
-func extractItemWeight(node *xhtml.Node, item *LighterPackItem) {
+func extractItemWeight(node *xhtml.Node, item *ExternalPackItem) {
 	mgNodes := findNodesByClass(node, "input", "lpMG")
 	if len(mgNodes) > 0 {
 		valStr := getAttr(mgNodes[0], "value")
@@ -165,7 +165,7 @@ func extractItemWeight(node *xhtml.Node, item *LighterPackItem) {
 	}
 }
 
-func extractItemPrice(node *xhtml.Node, item *LighterPackItem) {
+func extractItemPrice(node *xhtml.Node, item *ExternalPackItem) {
 	priceNodes := findNodesByClass(node, "span", "lpPriceCell")
 	for _, pn := range priceNodes {
 		if hasClass(pn, "lpNumber") {
@@ -180,7 +180,7 @@ func extractItemPrice(node *xhtml.Node, item *LighterPackItem) {
 	}
 }
 
-func extractItemQuantity(node *xhtml.Node, item *LighterPackItem) {
+func extractItemQuantity(node *xhtml.Node, item *ExternalPackItem) {
 	qtyNodes := findNodesByClass(node, "span", "lpQtyCell")
 	if len(qtyNodes) > 0 {
 		qtyText := strings.TrimSpace(textContent(qtyNodes[0]))

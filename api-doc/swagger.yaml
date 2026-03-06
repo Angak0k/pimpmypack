@@ -185,19 +185,19 @@ definitions:
     - category
     - item_name
     type: object
+  packs.ImportExternalPackResponse:
+    properties:
+      message:
+        type: string
+      pack_id:
+        type: integer
+    type: object
   packs.ImportFromURLRequest:
     properties:
       url:
         type: string
     required:
     - url
-    type: object
-  packs.ImportLighterPackResponse:
-    properties:
-      message:
-        type: string
-      pack_id:
-        type: integer
     type: object
   packs.Pack:
     properties:
@@ -663,7 +663,7 @@ paths:
         "200":
           description: CSV data imported successfully with pack ID
           schema:
-            $ref: '#/definitions/packs.ImportLighterPackResponse'
+            $ref: '#/definitions/packs.ImportExternalPackResponse'
         "400":
           description: Invalid CSV format
           schema:
@@ -699,7 +699,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/packs.ImportLighterPackResponse'
+            $ref: '#/definitions/packs.ImportExternalPackResponse'
         "400":
           description: Invalid URL
           schema:
@@ -715,6 +715,42 @@ paths:
       security:
       - Bearer: []
       summary: Import a pack from a LighterPack sharing URL
+      tags:
+      - Packs
+  /v1/importfrompimpmypackurl:
+    post:
+      consumes:
+      - application/json
+      description: Import items from a PimpMyPack sharing URL into a new pack
+      parameters:
+      - description: PimpMyPack URL
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/packs.ImportFromURLRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/packs.ImportExternalPackResponse'
+        "400":
+          description: Invalid URL
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "404":
+          description: Shared pack not found
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Import a pack from a PimpMyPack sharing URL
       tags:
       - Packs
   /v1/myaccount:

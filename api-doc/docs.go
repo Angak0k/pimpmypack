@@ -411,7 +411,7 @@ const docTemplate = `{
                     "200": {
                         "description": "CSV data imported successfully with pack ID",
                         "schema": {
-                            "$ref": "#/definitions/packs.ImportLighterPackResponse"
+                            "$ref": "#/definitions/packs.ImportExternalPackResponse"
                         }
                     },
                     "400": {
@@ -468,7 +468,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/packs.ImportLighterPackResponse"
+                            "$ref": "#/definitions/packs.ImportExternalPackResponse"
                         }
                     },
                     "400": {
@@ -485,6 +485,63 @@ const docTemplate = `{
                     },
                     "502": {
                         "description": "Failed to fetch page",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/importfrompimpmypackurl": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Import items from a PimpMyPack sharing URL into a new pack",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Packs"
+                ],
+                "summary": "Import a pack from a PimpMyPack sharing URL",
+                "parameters": [
+                    {
+                        "description": "PimpMyPack URL",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/packs.ImportFromURLRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/packs.ImportExternalPackResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid URL",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Shared pack not found",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
@@ -2643,6 +2700,17 @@ const docTemplate = `{
                 }
             }
         },
+        "packs.ImportExternalPackResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "pack_id": {
+                    "type": "integer"
+                }
+            }
+        },
         "packs.ImportFromURLRequest": {
             "type": "object",
             "required": [
@@ -2651,17 +2719,6 @@ const docTemplate = `{
             "properties": {
                 "url": {
                     "type": "string"
-                }
-            }
-        },
-        "packs.ImportLighterPackResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                },
-                "pack_id": {
-                    "type": "integer"
                 }
             }
         },

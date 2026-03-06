@@ -1,6 +1,6 @@
 # LighterPack URL Import - Specification
 
-**Status**: Implemented
+**Status**: Merged
 **Author**: Claude Agent
 **Date**: 2026-03-05
 **GitHub Issue**: [#185](https://github.com/Angak0k/pimpmypack/issues/185)
