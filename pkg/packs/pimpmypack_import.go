@@ -39,7 +39,10 @@ func validatePimpMyPackURL(rawURL string) (string, error) {
 		}
 	}
 
-	return "", errors.New("invalid PimpMyPack URL: must match https://app.alki.earth/sharedlist/<code> or https://app.alki.earth/public-pack.html?code=<code>")
+	return "", errors.New(
+		"invalid PimpMyPack URL: must match https://app.alki.earth/sharedlist/<code>" +
+			" or https://app.alki.earth/public-pack.html?code=<code>",
+	)
 }
 
 // convertSharedPackToExternalPack converts a SharedPackResponse into an ExternalPack
