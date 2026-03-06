@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/Angak0k/pimpmypack/pkg/inventories"
 	"github.com/Angak0k/pimpmypack/pkg/security"
@@ -28,8 +29,14 @@ var inventoryStorage InventoryImageStorage = NewDBInventoryImageStorage()
 // @Failure 404 {object} map[string]string "Item not found"
 // @Failure 413 {object} map[string]string "Payload too large"
 // @Failure 500 {object} map[string]string "Internal server error"
+// @Failure 503 {object} map[string]string "Feature disabled"
 // @Router /v1/myinventory/{id}/image [post]
 func UploadInventoryItemImage(c *gin.Context) {
+	if !config.FeatureItemPicturesUpload {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Item picture upload is currently disabled"})
+		return
+	}
+
 	ctx := c.Request.Context()
 
 	userID, err := security.ExtractTokenID(c)
@@ -67,26 +74,21 @@ func UploadInventoryItemImage(c *gin.Context) {
 		return
 	}
 
-	processed, err := processUploadedImage(c)
+	processed, err := processUploadedInventoryItemImage(c)
 	if err != nil {
-		if errors.Is(err, ErrInvalidFormat) {
+		switch {
+		case errors.Is(err, ErrInvalidFormat):
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid image format. Only JPEG, PNG, and WebP are supported"})
-			return
-		}
-		if errors.Is(err, ErrTooLarge) {
+		case errors.Is(err, ErrTooLarge):
 			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "File size exceeds maximum allowed"})
-			return
-		}
-		if errors.Is(err, ErrCorrupted) {
+		case errors.Is(err, ErrCorrupted):
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Corrupted or invalid image file"})
-			return
-		}
-		if err.Error() == ErrMsgNoImageProvided {
+		case err.Error() == ErrMsgNoImageProvided:
 			c.JSON(http.StatusBadRequest, gin.H{"error": "No image file provided"})
-			return
+		default:
+			helper.LogAndSanitize(err, "upload inventory image: process image failed")
+			c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		}
-		helper.LogAndSanitize(err, "upload inventory image: process image failed")
-		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
 		return
 	}
 
@@ -233,4 +235,9 @@ func DeleteInventoryItemImage(c *gin.Context) {
 		"message": "Image deleted successfully",
 		"item_id": itemID,
 	})
+}
+
+// processUploadedInventoryItemImage handles file validation and image processing for inventory items
+func processUploadedInventoryItemImage(c *gin.Context) (*ProcessedImage, error) {
+	return processUploadedImageWith(c, ProcessInventoryItemImageFromReader)
 }

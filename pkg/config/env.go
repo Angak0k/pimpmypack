@@ -47,6 +47,7 @@ var (
 	ResendConfirmRateLimitWindowMinutes int
 	MailServerConfig                    MailServer
 	SeedOnStartup                       bool
+	FeatureItemPicturesUpload           bool
 )
 
 type Config struct {
@@ -66,6 +67,7 @@ type Config struct {
 	ResendConfirmRateLimitWindowMinutes int
 	MailServer                          MailServer
 	SeedOnStartup                       bool
+	FeatureItemPicturesUpload           bool
 }
 
 func EnvInit(envFilePath string) error {
@@ -94,6 +96,7 @@ func EnvInit(envFilePath string) error {
 	ResendConfirmRateLimitWindowMinutes = newConfig.ResendConfirmRateLimitWindowMinutes
 	MailServerConfig = newConfig.MailServer
 	SeedOnStartup = newConfig.SeedOnStartup
+	FeatureItemPicturesUpload = newConfig.FeatureItemPicturesUpload
 
 	return nil
 }
@@ -145,6 +148,7 @@ func newConfig() Config {
 		MailServer: MailServer{
 			MailPort: 587,
 		},
+		FeatureItemPicturesUpload: true,
 	}
 }
 
@@ -182,6 +186,9 @@ func setEnvVars(cfg *Config) {
 	cfg.MailServer.MailServer = os.Getenv("MAIL_SERVER")
 	cfg.MailServer.MailPort, _ = strconv.Atoi(ifEnvEmpty(os.Getenv("MAIL_PORT"), strconv.Itoa(cfg.MailServer.MailPort)))
 	cfg.SeedOnStartup = os.Getenv("SEED_ON_STARTUP") == "true"
+	if v, err := strconv.ParseBool(os.Getenv("FEATURE_ITEM_PICTURES_UPLOAD")); err == nil {
+		cfg.FeatureItemPicturesUpload = v
+	}
 }
 
 func ifEnvEmpty(envVar, defaultValue string) string {
