@@ -15,16 +15,16 @@ func TestValidatePimpMyPackURL(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name:     "valid sharedlist URL",
+			name:     "short code - 28 chars",
 			url:      "https://app.alki.earth/sharedlist/pimpMyPackIsBetterThanLighte",
 			wantCode: "pimpMyPackIsBetterThanLighte",
 			wantErr:  true, // only 28 chars
 		},
 		{
-			name:     "valid 30-char code",
+			name:     "short code - 27 chars",
 			url:      "https://app.alki.earth/sharedlist/pimpMyPackIsBetterThanLight",
 			wantCode: "pimpMyPackIsBetterThanLight",
-			wantErr:  true, // only 26 chars
+			wantErr:  true, // only 27 chars
 		},
 		{
 			name:     "wrong domain",

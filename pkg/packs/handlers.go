@@ -1183,7 +1183,7 @@ func packAction(c *gin.Context, actionName string,
 // @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/importfromlighterpack [post]
 func ImportFromLighterPack(c *gin.Context) {
-	var lighterPack ExternalPack
+	var externalPack ExternalPack
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {
@@ -1217,7 +1217,7 @@ func ImportFromLighterPack(c *gin.Context) {
 
 	// Iterate through CSV records and process them
 	for {
-		var lighterPackItem ExternalPackItem
+		var packItem ExternalPackItem
 		record, err := reader.Read()
 		if errors.Is(err, io.EOF) {
 			break
@@ -1234,19 +1234,19 @@ func ImportFromLighterPack(c *gin.Context) {
 			return
 		}
 
-		lighterPackItem, err = readLineFromCSV(record)
+		packItem, err = readLineFromCSV(record)
 		if err != nil {
 			helper.LogAndSanitize(err, "import from lighterpack: read line from CSV failed")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 			return
 		}
 
-		lighterPack = append(lighterPack, lighterPackItem)
+		externalPack = append(externalPack, packItem)
 	}
 
 	// Perform database insertion
 	packID, err := insertExternalPack(
-		c.Request.Context(), &lighterPack, userID, "LighterPack Import", "LighterPack Import")
+		c.Request.Context(), &externalPack, userID, "LighterPack Import", "LighterPack Import")
 	if err != nil {
 		helper.LogAndSanitize(err, "import from lighterpack: insert lighterpack failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -1362,6 +1362,11 @@ func ImportFromPimpMyPackURL(c *gin.Context) {
 		}
 		helper.LogAndSanitize(err, "import from pimpmypack url: return shared pack failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	if len(sharedPack.Contents) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "shared pack has no items"})
 		return
 	}
 
