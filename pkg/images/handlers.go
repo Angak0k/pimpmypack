@@ -3,6 +3,7 @@ package images
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/Angak0k/pimpmypack/pkg/helper"
@@ -13,33 +14,32 @@ import (
 
 var storage ImageStorage = NewDBImageStorage()
 
-// processUploadedImage handles file validation and image processing
-func processUploadedImage(c *gin.Context) (*ProcessedImage, error) {
-	// Get file from form data
+// imageProcessorFunc is a function type for processing uploaded images from a reader
+type imageProcessorFunc = func(reader io.Reader) (*ProcessedImage, error)
+
+// processUploadedImageWith handles file validation and delegates processing to the given function
+func processUploadedImageWith(c *gin.Context, processFn imageProcessorFunc) (*ProcessedImage, error) {
 	file, err := c.FormFile("image")
 	if err != nil {
 		return nil, errors.New(ErrMsgNoImageProvided)
 	}
 
-	// Check file size (5MB limit)
 	if file.Size > MaxUploadSize {
 		return nil, fmt.Errorf("file size exceeds maximum allowed (%d bytes): %w", MaxUploadSize, ErrTooLarge)
 	}
 
-	// Open file
 	fileReader, err := file.Open()
 	if err != nil {
 		return nil, errors.New("failed to read uploaded file")
 	}
 	defer fileReader.Close()
 
-	// Process image
-	processed, err := ProcessImageFromReader(fileReader)
-	if err != nil {
-		return nil, err
-	}
+	return processFn(fileReader)
+}
 
-	return processed, nil
+// processUploadedImage handles file validation and image processing using default settings
+func processUploadedImage(c *gin.Context) (*ProcessedImage, error) {
+	return processUploadedImageWith(c, ProcessImageFromReader)
 }
 
 // UploadPackImage uploads or updates an image for a pack

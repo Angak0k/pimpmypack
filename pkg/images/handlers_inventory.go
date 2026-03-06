@@ -2,7 +2,6 @@ package images
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
@@ -30,6 +29,7 @@ var inventoryStorage InventoryImageStorage = NewDBInventoryImageStorage()
 // @Failure 404 {object} map[string]string "Item not found"
 // @Failure 413 {object} map[string]string "Payload too large"
 // @Failure 500 {object} map[string]string "Internal server error"
+// @Failure 503 {object} map[string]string "Feature disabled"
 // @Router /v1/myinventory/{id}/image [post]
 func UploadInventoryItemImage(c *gin.Context) {
 	if !config.FeatureItemPicturesUpload {
@@ -239,25 +239,5 @@ func DeleteInventoryItemImage(c *gin.Context) {
 
 // processUploadedInventoryItemImage handles file validation and image processing for inventory items
 func processUploadedInventoryItemImage(c *gin.Context) (*ProcessedImage, error) {
-	file, err := c.FormFile("image")
-	if err != nil {
-		return nil, errors.New(ErrMsgNoImageProvided)
-	}
-
-	if file.Size > MaxUploadSize {
-		return nil, fmt.Errorf("file size exceeds maximum allowed (%d bytes): %w", MaxUploadSize, ErrTooLarge)
-	}
-
-	fileReader, err := file.Open()
-	if err != nil {
-		return nil, errors.New("failed to read uploaded file")
-	}
-	defer fileReader.Close()
-
-	processed, err := ProcessInventoryItemImageFromReader(fileReader)
-	if err != nil {
-		return nil, err
-	}
-
-	return processed, nil
+	return processUploadedImageWith(c, ProcessInventoryItemImageFromReader)
 }

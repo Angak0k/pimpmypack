@@ -186,7 +186,9 @@ func setEnvVars(cfg *Config) {
 	cfg.MailServer.MailServer = os.Getenv("MAIL_SERVER")
 	cfg.MailServer.MailPort, _ = strconv.Atoi(ifEnvEmpty(os.Getenv("MAIL_PORT"), strconv.Itoa(cfg.MailServer.MailPort)))
 	cfg.SeedOnStartup = os.Getenv("SEED_ON_STARTUP") == "true"
-	cfg.FeatureItemPicturesUpload = os.Getenv("FEATURE_ITEM_PICTURES_UPLOAD") != "false"
+	if v, err := strconv.ParseBool(os.Getenv("FEATURE_ITEM_PICTURES_UPLOAD")); err == nil {
+		cfg.FeatureItemPicturesUpload = v
+	}
 }
 
 func ifEnvEmpty(envVar, defaultValue string) string {

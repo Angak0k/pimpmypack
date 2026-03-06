@@ -112,9 +112,11 @@ func ResizeImage(img image.Image) image.Image {
 	return ResizeImageWithMax(img, MaxDimension)
 }
 
-// EncodeToJPEGWithQuality encodes an image to JPEG format with the given quality (0-100)
-// This also effectively strips EXIF data as we're re-encoding from scratch
+// EncodeToJPEGWithQuality encodes an image to JPEG format with the given quality (1-100)
+// Values outside the range are clamped. This also effectively strips EXIF data.
 func EncodeToJPEGWithQuality(img image.Image, quality int) ([]byte, error) {
+	quality = max(1, min(100, quality))
+
 	var buf bytes.Buffer
 
 	opts := &jpeg.Options{Quality: quality}

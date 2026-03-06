@@ -402,7 +402,12 @@ func TestProcessImageFromReader(t *testing.T) {
 }
 
 func TestEncodeToJPEGWithQuality(t *testing.T) {
-	img := image.NewRGBA(image.Rect(0, 0, 200, 200))
+	// Use a gradient image to ensure quality difference is measurable
+	data := createTestJPEG(200, 200)
+	img, err := DecodeImage(data)
+	if err != nil {
+		t.Fatalf("Failed to decode test image: %v", err)
+	}
 
 	// Encode at high quality
 	highQ, err := EncodeToJPEGWithQuality(img, 95)
