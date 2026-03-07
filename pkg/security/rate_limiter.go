@@ -19,8 +19,18 @@ type IPRateLimiter struct {
 
 // NewIPRateLimiter creates a new IP-based rate limiter
 func NewIPRateLimiter(requestsPerWindow, burstSize, windowMinutes int) *IPRateLimiter {
+	if windowMinutes <= 0 {
+		windowMinutes = 1
+	}
+	if requestsPerWindow <= 0 {
+		requestsPerWindow = 1
+	}
+	if burstSize < 1 {
+		burstSize = 1
+	}
+
 	window := time.Duration(windowMinutes) * time.Minute
-	r := rate.Every(window / time.Duration(requestsPerWindow))
+	r := rate.Limit(float64(requestsPerWindow) / window.Seconds())
 	return &IPRateLimiter{
 		rate:          r,
 		burst:         burstSize,

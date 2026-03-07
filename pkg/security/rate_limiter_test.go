@@ -196,36 +196,43 @@ func TestNewEndpointRateLimiter_DynamicRetryAfter(t *testing.T) {
 
 	assert.Equal(t, http.StatusTooManyRequests, w2.Code)
 
-	var body map[string]json.Number
+	var body struct {
+		RetryAfter int `json:"retry_after"`
+	}
 	err := json.NewDecoder(w2.Body).Decode(&body)
 	require.NoError(t, err)
-	retryAfter, err := body["retry_after"].Int64()
-	require.NoError(t, err)
-	assert.Equal(t, int64(300), retryAfter)
+	assert.Equal(t, 300, body.RetryAfter)
 }
 
 func TestNewEndpointRateLimiter_WindowMinutesAffectsRate(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
-	// 2 requests per 2-minute window → 1 req/min refill rate
+	// 6000 requests per 1-minute window → 1 token every 10ms, burst of 1
 	router := gin.New()
-	router.POST("/test", NewEndpointRateLimiter("/test", 2, 2, 2), func(c *gin.Context) {
+	router.POST("/test", NewEndpointRateLimiter("/test", 6000, 1, 1), func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"message": "success"})
 	})
 
-	// Use burst of 2
-	for i := 0; i < 2; i++ {
-		req := httptest.NewRequest(http.MethodPost, "/test", nil)
-		w := httptest.NewRecorder()
-		router.ServeHTTP(w, req)
-		assert.Equal(t, http.StatusOK, w.Code)
-	}
+	// First request uses the burst token
+	req1 := httptest.NewRequest(http.MethodPost, "/test", nil)
+	w1 := httptest.NewRecorder()
+	router.ServeHTTP(w1, req1)
+	assert.Equal(t, http.StatusOK, w1.Code)
 
-	// 3rd should be blocked
-	req := httptest.NewRequest(http.MethodPost, "/test", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
-	assert.Equal(t, http.StatusTooManyRequests, w.Code)
+	// Immediate second request should be rate limited (no time for refill)
+	req2 := httptest.NewRequest(http.MethodPost, "/test", nil)
+	w2 := httptest.NewRecorder()
+	router.ServeHTTP(w2, req2)
+	assert.Equal(t, http.StatusTooManyRequests, w2.Code)
+
+	// Wait long enough for at least one token to be refilled
+	time.Sleep(20 * time.Millisecond)
+
+	// Request after sleep should succeed due to refill
+	req3 := httptest.NewRequest(http.MethodPost, "/test", nil)
+	w3 := httptest.NewRecorder()
+	router.ServeHTTP(w3, req3)
+	assert.Equal(t, http.StatusOK, w3.Code)
 }
 
 func TestIPRateLimiter_GetLimiter(t *testing.T) {
