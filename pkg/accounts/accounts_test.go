@@ -1164,6 +1164,111 @@ func testOmittedImagePositionPreserved(t *testing.T, router *gin.Engine, token s
 	}
 }
 
+func TestPutMyAccountIsProfilePublic(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.PUT("/v1/myaccount", PutMyAccount)
+	router.GET("/v1/myaccount", GetMyAccount)
+
+	testUser := users[0]
+	token, err := security.GenerateToken(testUser.ID)
+	if err != nil {
+		t.Fatalf("failed to generate token: %v", err)
+	}
+
+	t.Run("Default is_profile_public is false", func(t *testing.T) {
+		testDefaultProfilePublic(t, router, token)
+	})
+	t.Run("Toggle is_profile_public to true", func(t *testing.T) {
+		testSetProfilePublic(t, router, token, testUser, true)
+	})
+	t.Run("Omitting is_profile_public preserves current value", func(t *testing.T) {
+		testOmittedProfilePublicPreserved(t, router, token, testUser)
+	})
+	t.Run("Toggle is_profile_public back to false", func(t *testing.T) {
+		testSetProfilePublic(t, router, token, testUser, false)
+	})
+}
+
+func testDefaultProfilePublic(t *testing.T, router *gin.Engine, token string) {
+	t.Helper()
+	req, _ := http.NewRequest(http.MethodGet, "/v1/myaccount", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200 but got %d: %s", w.Code, w.Body.String())
+	}
+
+	var account Account
+	if err := json.Unmarshal(w.Body.Bytes(), &account); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+	if account.IsProfilePublic {
+		t.Error("Expected is_profile_public to be false by default")
+	}
+}
+
+func testSetProfilePublic(
+	t *testing.T, router *gin.Engine, token string, user User, value bool,
+) {
+	t.Helper()
+	input := AccountUpdateInput{
+		Email:           user.Email,
+		Firstname:       user.Firstname,
+		Lastname:        user.Lastname,
+		IsProfilePublic: &value,
+	}
+	jsonData, _ := json.Marshal(input)
+	req, _ := http.NewRequest(http.MethodPut, "/v1/myaccount", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200 but got %d: %s", w.Code, w.Body.String())
+	}
+
+	var account Account
+	if err := json.Unmarshal(w.Body.Bytes(), &account); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+	if account.IsProfilePublic != value {
+		t.Errorf("Expected is_profile_public to be %v but got %v", value, account.IsProfilePublic)
+	}
+}
+
+func testOmittedProfilePublicPreserved(
+	t *testing.T, router *gin.Engine, token string, user User,
+) {
+	t.Helper()
+	input := AccountUpdateInput{
+		Email:     user.Email,
+		Firstname: user.Firstname,
+		Lastname:  user.Lastname,
+	}
+	jsonData, _ := json.Marshal(input)
+	req, _ := http.NewRequest(http.MethodPut, "/v1/myaccount", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected 200 but got %d: %s", w.Code, w.Body.String())
+	}
+
+	var account Account
+	if err := json.Unmarshal(w.Body.Bytes(), &account); err != nil {
+		t.Fatalf("Failed to unmarshal: %v", err)
+	}
+	if !account.IsProfilePublic {
+		t.Error("Expected is_profile_public to remain true when omitted")
+	}
+}
+
 func testImagePositionOutOfRange(t *testing.T, router *gin.Engine, token string, user User) {
 	t.Helper()
 	posX := 150

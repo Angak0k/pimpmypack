@@ -61,7 +61,10 @@ func returnSharedPacksByUsername(ctx context.Context, username string) ([]Shared
 		LEFT JOIN pack_content pc ON p.id = pc.pack_id
 		LEFT JOIN inventory i ON pc.item_id = i.id
 		LEFT JOIN pack_images pi ON p.id = pi.pack_id
-		WHERE a.username = $1 AND p.sharing_code IS NOT NULL
+		WHERE a.username = $1
+		  AND a.status = 'active'
+		  AND a.is_profile_public = true
+		  AND p.sharing_code IS NOT NULL
 		GROUP BY p.id, p.pack_name, p.pack_description, p.sharing_code,
 		         pi.pack_id, p.season, p.trail, p.adventure, p.created_at
 		ORDER BY p.created_at DESC;`,

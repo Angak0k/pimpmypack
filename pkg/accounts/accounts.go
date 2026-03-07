@@ -462,8 +462,8 @@ func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 	statement, err := database.DB().PrepareContext(ctx,
 		`UPDATE account SET email=$1, firstname=$2, lastname=$3, status=$4, role=$5, preferred_currency=$6,
 		    preferred_unit_system=$7, youtube_url=$8, instagram_url=$9, image_position_x=$10,
-		    image_position_y=$11, updated_at=$12
-		WHERE id=$13 RETURNING username;`)
+		    image_position_y=$11, is_profile_public=$12, updated_at=$13
+		WHERE id=$14 RETURNING username;`)
 	if err != nil {
 		return err
 	}
@@ -472,7 +472,7 @@ func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 
 	err = statement.QueryRowContext(ctx, a.Email, a.Firstname, a.Lastname, a.Status, a.Role, a.PreferredCurrency,
 		a.PreferredUnitSystem, a.YoutubeURL, a.InstagramURL, a.ImagePositionX, a.ImagePositionY,
-		a.UpdatedAt, a.ID).Scan(&a.Username)
+		a.IsProfilePublic, a.UpdatedAt, a.ID).Scan(&a.Username)
 	if err != nil {
 		return err
 	}
