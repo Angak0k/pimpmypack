@@ -344,9 +344,12 @@ func returnAccounts(ctx context.Context) (*Accounts, error) {
 		    a.preferred_currency, a.preferred_unit_system, a.youtube_url, a.instagram_url,
 		    CASE WHEN ai.account_id IS NOT NULL THEN true ELSE false END AS has_profile_image,
 		    a.image_position_x, a.image_position_y, a.is_profile_public,
+		    CASE WHEN abi.account_id IS NOT NULL THEN true ELSE false END AS has_banner_image,
+		    a.banner_position_y,
 		    a.created_at, a.updated_at
 		FROM account a
-		LEFT JOIN account_images ai ON a.id = ai.account_id;`)
+		LEFT JOIN account_images ai ON a.id = ai.account_id
+		LEFT JOIN account_banner_images abi ON a.id = abi.account_id;`)
 	if err != nil {
 		return nil, err
 	}
@@ -370,6 +373,8 @@ func returnAccounts(ctx context.Context) (*Accounts, error) {
 			&account.ImagePositionX,
 			&account.ImagePositionY,
 			&account.IsProfilePublic,
+			&account.HasBannerImage,
+			&account.BannerPositionY,
 			&account.CreatedAt,
 			&account.UpdatedAt)
 		if err != nil {
@@ -393,9 +398,12 @@ func findAccountByID(ctx context.Context, id uint) (*Account, error) {
 		    a.preferred_currency, a.preferred_unit_system, a.youtube_url, a.instagram_url,
 		    CASE WHEN ai.account_id IS NOT NULL THEN true ELSE false END AS has_profile_image,
 		    a.image_position_x, a.image_position_y, a.is_profile_public,
+		    CASE WHEN abi.account_id IS NOT NULL THEN true ELSE false END AS has_banner_image,
+		    a.banner_position_y,
 		    a.created_at, a.updated_at
 		FROM account a
 		LEFT JOIN account_images ai ON a.id = ai.account_id
+		LEFT JOIN account_banner_images abi ON a.id = abi.account_id
 		WHERE a.id = $1;`,
 		id)
 	err := row.Scan(
@@ -414,6 +422,8 @@ func findAccountByID(ctx context.Context, id uint) (*Account, error) {
 		&account.ImagePositionX,
 		&account.ImagePositionY,
 		&account.IsProfilePublic,
+		&account.HasBannerImage,
+		&account.BannerPositionY,
 		&account.CreatedAt,
 		&account.UpdatedAt)
 
@@ -462,8 +472,8 @@ func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 	statement, err := database.DB().PrepareContext(ctx,
 		`UPDATE account SET email=$1, firstname=$2, lastname=$3, status=$4, role=$5, preferred_currency=$6,
 		    preferred_unit_system=$7, youtube_url=$8, instagram_url=$9, image_position_x=$10,
-		    image_position_y=$11, is_profile_public=$12, updated_at=$13
-		WHERE id=$14 RETURNING username;`)
+		    image_position_y=$11, is_profile_public=$12, banner_position_y=$13, updated_at=$14
+		WHERE id=$15 RETURNING username;`)
 	if err != nil {
 		return err
 	}
@@ -472,7 +482,7 @@ func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 
 	err = statement.QueryRowContext(ctx, a.Email, a.Firstname, a.Lastname, a.Status, a.Role, a.PreferredCurrency,
 		a.PreferredUnitSystem, a.YoutubeURL, a.InstagramURL, a.ImagePositionX, a.ImagePositionY,
-		a.IsProfilePublic, a.UpdatedAt, a.ID).Scan(&a.Username)
+		a.IsProfilePublic, a.BannerPositionY, a.UpdatedAt, a.ID).Scan(&a.Username)
 	if err != nil {
 		return err
 	}
@@ -484,7 +494,8 @@ func isValidationError(err error) bool {
 	msg := err.Error()
 	return msg == "invalid email format" ||
 		msg == "image_position_x must be between 0 and 100" ||
-		msg == "image_position_y must be between 0 and 100"
+		msg == "image_position_y must be between 0 and 100" ||
+		msg == "banner_position_y must be between 0 and 100"
 }
 
 // normalizeEmptyStringPtr converts empty string pointers to nil for clean DB storage
@@ -519,6 +530,9 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 	if input.ImagePositionY != nil && (*input.ImagePositionY < 0 || *input.ImagePositionY > 100) {
 		return nil, errors.New("image_position_y must be between 0 and 100")
 	}
+	if input.BannerPositionY != nil && (*input.BannerPositionY < 0 || *input.BannerPositionY > 100) {
+		return nil, errors.New("banner_position_y must be between 0 and 100")
+	}
 
 	now := time.Now().Truncate(time.Second)
 
@@ -531,11 +545,13 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 		     image_position_x=COALESCE($8, image_position_x),
 		     image_position_y=COALESCE($9, image_position_y),
 		     is_profile_public=COALESCE($10, is_profile_public),
-		     updated_at=$11
-		 WHERE id=$12
+		     banner_position_y=COALESCE($11, banner_position_y),
+		     updated_at=$12
+		 WHERE id=$13
 		 RETURNING id, username, email, firstname, lastname, role, status,
 		           preferred_currency, preferred_unit_system, youtube_url, instagram_url,
 		           image_position_x, image_position_y, is_profile_public,
+		           banner_position_y,
 		           created_at, updated_at;`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare statement: %w", err)
@@ -554,6 +570,7 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 		input.ImagePositionX,
 		input.ImagePositionY,
 		input.IsProfilePublic,
+		input.BannerPositionY,
 		now,
 		userID,
 	).Scan(
@@ -571,6 +588,7 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 		&account.ImagePositionX,
 		&account.ImagePositionY,
 		&account.IsProfilePublic,
+		&account.BannerPositionY,
 		&account.CreatedAt,
 		&account.UpdatedAt,
 	)
@@ -582,16 +600,19 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 		return nil, fmt.Errorf("failed to update account: %w", err)
 	}
 
-	// Compute has_profile_image separately
-	var hasProfileImage bool
+	// Compute has_profile_image and has_banner_image separately
+	var hasProfileImage, hasBannerImage bool
 	err = database.DB().QueryRowContext(ctx,
-		`SELECT EXISTS(SELECT 1 FROM account_images WHERE account_id = $1)`,
+		`SELECT
+		    EXISTS(SELECT 1 FROM account_images WHERE account_id = $1),
+		    EXISTS(SELECT 1 FROM account_banner_images WHERE account_id = $1)`,
 		userID,
-	).Scan(&hasProfileImage)
+	).Scan(&hasProfileImage, &hasBannerImage)
 	if err != nil {
-		return nil, fmt.Errorf("failed to check profile image: %w", err)
+		return nil, fmt.Errorf("failed to check images: %w", err)
 	}
 	account.HasProfileImage = hasProfileImage
+	account.HasBannerImage = hasBannerImage
 
 	return &account, nil
 }

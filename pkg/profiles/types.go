@@ -9,6 +9,8 @@ type PublicProfile struct {
 	HasProfileImage bool                `json:"has_profile_image"`
 	ImagePositionX  int                 `json:"image_position_x"`
 	ImagePositionY  int                 `json:"image_position_y"`
+	HasBannerImage  bool                `json:"has_banner_image"`
+	BannerPositionY int                 `json:"banner_position_y"`
 	YoutubeURL      *string             `json:"youtube_url,omitempty"`
 	InstagramURL    *string             `json:"instagram_url,omitempty"`
 	SharedPacks     []SharedPackSummary `json:"shared_packs"`

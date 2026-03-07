@@ -2,12 +2,16 @@ basePath: /api
 definitions:
   accounts.Account:
     properties:
+      banner_position_y:
+        type: integer
       created_at:
         type: string
       email:
         type: string
       firstname:
         type: string
+      has_banner_image:
+        type: boolean
       has_profile_image:
         type: boolean
       id:
@@ -39,6 +43,8 @@ definitions:
     type: object
   accounts.AccountUpdateInput:
     properties:
+      banner_position_y:
+        type: integer
       email:
         type: string
       firstname:
@@ -380,8 +386,12 @@ definitions:
     type: object
   profiles.PublicProfile:
     properties:
+      banner_position_y:
+        type: integer
       firstname:
         type: string
+      has_banner_image:
+        type: boolean
       has_profile_image:
         type: boolean
       image_position_x:
@@ -702,6 +712,37 @@ paths:
       summary: Get public user profile
       tags:
       - Profiles
+  /v1/accounts/{id}/banner:
+    get:
+      description: Get the banner/hero image for a user account
+      parameters:
+      - description: Account ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - image/jpeg
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: file
+        "400":
+          description: Invalid account ID
+          schema:
+            type: string
+        "404":
+          description: No banner image found
+          schema:
+            type: string
+        "500":
+          description: Internal server error
+          schema:
+            type: string
+      summary: Get banner image
+      tags:
+      - Account Images
   /v1/accounts/{id}/image:
     get:
       description: Get the profile image for a user account
@@ -903,6 +944,82 @@ paths:
       summary: Update account info
       tags:
       - Accounts
+  /v1/myaccount/banner:
+    delete:
+      description: Delete the banner/hero image for the currently logged-in user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Banner image deleted successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Delete banner image
+      tags:
+      - Account Images
+    post:
+      consumes:
+      - multipart/form-data
+      description: Upload or update the banner/hero image for the currently logged-in
+        user
+      parameters:
+      - description: Image file (JPEG, PNG, or WebP, max 5MB)
+        in: formData
+        name: image
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Banner image uploaded successfully
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request or image
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "413":
+          description: Payload too large
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - Bearer: []
+      summary: Upload or update banner image
+      tags:
+      - Account Images
   /v1/myaccount/image:
     delete:
       description: Delete the profile image for the currently logged-in user

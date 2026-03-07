@@ -26,6 +26,10 @@ const (
 	JPEGQuality = 85
 	// InventoryItemJPEGQuality is the quality setting for inventory item images (0-100)
 	InventoryItemJPEGQuality = 70
+	// MaxBannerWidth is the maximum width for banner images
+	MaxBannerWidth = 1920
+	// MaxBannerHeight is the maximum height for banner images
+	MaxBannerHeight = 600
 	// MimeTypeJPEG is the MIME type for JPEG images
 	MimeTypeJPEG = "image/jpeg"
 	// MimeTypePNG is the MIME type for PNG images
@@ -298,4 +302,80 @@ func ProcessInventoryItemImageFromReader(reader io.Reader) (*ProcessedImage, err
 	}
 
 	return ProcessInventoryItemImage(data)
+}
+
+// ResizeBannerImage resizes an image to fit within MaxBannerWidth x MaxBannerHeight
+func ResizeBannerImage(img image.Image) image.Image {
+	bounds := img.Bounds()
+	width := bounds.Dx()
+	height := bounds.Dy()
+
+	if width <= MaxBannerWidth && height <= MaxBannerHeight {
+		return img
+	}
+
+	// Scale down to fit within both width and height constraints
+	scaleW := float64(MaxBannerWidth) / float64(width)
+	scaleH := float64(MaxBannerHeight) / float64(height)
+	scale := min(scaleW, scaleH)
+
+	newWidth := max(1, int(float64(width)*scale))
+	newHeight := max(1, int(float64(height)*scale))
+
+	dst := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
+	draw.CatmullRom.Scale(dst, dst.Rect, img, bounds, draw.Over, nil)
+
+	return dst
+}
+
+// ProcessBannerImage validates and processes an uploaded banner image
+func ProcessBannerImage(data []byte) (*ProcessedImage, error) {
+	if len(data) > MaxUploadSize {
+		return nil, fmt.Errorf("%w: upload size %d exceeds %d bytes",
+			ErrTooLarge, len(data), MaxUploadSize)
+	}
+
+	_, err := ValidateImageFormat(data)
+	if err != nil {
+		return nil, err
+	}
+
+	img, err := DecodeImage(data)
+	if err != nil {
+		return nil, err
+	}
+
+	img = ResizeBannerImage(img)
+
+	processedData, err := EncodeToJPEG(img)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(processedData) > MaxProcessedSize {
+		return nil, fmt.Errorf("%w: processed size %d exceeds %d bytes",
+			ErrTooLarge, len(processedData), MaxProcessedSize)
+	}
+
+	bounds := img.Bounds()
+
+	return &ProcessedImage{
+		Data: processedData,
+		Metadata: ImageMetadata{
+			MimeType: MimeTypeJPEG,
+			FileSize: len(processedData),
+			Width:    bounds.Dx(),
+			Height:   bounds.Dy(),
+		},
+	}, nil
+}
+
+// ProcessBannerImageFromReader processes a banner image from an io.Reader
+func ProcessBannerImageFromReader(reader io.Reader) (*ProcessedImage, error) {
+	data, err := io.ReadAll(io.LimitReader(reader, MaxUploadSize+1))
+	if err != nil {
+		return nil, fmt.Errorf("failed to read image data: %w", err)
+	}
+
+	return ProcessBannerImage(data)
 }

@@ -371,6 +371,53 @@
                 }
             }
         },
+        "/v1/accounts/{id}/banner": {
+            "get": {
+                "description": "Get the banner/hero image for a user account",
+                "produces": [
+                    "image/jpeg"
+                ],
+                "tags": [
+                    "Account Images"
+                ],
+                "summary": "Get banner image",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Account ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid account ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "No banner image found",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/accounts/{id}/image": {
             "get": {
                 "description": "Get the profile image for a user account",
@@ -680,6 +727,122 @@
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/myaccount/banner": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Upload or update the banner/hero image for the currently logged-in user",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Account Images"
+                ],
+                "summary": "Upload or update banner image",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Image file (JPEG, PNG, or WebP, max 5MB)",
+                        "name": "image",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Banner image uploaded successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request or image",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "413": {
+                        "description": "Payload too large",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Delete the banner/hero image for the currently logged-in user",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Account Images"
+                ],
+                "summary": "Delete banner image",
+                "responses": {
+                    "200": {
+                        "description": "Banner image deleted successfully",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     }
                 }
@@ -2472,6 +2635,9 @@
         "accounts.Account": {
             "type": "object",
             "properties": {
+                "banner_position_y": {
+                    "type": "integer"
+                },
                 "created_at": {
                     "type": "string"
                 },
@@ -2480,6 +2646,9 @@
                 },
                 "firstname": {
                     "type": "string"
+                },
+                "has_banner_image": {
+                    "type": "boolean"
                 },
                 "has_profile_image": {
                     "type": "boolean"
@@ -2533,6 +2702,9 @@
                 "lastname"
             ],
             "properties": {
+                "banner_position_y": {
+                    "type": "integer"
+                },
                 "email": {
                     "type": "string"
                 },
@@ -3044,8 +3216,14 @@
         "profiles.PublicProfile": {
             "type": "object",
             "properties": {
+                "banner_position_y": {
+                    "type": "integer"
+                },
                 "firstname": {
                     "type": "string"
+                },
+                "has_banner_image": {
+                    "type": "boolean"
                 },
                 "has_profile_image": {
                     "type": "boolean"

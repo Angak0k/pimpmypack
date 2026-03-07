@@ -119,3 +119,8 @@ func NewDBAccountImageStorage() *DBStorage {
 func NewDBInventoryImageStorage() *DBStorage {
 	return &DBStorage{store: dbImageStore{table: "inventory_images", idColumn: "item_id"}}
 }
+
+// NewDBBannerImageStorage creates a new database banner image storage instance
+func NewDBBannerImageStorage() *DBStorage {
+	return &DBStorage{store: dbImageStore{table: "account_banner_images", idColumn: "account_id"}}
+}
