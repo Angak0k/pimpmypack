@@ -24,6 +24,7 @@ type SharedPackSummary struct {
 	PackDescription string    `json:"pack_description"`
 	HasImage        bool      `json:"has_image"`
 	PackWeight      int       `json:"pack_weight"`
+	BaseWeight      int       `json:"base_weight"`
 	PackItemsCount  int       `json:"pack_items_count"`
 	SharingCode     string    `json:"sharing_code"`
 	Season          *string   `json:"season,omitempty"`

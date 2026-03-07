@@ -60,6 +60,8 @@ func returnSharedPacksByUsername(ctx context.Context, username string) ([]Shared
 		SELECT p.id, p.pack_name, p.pack_description,
 		    CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END AS has_image,
 		    COALESCE(SUM(i.weight * pc.quantity), 0) AS pack_weight,
+		    COALESCE(SUM(CASE WHEN pc.worn = false AND pc.consumable = false
+		        THEN i.weight * pc.quantity ELSE 0 END), 0) AS base_weight,
 		    COALESCE(SUM(pc.quantity), 0) AS pack_items_count,
 		    p.sharing_code, p.season, p.trail, p.adventure, p.created_at
 		FROM pack p
@@ -90,6 +92,7 @@ func returnSharedPacksByUsername(ctx context.Context, username string) ([]Shared
 			&pack.PackDescription,
 			&pack.HasImage,
 			&pack.PackWeight,
+			&pack.BaseWeight,
 			&pack.PackItemsCount,
 			&pack.SharingCode,
 			&pack.Season,
