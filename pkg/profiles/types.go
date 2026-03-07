@@ -4,6 +4,7 @@ import "time"
 
 // PublicProfile represents the public-facing user profile
 type PublicProfile struct {
+	AccountID       uint                `json:"account_id"`
 	Username        string              `json:"username"`
 	Firstname       string              `json:"firstname"`
 	HasProfileImage bool                `json:"has_profile_image"`

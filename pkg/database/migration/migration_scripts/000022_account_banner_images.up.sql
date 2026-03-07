@@ -9,4 +9,4 @@ CREATE TABLE account_banner_images (
     updated_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
 
-ALTER TABLE account ADD COLUMN banner_position_y INTEGER NOT NULL DEFAULT 50;
+ALTER TABLE account ADD COLUMN banner_position_y INTEGER NOT NULL DEFAULT 50 CHECK (banner_position_y BETWEEN 0 AND 100);

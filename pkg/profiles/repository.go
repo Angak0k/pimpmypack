@@ -20,7 +20,7 @@ func returnPublicProfileByUsername(ctx context.Context, username string) (*Publi
 	var profile PublicProfile
 
 	err := database.DB().QueryRowContext(ctx,
-		`SELECT a.username, a.firstname, a.youtube_url, a.instagram_url,
+		`SELECT a.id, a.username, a.firstname, a.youtube_url, a.instagram_url,
 		    CASE WHEN ai.account_id IS NOT NULL THEN true ELSE false END AS has_profile_image,
 		    a.image_position_x, a.image_position_y,
 		    CASE WHEN abi.account_id IS NOT NULL THEN true ELSE false END AS has_banner_image,
@@ -31,6 +31,7 @@ func returnPublicProfileByUsername(ctx context.Context, username string) (*Publi
 		WHERE a.username = $1 AND a.status = 'active' AND a.is_profile_public = true;`,
 		username,
 	).Scan(
+		&profile.AccountID,
 		&profile.Username,
 		&profile.Firstname,
 		&profile.YoutubeURL,
