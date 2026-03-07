@@ -1,0 +1,1 @@
+ALTER TABLE "pack" DROP COLUMN IF EXISTS "trail_id";

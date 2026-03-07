@@ -174,17 +174,29 @@ func createPacks(
 	packIDs := make([]uint, len(seedPackDefs))
 
 	for i, p := range seedPackDefs {
+		// Resolve trail name to trail_id
+		var trailID *uint
+		if p.trail != nil {
+			var tid uint
+			err := tx.QueryRowContext(ctx,
+				`SELECT id FROM trail WHERE name = $1`, *p.trail,
+			).Scan(&tid)
+			if err == nil {
+				trailID = &tid
+			}
+		}
+
 		var id uint
 		err := tx.QueryRowContext(ctx,
 			`INSERT INTO pack
 			(user_id, pack_name, pack_description,
-			 season, trail, adventure,
+			 season, trail, trail_id, adventure,
 			 is_favorite,
 			 created_at, updated_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 			RETURNING id`,
 			userID, p.packName, p.packDescription,
-			p.season, p.trail, p.adventure, p.isFavorite,
+			p.season, p.trail, trailID, p.adventure, p.isFavorite,
 			now, now,
 		).Scan(&id)
 		if err != nil {

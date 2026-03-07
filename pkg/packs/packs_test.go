@@ -1832,12 +1832,13 @@ func TestGetPackOptions(t *testing.T) {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
 
-		expectedOptions := GetPackOptionsValues()
+		expectedOptions := GetPackOptionsValues(req.Context())
 		if diff := cmp.Diff(expectedOptions.Seasons, response.Seasons); diff != "" {
 			t.Errorf("Seasons mismatch (-want +got):\n%s", diff)
 		}
-		if diff := cmp.Diff(expectedOptions.Trails, response.Trails); diff != "" {
-			t.Errorf("Trails mismatch (-want +got):\n%s", diff)
+		// Trails are now DB-driven, verify they are present
+		if len(response.Trails) == 0 {
+			t.Error("Expected trails to be non-empty")
 		}
 		if diff := cmp.Diff(expectedOptions.Adventures, response.Adventures); diff != "" {
 			t.Errorf("Adventures mismatch (-want +got):\n%s", diff)

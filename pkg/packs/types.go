@@ -1,8 +1,11 @@
 package packs
 
 import (
+	"context"
 	"errors"
 	"time"
+
+	"github.com/Angak0k/pimpmypack/pkg/trails"
 )
 
 // Domain errors
@@ -22,16 +25,6 @@ var (
 // allowedSeasons defines the valid season values for a pack
 var allowedSeasons = []string{"Winter", "3-Season", "Summer"}
 
-// allowedTrails defines the valid trail values for a pack
-var allowedTrails = []string{
-	"Appalachian Trail", "Pacific Crest Trail", "Continental Divide Trail",
-	"John Muir Trail", "Colorado Trail",
-	"GR20", "GR10", "GR34", "GR5", "GR54", "HRP", "Hexatrek", "Tour du Mont Blanc",
-	"Camino de Santiago", "Alta Via 1", "West Highland Way", "Kungsleden",
-	"Kumano Kodo", "Nakasendo Trail", "Shikoku Pilgrimage",
-	"Te Araroa", "Milford Track", "Routeburn Track", "Tongariro Northern Circuit",
-}
-
 // allowedAdventures defines the valid adventure type values for a pack
 var allowedAdventures = []string{"Bikepacking", "Backpacking", "Thru-hike", "Backcountry Skiing"}
 
@@ -48,6 +41,7 @@ type Pack struct {
 	HasImage        bool      `json:"has_image"`
 	Season          *string   `json:"season,omitempty"`
 	Trail           *string   `json:"trail,omitempty"`
+	TrailID         *uint     `json:"trail_id,omitempty"`
 	Adventure       *string   `json:"adventure,omitempty"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
@@ -203,11 +197,36 @@ type PackOptionsResponse struct {
 	Adventures []string `json:"adventures"`
 }
 
-// GetPackOptionsValues returns a defensive copy of the allowed metadata values
-func GetPackOptionsValues() PackOptionsResponse {
+// GetPackOptionsValues returns the allowed metadata values, querying the DB for trails
+func GetPackOptionsValues(ctx context.Context) PackOptionsResponse {
+	trailNames, err := trails.ReturnTrailNames(ctx)
+	if err != nil {
+		// Fallback to empty list on error
+		trailNames = []string{}
+	}
 	return PackOptionsResponse{
 		Seasons:    append([]string{}, allowedSeasons...),
-		Trails:     append([]string{}, allowedTrails...),
+		Trails:     trailNames,
+		Adventures: append([]string{}, allowedAdventures...),
+	}
+}
+
+// PackOptionsV2Response represents the V2 allowed values with grouped trails
+type PackOptionsV2Response struct {
+	Seasons    []string                                    `json:"seasons"`
+	Trails     map[string]map[string][]trails.TrailSummary `json:"trails"`
+	Adventures []string                                    `json:"adventures"`
+}
+
+// GetPackOptionsV2Values returns the allowed metadata values with trails grouped by continent/country
+func GetPackOptionsV2Values(ctx context.Context) PackOptionsV2Response {
+	grouped, err := trails.ReturnTrailsGrouped(ctx)
+	if err != nil {
+		grouped = make(map[string]map[string][]trails.TrailSummary)
+	}
+	return PackOptionsV2Response{
+		Seasons:    append([]string{}, allowedSeasons...),
+		Trails:     grouped,
 		Adventures: append([]string{}, allowedAdventures...),
 	}
 }

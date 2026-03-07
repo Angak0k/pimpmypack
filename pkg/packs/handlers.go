@@ -9,6 +9,7 @@ import (
 
 	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/Angak0k/pimpmypack/pkg/security"
+	"github.com/Angak0k/pimpmypack/pkg/trails"
 	"github.com/gin-gonic/gin"
 )
 
@@ -97,7 +98,7 @@ func PostPack(c *gin.Context) {
 		return
 	}
 
-	if err := validatePackMetadata(input.Season, input.Trail, input.Adventure); err != nil {
+	if err := validatePackMetadata(c.Request.Context(), input.Season, input.Trail, input.Adventure); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -108,6 +109,7 @@ func PostPack(c *gin.Context) {
 		PackDescription: input.PackDescription,
 		Season:          input.Season,
 		Trail:           input.Trail,
+		TrailID:         resolveTrailID(c.Request.Context(), input.Trail),
 		Adventure:       input.Adventure,
 	}
 
@@ -147,7 +149,7 @@ func PutPackByID(c *gin.Context) {
 		return
 	}
 
-	if err := validatePackMetadata(input.Season, input.Trail, input.Adventure); err != nil {
+	if err := validatePackMetadata(c.Request.Context(), input.Season, input.Trail, input.Adventure); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -171,6 +173,7 @@ func PutPackByID(c *gin.Context) {
 		PackDescription: input.PackDescription,
 		Season:          input.Season,
 		Trail:           input.Trail,
+		TrailID:         resolveTrailID(c.Request.Context(), input.Trail),
 		Adventure:       input.Adventure,
 		CreatedAt:       existingPack.CreatedAt,      // Preserve existing CreatedAt
 		UpdatedAt:       existingPack.UpdatedAt,      // Preserve existing UpdatedAt
@@ -334,7 +337,7 @@ func PostMyPack(c *gin.Context) {
 		return
 	}
 
-	if err := validatePackMetadata(input.Season, input.Trail, input.Adventure); err != nil {
+	if err := validatePackMetadata(c.Request.Context(), input.Season, input.Trail, input.Adventure); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -345,6 +348,7 @@ func PostMyPack(c *gin.Context) {
 		PackDescription: input.PackDescription,
 		Season:          input.Season,
 		Trail:           input.Trail,
+		TrailID:         resolveTrailID(c.Request.Context(), input.Trail),
 		Adventure:       input.Adventure,
 	}
 
@@ -395,7 +399,7 @@ func PutMyPackByID(c *gin.Context) {
 		return
 	}
 
-	if err := validatePackMetadata(input.Season, input.Trail, input.Adventure); err != nil {
+	if err := validatePackMetadata(c.Request.Context(), input.Season, input.Trail, input.Adventure); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
@@ -427,6 +431,7 @@ func PutMyPackByID(c *gin.Context) {
 	updatedPack.PackDescription = input.PackDescription
 	updatedPack.Season = input.Season
 	updatedPack.Trail = input.Trail
+	updatedPack.TrailID = resolveTrailID(c.Request.Context(), input.Trail)
 	updatedPack.Adventure = input.Adventure
 
 	err = updatePackByID(c.Request.Context(), id, &updatedPack)
@@ -1390,17 +1395,34 @@ func ImportFromPimpMyPackURL(c *gin.Context) {
 
 // validatePackMetadata checks that season, trail, and adventure values are allowed.
 // Returns nil if all values are valid or nil.
-func validatePackMetadata(season, trail, adventure *string) error {
+func validatePackMetadata(ctx context.Context, season, trail, adventure *string) error {
 	if !isAllowedValue(season, allowedSeasons) {
 		return errors.New("invalid season value")
 	}
-	if !isAllowedValue(trail, allowedTrails) {
+	valid, err := trails.IsValidTrailName(ctx, trail)
+	if err != nil {
+		return errors.New("failed to validate trail")
+	}
+	if !valid {
 		return errors.New("invalid trail value")
 	}
 	if !isAllowedValue(adventure, allowedAdventures) {
 		return errors.New("invalid adventure value")
 	}
 	return nil
+}
+
+// resolveTrailID resolves a trail name to a trail ID.
+// Returns nil if the trail name is nil.
+func resolveTrailID(ctx context.Context, trailName *string) *uint {
+	if trailName == nil {
+		return nil
+	}
+	trail, err := trails.FindTrailByName(ctx, *trailName)
+	if err != nil {
+		return nil
+	}
+	return &trail.ID
 }
 
 // Get pack options
@@ -1412,7 +1434,19 @@ func validatePackMetadata(season, trail, adventure *string) error {
 // @Success 200 {object} PackOptionsResponse
 // @Router /v1/pack-options [get]
 func GetPackOptions(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, GetPackOptionsValues())
+	c.IndentedJSON(http.StatusOK, GetPackOptionsValues(c.Request.Context()))
+}
+
+// Get V2 pack options with grouped trails
+// @Summary Get allowed values for pack metadata (V2)
+// @Description Returns the allowed values for season, trail (grouped by continent/country), and adventure fields
+// @Tags Packs
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} PackOptionsV2Response
+// @Router /v2/pack-options [get]
+func GetPackOptionsV2(c *gin.Context) {
+	c.IndentedJSON(http.StatusOK, GetPackOptionsV2Values(c.Request.Context()))
 }
 
 // SharedList gets pack metadata and contents for a shared pack
