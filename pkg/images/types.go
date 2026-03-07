@@ -76,6 +76,23 @@ type AccountImageStorage interface {
 	Exists(ctx context.Context, accountID uint) (bool, error)
 }
 
+// BannerImageStorage defines the interface for account banner image storage operations
+type BannerImageStorage interface {
+	// Save stores a banner image for an account
+	Save(ctx context.Context, accountID uint, data []byte, metadata ImageMetadata) error
+
+	// Get retrieves a banner image for an account
+	// Returns ErrNotFound if the image doesn't exist
+	Get(ctx context.Context, accountID uint) (*Image, error)
+
+	// Delete removes a banner image for an account
+	// Returns nil if the image doesn't exist (idempotent)
+	Delete(ctx context.Context, accountID uint) error
+
+	// Exists checks if a banner image exists for an account
+	Exists(ctx context.Context, accountID uint) (bool, error)
+}
+
 // InventoryImageStorage defines the interface for inventory item image storage operations
 type InventoryImageStorage interface {
 	// Save stores an image for an inventory item

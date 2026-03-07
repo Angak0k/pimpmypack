@@ -18,6 +18,9 @@ type Account struct {
 	HasProfileImage     bool      `json:"has_profile_image"`
 	ImagePositionX      int       `json:"image_position_x"`
 	ImagePositionY      int       `json:"image_position_y"`
+	IsProfilePublic     bool      `json:"is_profile_public"`
+	HasBannerImage      bool      `json:"has_banner_image"`
+	BannerPositionY     int       `json:"banner_position_y"`
 	CreatedAt           time.Time `json:"created_at"`
 	UpdatedAt           time.Time `json:"updated_at"`
 }
@@ -82,6 +85,8 @@ type AccountUpdateInput struct {
 	InstagramURL        *string `json:"instagram_url"`
 	ImagePositionX      *int    `json:"image_position_x"`
 	ImagePositionY      *int    `json:"image_position_y"`
+	IsProfilePublic     *bool   `json:"is_profile_public"`
+	BannerPositionY     *int    `json:"banner_position_y"`
 }
 
 // ResendConfirmEmailInput represents the data required to resend a confirmation email

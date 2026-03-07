@@ -1,8 +1,8 @@
 package images
 
 import (
+	"context"
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/Angak0k/pimpmypack/pkg/helper"
@@ -12,29 +12,74 @@ import (
 
 var accountStorage AccountImageStorage = NewDBAccountImageStorage()
 
-// processUploadedProfileImage handles file validation and profile image processing
-func processUploadedProfileImage(c *gin.Context) (*ProcessedImage, error) {
-	file, err := c.FormFile("image")
+// handleImageProcessingError sends the appropriate HTTP error response for image processing errors
+func handleImageProcessingError(c *gin.Context, err error, context string) {
+	if errors.Is(err, ErrInvalidFormat) {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Invalid image format. Only JPEG, PNG, and WebP are supported",
+		})
+		return
+	}
+	if errors.Is(err, ErrTooLarge) {
+		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
+			"error": "File size exceeds maximum allowed",
+		})
+		return
+	}
+	if errors.Is(err, ErrCorrupted) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Corrupted or invalid image file"})
+		return
+	}
+	if err.Error() == ErrMsgNoImageProvided {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No image file provided"})
+		return
+	}
+	helper.LogAndSanitize(err, context+": process image failed")
+	c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
+}
+
+// imageSaver abstracts the Save method shared by storage interfaces
+type imageSaver interface {
+	Save(ctx context.Context, id uint, data []byte, metadata ImageMetadata) error
+}
+
+// uploadUserImage handles the common upload flow: extract token, process, save, respond
+func uploadUserImage(
+	c *gin.Context,
+	store imageSaver,
+	processor imageProcessorFunc,
+	logPrefix string,
+	successMsg string,
+) {
+	ctx := c.Request.Context()
+
+	userID, err := security.ExtractTokenID(c)
 	if err != nil {
-		return nil, errors.New(ErrMsgNoImageProvided)
+		helper.LogAndSanitize(err, logPrefix+": extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
+		return
 	}
 
-	if file.Size > MaxUploadSize {
-		return nil, fmt.Errorf("%w: file size exceeds maximum allowed (%d bytes)", ErrTooLarge, MaxUploadSize)
-	}
-
-	fileReader, err := file.Open()
+	processed, err := processUploadedImageWith(c, processor)
 	if err != nil {
-		return nil, errors.New("failed to read uploaded file")
+		handleImageProcessingError(c, err, logPrefix)
+		return
 	}
-	defer fileReader.Close()
 
-	processed, err := ProcessProfileImageFromReader(fileReader)
+	err = store.Save(ctx, userID, processed.Data, processed.Metadata)
 	if err != nil {
-		return nil, err
+		helper.LogAndSanitize(err, logPrefix+": save image failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save image"})
+		return
 	}
 
-	return processed, nil
+	c.JSON(http.StatusOK, gin.H{
+		"message":   successMsg,
+		"mime_type": processed.Metadata.MimeType,
+		"file_size": processed.Metadata.FileSize,
+		"width":     processed.Metadata.Width,
+		"height":    processed.Metadata.Height,
+	})
 }
 
 // UploadMyProfileImage uploads or updates the profile image for the current user
@@ -52,52 +97,8 @@ func processUploadedProfileImage(c *gin.Context) (*ProcessedImage, error) {
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /v1/myaccount/image [post]
 func UploadMyProfileImage(c *gin.Context) {
-	ctx := c.Request.Context()
-
-	userID, err := security.ExtractTokenID(c)
-	if err != nil {
-		helper.LogAndSanitize(err, "upload profile image: extract token ID failed")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
-		return
-	}
-
-	processed, err := processUploadedProfileImage(c)
-	if err != nil {
-		if errors.Is(err, ErrInvalidFormat) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid image format. Only JPEG, PNG, and WebP are supported"})
-			return
-		}
-		if errors.Is(err, ErrTooLarge) {
-			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "File size exceeds maximum allowed"})
-			return
-		}
-		if errors.Is(err, ErrCorrupted) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Corrupted or invalid image file"})
-			return
-		}
-		if err.Error() == ErrMsgNoImageProvided {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "No image file provided"})
-			return
-		}
-		helper.LogAndSanitize(err, "upload profile image: process image failed")
-		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
-		return
-	}
-
-	err = accountStorage.Save(ctx, userID, processed.Data, processed.Metadata)
-	if err != nil {
-		helper.LogAndSanitize(err, "upload profile image: save image failed")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save image"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{
-		"message":   "Profile image uploaded successfully",
-		"mime_type": processed.Metadata.MimeType,
-		"file_size": processed.Metadata.FileSize,
-		"width":     processed.Metadata.Width,
-		"height":    processed.Metadata.Height,
-	})
+	uploadUserImage(c, accountStorage, ProcessProfileImageFromReader,
+		"upload profile image", "Profile image uploaded successfully")
 }
 
 // DeleteMyProfileImage deletes the profile image for the current user

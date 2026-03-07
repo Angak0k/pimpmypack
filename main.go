@@ -14,6 +14,7 @@ import (
 	"github.com/Angak0k/pimpmypack/pkg/images"
 	"github.com/Angak0k/pimpmypack/pkg/inventories"
 	"github.com/Angak0k/pimpmypack/pkg/packs"
+	"github.com/Angak0k/pimpmypack/pkg/profiles"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -124,8 +125,10 @@ func setupPublicRoutes(router *gin.Engine) {
 		),
 		accounts.ResendConfirmEmail)
 	public.GET("/sharedlist/:sharing_code", packs.SharedList)
+	public.GET("/user/:username", profiles.GetPublicProfile)
 	public.GET("/v1/packs/:id/image", images.GetPackImage)
 	public.GET("/v1/accounts/:id/image", images.GetProfileImage)
+	public.GET("/v1/accounts/:id/banner", images.GetBannerImage)
 }
 
 func setupProtectedRoutes(router *gin.Engine) {
@@ -160,6 +163,8 @@ func setupProtectedRoutes(router *gin.Engine) {
 	protected.DELETE("/mypack/:id/image", images.DeletePackImage)
 	protected.POST("/myaccount/image", images.UploadMyProfileImage)
 	protected.DELETE("/myaccount/image", images.DeleteMyProfileImage)
+	protected.POST("/myaccount/banner", images.UploadMyBannerImage)
+	protected.DELETE("/myaccount/banner", images.DeleteMyBannerImage)
 	protected.POST("/myinventory/:id/image", images.UploadInventoryItemImage)
 	protected.GET("/myinventory/:id/image", images.GetInventoryItemImage)
 	protected.DELETE("/myinventory/:id/image", images.DeleteInventoryItemImage)
