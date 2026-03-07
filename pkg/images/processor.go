@@ -6,6 +6,7 @@ import (
 	"image"
 	"image/jpeg"
 	"io"
+	"math"
 
 	"golang.org/x/image/draw"
 	_ "golang.org/x/image/webp" // Register WebP decoder
@@ -26,6 +27,8 @@ const (
 	JPEGQuality = 85
 	// InventoryItemJPEGQuality is the quality setting for inventory item images (0-100)
 	InventoryItemJPEGQuality = 70
+	// BannerJPEGQuality is the quality setting for banner images (0-100)
+	BannerJPEGQuality = 95
 	// MaxBannerWidth is the maximum width for banner images
 	MaxBannerWidth = 1920
 	// MaxBannerHeight is the maximum height for banner images
@@ -304,26 +307,39 @@ func ProcessInventoryItemImageFromReader(reader io.Reader) (*ProcessedImage, err
 	return ProcessInventoryItemImage(data)
 }
 
-// ResizeBannerImage resizes an image to fit within MaxBannerWidth x MaxBannerHeight
+// ResizeBannerImage scales and center-crops an image to exactly MaxBannerWidth x MaxBannerHeight
 func ResizeBannerImage(img image.Image) image.Image {
 	bounds := img.Bounds()
-	width := bounds.Dx()
-	height := bounds.Dy()
+	origW := bounds.Dx()
+	origH := bounds.Dy()
 
-	if width <= MaxBannerWidth && height <= MaxBannerHeight {
+	if origW == MaxBannerWidth && origH == MaxBannerHeight {
 		return img
 	}
 
-	// Scale down to fit within both width and height constraints
-	scaleW := float64(MaxBannerWidth) / float64(width)
-	scaleH := float64(MaxBannerHeight) / float64(height)
-	scale := min(scaleW, scaleH)
+	// Compute the source crop rectangle matching the target aspect ratio,
+	// then scale directly to the target size. This avoids allocating a
+	// potentially huge intermediate image for extreme aspect ratios.
+	targetAspect := float64(MaxBannerWidth) / float64(MaxBannerHeight)
+	sourceAspect := float64(origW) / float64(origH)
 
-	newWidth := max(1, int(float64(width)*scale))
-	newHeight := max(1, int(float64(height)*scale))
+	var cropRect image.Rectangle
+	if sourceAspect > targetAspect {
+		// Source is wider than target — crop sides
+		cropH := origH
+		cropW := int(math.Round(float64(cropH) * targetAspect))
+		cropX := (origW - cropW) / 2
+		cropRect = image.Rect(bounds.Min.X+cropX, bounds.Min.Y, bounds.Min.X+cropX+cropW, bounds.Min.Y+cropH)
+	} else {
+		// Source is taller than target — crop top/bottom
+		cropW := origW
+		cropH := int(math.Round(float64(cropW) / targetAspect))
+		cropY := (origH - cropH) / 2
+		cropRect = image.Rect(bounds.Min.X, bounds.Min.Y+cropY, bounds.Min.X+cropW, bounds.Min.Y+cropY+cropH)
+	}
 
-	dst := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
-	draw.CatmullRom.Scale(dst, dst.Rect, img, bounds, draw.Over, nil)
+	dst := image.NewRGBA(image.Rect(0, 0, MaxBannerWidth, MaxBannerHeight))
+	draw.CatmullRom.Scale(dst, dst.Bounds(), img, cropRect, draw.Over, nil)
 
 	return dst
 }
@@ -347,7 +363,7 @@ func ProcessBannerImage(data []byte) (*ProcessedImage, error) {
 
 	img = ResizeBannerImage(img)
 
-	processedData, err := EncodeToJPEG(img)
+	processedData, err := EncodeToJPEGWithQuality(img, BannerJPEGQuality)
 	if err != nil {
 		return nil, err
 	}
