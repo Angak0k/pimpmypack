@@ -477,47 +477,56 @@ func TestProcessInventoryItemImage_SmallImageUnchangedDimensions(t *testing.T) {
 	}
 }
 
-func TestResizeBannerImage_4x3Source(t *testing.T) {
-	img := image.NewRGBA(image.Rect(0, 0, 2048, 1536))
-	result := ResizeBannerImage(img)
-	bounds := result.Bounds()
-	if bounds.Dx() != MaxBannerWidth || bounds.Dy() != MaxBannerHeight {
-		t.Errorf("Expected %dx%d, got %dx%d", MaxBannerWidth, MaxBannerHeight, bounds.Dx(), bounds.Dy())
+func TestResizeBannerImage(t *testing.T) {
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{"4x3 source", 2048, 1536},
+		{"16x9 source", 1920, 1080},
+		{"wide panoramic", 3840, 600},
+		{"small image", 800, 400},
+		{"exact target size", MaxBannerWidth, MaxBannerHeight},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			img := image.NewRGBA(image.Rect(0, 0, tt.width, tt.height))
+			result := ResizeBannerImage(img)
+			bounds := result.Bounds()
+			if bounds.Dx() != MaxBannerWidth || bounds.Dy() != MaxBannerHeight {
+				t.Errorf("Expected %dx%d, got %dx%d", MaxBannerWidth, MaxBannerHeight, bounds.Dx(), bounds.Dy())
+			}
+		})
 	}
 }
 
-func TestResizeBannerImage_16x9Source(t *testing.T) {
-	img := image.NewRGBA(image.Rect(0, 0, 1920, 1080))
-	result := ResizeBannerImage(img)
-	bounds := result.Bounds()
-	if bounds.Dx() != MaxBannerWidth || bounds.Dy() != MaxBannerHeight {
-		t.Errorf("Expected %dx%d, got %dx%d", MaxBannerWidth, MaxBannerHeight, bounds.Dx(), bounds.Dy())
+func TestProcessBannerImage(t *testing.T) {
+	tests := []struct {
+		name   string
+		width  int
+		height int
+	}{
+		{"4x3 source", 2048, 1536},
+		{"16x9 source", 1920, 1080},
+		{"small image", 800, 400},
 	}
-}
 
-func TestResizeBannerImage_WidePanoramic(t *testing.T) {
-	img := image.NewRGBA(image.Rect(0, 0, 3840, 600))
-	result := ResizeBannerImage(img)
-	bounds := result.Bounds()
-	if bounds.Dx() != MaxBannerWidth || bounds.Dy() != MaxBannerHeight {
-		t.Errorf("Expected %dx%d, got %dx%d", MaxBannerWidth, MaxBannerHeight, bounds.Dx(), bounds.Dy())
-	}
-}
-
-func TestResizeBannerImage_SmallImage(t *testing.T) {
-	img := image.NewRGBA(image.Rect(0, 0, 800, 400))
-	result := ResizeBannerImage(img)
-	bounds := result.Bounds()
-	if bounds.Dx() != MaxBannerWidth || bounds.Dy() != MaxBannerHeight {
-		t.Errorf("Expected %dx%d, got %dx%d", MaxBannerWidth, MaxBannerHeight, bounds.Dx(), bounds.Dy())
-	}
-}
-
-func TestResizeBannerImage_ExactTargetSize(t *testing.T) {
-	img := image.NewRGBA(image.Rect(0, 0, MaxBannerWidth, MaxBannerHeight))
-	result := ResizeBannerImage(img)
-	bounds := result.Bounds()
-	if bounds.Dx() != MaxBannerWidth || bounds.Dy() != MaxBannerHeight {
-		t.Errorf("Expected %dx%d, got %dx%d", MaxBannerWidth, MaxBannerHeight, bounds.Dx(), bounds.Dy())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data := createTestJPEG(tt.width, tt.height)
+			result, err := ProcessBannerImage(data)
+			if err != nil {
+				t.Fatalf("Failed to process banner image: %v", err)
+			}
+			if result.Metadata.Width != MaxBannerWidth || result.Metadata.Height != MaxBannerHeight {
+				t.Errorf("Expected %dx%d, got %dx%d",
+					MaxBannerWidth, MaxBannerHeight, result.Metadata.Width, result.Metadata.Height)
+			}
+			if result.Metadata.MimeType != MimeTypeJPEG {
+				t.Errorf("Expected %s, got %s", MimeTypeJPEG, result.Metadata.MimeType)
+			}
+		})
 	}
 }

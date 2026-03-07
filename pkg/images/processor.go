@@ -313,23 +313,33 @@ func ResizeBannerImage(img image.Image) image.Image {
 	origW := bounds.Dx()
 	origH := bounds.Dy()
 
-	// Scale to cover the entire target area
-	scaleW := float64(MaxBannerWidth) / float64(origW)
-	scaleH := float64(MaxBannerHeight) / float64(origH)
-	scale := math.Max(scaleW, scaleH)
+	if origW == MaxBannerWidth && origH == MaxBannerHeight {
+		return img
+	}
 
-	scaledW := max(MaxBannerWidth, int(math.Round(float64(origW)*scale)))
-	scaledH := max(MaxBannerHeight, int(math.Round(float64(origH)*scale)))
+	// Compute the source crop rectangle matching the target aspect ratio,
+	// then scale directly to the target size. This avoids allocating a
+	// potentially huge intermediate image for extreme aspect ratios.
+	targetAspect := float64(MaxBannerWidth) / float64(MaxBannerHeight)
+	sourceAspect := float64(origW) / float64(origH)
 
-	scaled := image.NewRGBA(image.Rect(0, 0, scaledW, scaledH))
-	draw.CatmullRom.Scale(scaled, scaled.Bounds(), img, bounds, draw.Over, nil)
-
-	// Center-crop to exact target dimensions
-	cropX := (scaledW - MaxBannerWidth) / 2
-	cropY := (scaledH - MaxBannerHeight) / 2
+	var cropRect image.Rectangle
+	if sourceAspect > targetAspect {
+		// Source is wider than target — crop sides
+		cropH := origH
+		cropW := int(math.Round(float64(cropH) * targetAspect))
+		cropX := (origW - cropW) / 2
+		cropRect = image.Rect(bounds.Min.X+cropX, bounds.Min.Y, bounds.Min.X+cropX+cropW, bounds.Min.Y+cropH)
+	} else {
+		// Source is taller than target — crop top/bottom
+		cropW := origW
+		cropH := int(math.Round(float64(cropW) / targetAspect))
+		cropY := (origH - cropH) / 2
+		cropRect = image.Rect(bounds.Min.X, bounds.Min.Y+cropY, bounds.Min.X+cropW, bounds.Min.Y+cropY+cropH)
+	}
 
 	dst := image.NewRGBA(image.Rect(0, 0, MaxBannerWidth, MaxBannerHeight))
-	draw.Draw(dst, dst.Bounds(), scaled, image.Pt(cropX, cropY), draw.Src)
+	draw.CatmullRom.Scale(dst, dst.Bounds(), img, cropRect, draw.Over, nil)
 
 	return dst
 }
