@@ -3219,6 +3219,9 @@ const docTemplate = `{
         "profiles.PublicProfile": {
             "type": "object",
             "properties": {
+                "account_id": {
+                    "type": "integer"
+                },
                 "banner_position_y": {
                     "type": "integer"
                 },

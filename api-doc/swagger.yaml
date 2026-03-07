@@ -386,6 +386,8 @@ definitions:
     type: object
   profiles.PublicProfile:
     properties:
+      account_id:
+        type: integer
       banner_position_y:
         type: integer
       firstname:
