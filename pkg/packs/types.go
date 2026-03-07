@@ -198,17 +198,16 @@ type PackOptionsResponse struct {
 }
 
 // GetPackOptionsValues returns the allowed metadata values, querying the DB for trails
-func GetPackOptionsValues(ctx context.Context) PackOptionsResponse {
+func GetPackOptionsValues(ctx context.Context) (PackOptionsResponse, error) {
 	trailNames, err := trails.ReturnTrailNames(ctx)
 	if err != nil {
-		// Fallback to empty list on error
-		trailNames = []string{}
+		return PackOptionsResponse{}, err
 	}
 	return PackOptionsResponse{
 		Seasons:    append([]string{}, allowedSeasons...),
 		Trails:     trailNames,
 		Adventures: append([]string{}, allowedAdventures...),
-	}
+	}, nil
 }
 
 // PackOptionsV2Response represents the V2 allowed values with grouped trails
@@ -219,16 +218,16 @@ type PackOptionsV2Response struct {
 }
 
 // GetPackOptionsV2Values returns the allowed metadata values with trails grouped by continent/country
-func GetPackOptionsV2Values(ctx context.Context) PackOptionsV2Response {
+func GetPackOptionsV2Values(ctx context.Context) (PackOptionsV2Response, error) {
 	grouped, err := trails.ReturnTrailsGrouped(ctx)
 	if err != nil {
-		grouped = make(map[string]map[string][]trails.TrailSummary)
+		return PackOptionsV2Response{}, err
 	}
 	return PackOptionsV2Response{
 		Seasons:    append([]string{}, allowedSeasons...),
 		Trails:     grouped,
 		Adventures: append([]string{}, allowedAdventures...),
-	}
+	}, nil
 }
 
 // isAllowedValue checks if a value is in the allowed list.

@@ -243,8 +243,12 @@ func PostTrailsBulk(c *gin.Context) {
 
 	created, err := insertTrailsBulk(c.Request.Context(), trailsToCreate)
 	if err != nil {
+		if errors.Is(err, ErrTrailNameExists) {
+			c.JSON(http.StatusConflict, gin.H{"error": "One or more trail names already exist"})
+			return
+		}
 		helper.LogAndSanitize(err, "post trails bulk: insert trails failed")
-		c.IndentedJSON(http.StatusConflict, gin.H{"error": err.Error()})
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 
@@ -275,8 +279,16 @@ func DeleteTrailsBulk(c *gin.Context) {
 
 	err := deleteTrailsBulk(c.Request.Context(), input.IDs)
 	if err != nil {
+		if errors.Is(err, ErrTrailInUse) {
+			c.JSON(http.StatusConflict, gin.H{"error": "One or more trails are in use by packs"})
+			return
+		}
+		if errors.Is(err, ErrTrailNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "One or more trail IDs not found"})
+			return
+		}
 		helper.LogAndSanitize(err, "delete trails bulk: delete trails failed")
-		c.IndentedJSON(http.StatusConflict, gin.H{"error": err.Error()})
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return
 	}
 

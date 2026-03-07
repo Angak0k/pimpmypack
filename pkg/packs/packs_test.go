@@ -1832,7 +1832,10 @@ func TestGetPackOptions(t *testing.T) {
 			t.Fatalf("Failed to unmarshal response body: %v", err)
 		}
 
-		expectedOptions := GetPackOptionsValues(req.Context())
+		expectedOptions, err := GetPackOptionsValues(req.Context())
+		if err != nil {
+			t.Fatalf("Failed to get pack options: %v", err)
+		}
 		if diff := cmp.Diff(expectedOptions.Seasons, response.Seasons); diff != "" {
 			t.Errorf("Seasons mismatch (-want +got):\n%s", diff)
 		}

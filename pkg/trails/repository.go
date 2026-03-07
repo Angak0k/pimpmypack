@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/Angak0k/pimpmypack/pkg/database"
+	"github.com/lib/pq"
 )
+
+const trailNameConstraint = "idx_trail_name"
 
 func returnTrails(ctx context.Context) (Trails, error) {
 	rows, err := database.DB().QueryContext(ctx,
@@ -90,7 +92,8 @@ func insertTrail(ctx context.Context, t *Trail) error {
 		t.CreatedAt, t.UpdatedAt).Scan(&t.ID)
 
 	if err != nil {
-		if strings.Contains(err.Error(), "idx_trail_name") {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == trailNameConstraint {
 			return ErrTrailNameExists
 		}
 		return err
@@ -110,7 +113,8 @@ func updateTrailByID(ctx context.Context, id uint, t *Trail) error {
 		WHERE id=$7;`,
 		t.Name, t.Country, t.Continent, t.DistanceKm, t.URL, t.UpdatedAt, id)
 	if err != nil {
-		if strings.Contains(err.Error(), "idx_trail_name") {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == trailNameConstraint {
 			return ErrTrailNameExists
 		}
 		return err
@@ -182,8 +186,9 @@ func insertTrailsBulk(ctx context.Context, trailsToCreate []Trail) ([]Trail, err
 			t.Name, t.Country, t.Continent, t.DistanceKm, t.URL,
 			t.CreatedAt, t.UpdatedAt).Scan(&t.ID)
 		if err != nil {
-			if strings.Contains(err.Error(), "idx_trail_name") {
-				return nil, fmt.Errorf("trail name %q already exists", t.Name)
+			var pqErr *pq.Error
+			if errors.As(err, &pqErr) && pqErr.Code == "23505" && pqErr.Constraint == trailNameConstraint {
+				return nil, ErrTrailNameExists
 			}
 			return nil, fmt.Errorf("failed to insert trail %q: %w", t.Name, err)
 		}
@@ -217,7 +222,7 @@ func deleteTrailsBulk(ctx context.Context, ids []uint) error {
 			return fmt.Errorf("failed to check trail %d usage: %w", id, err)
 		}
 		if count > 0 {
-			return fmt.Errorf("trail ID %d is in use by %d pack(s)", id, count)
+			return ErrTrailInUse
 		}
 
 		result, execErr := tx.ExecContext(ctx, `DELETE FROM trail WHERE id = $1;`, id)
@@ -232,7 +237,7 @@ func deleteTrailsBulk(ctx context.Context, ids []uint) error {
 			return fmt.Errorf("failed to get rows affected for trail %d: %w", id, err)
 		}
 		if rowsAffected == 0 {
-			err = fmt.Errorf("trail ID %d not found", id)
+			err = ErrTrailNotFound
 			return err
 		}
 	}
