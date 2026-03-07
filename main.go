@@ -111,17 +111,21 @@ func setupPublicRoutes(router *gin.Engine) {
 	public.POST("/register", accounts.Register)
 	public.POST("/login", accounts.Login)
 	public.POST("/auth/refresh",
-		security.RefreshRateLimiter(
+		security.NewEndpointRateLimiter(
+			"/auth/refresh",
 			config.RefreshRateLimitRequests,
 			config.RefreshRateLimitRequests,
+			config.RefreshRateLimitWindowMinutes,
 		),
 		security.RefreshTokenHandler)
 	public.GET("/confirmemail", accounts.ConfirmEmail)
 	public.POST("/forgotpassword", accounts.ForgotPassword)
 	public.POST("/resend-confirmemail",
-		security.ResendConfirmRateLimiter(
+		security.NewEndpointRateLimiter(
+			"/resend-confirmemail",
 			config.ResendConfirmRateLimitRequests,
 			config.ResendConfirmRateLimitRequests,
+			config.ResendConfirmRateLimitWindowMinutes,
 		),
 		accounts.ResendConfirmEmail)
 	public.GET("/sharedlist/:sharing_code", packs.SharedList)

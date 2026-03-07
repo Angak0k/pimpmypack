@@ -11,17 +11,20 @@ import (
 
 // IPRateLimiter manages rate limiters per IP address
 type IPRateLimiter struct {
-	limiters sync.Map // map[string]*rate.Limiter
-	rate     rate.Limit
-	burst    int
+	limiters      sync.Map // map[string]*rate.Limiter
+	rate          rate.Limit
+	burst         int
+	windowMinutes int
 }
 
 // NewIPRateLimiter creates a new IP-based rate limiter
-func NewIPRateLimiter(requestsPerMinute, burstSize int) *IPRateLimiter {
-	r := rate.Every(time.Minute / time.Duration(requestsPerMinute))
+func NewIPRateLimiter(requestsPerWindow, burstSize, windowMinutes int) *IPRateLimiter {
+	window := time.Duration(windowMinutes) * time.Minute
+	r := rate.Every(window / time.Duration(requestsPerWindow))
 	return &IPRateLimiter{
-		rate:  r,
-		burst: burstSize,
+		rate:          r,
+		burst:         burstSize,
+		windowMinutes: windowMinutes,
 	}
 }
 
@@ -40,39 +43,23 @@ func (rl *IPRateLimiter) GetLimiter(ip string) *rate.Limiter {
 	return rateLimiter
 }
 
-// RefreshRateLimiter creates a rate limiting middleware for /auth/refresh endpoint
-func RefreshRateLimiter(requestsPerMinute, burstSize int) gin.HandlerFunc {
-	limiter := NewIPRateLimiter(requestsPerMinute, burstSize)
-
-	return func(c *gin.Context) {
-		clientIP := c.ClientIP()
-
-		if !limiter.GetLimiter(clientIP).Allow() {
-			AuditRateLimitExceeded(c, "/auth/refresh")
-			c.JSON(http.StatusTooManyRequests, gin.H{
-				"error":       "Rate limit exceeded",
-				"retry_after": 60,
-			})
-			c.Abort()
-			return
-		}
-
-		c.Next()
-	}
+// RetryAfterSeconds returns the retry_after value in seconds based on the configured window
+func (rl *IPRateLimiter) RetryAfterSeconds() int {
+	return rl.windowMinutes * 60
 }
 
-// ResendConfirmRateLimiter creates a rate limiting middleware for /resend-confirmemail endpoint
-func ResendConfirmRateLimiter(requestsPerMinute, burstSize int) gin.HandlerFunc {
-	limiter := NewIPRateLimiter(requestsPerMinute, burstSize)
+// NewEndpointRateLimiter creates a rate limiting middleware for any endpoint
+func NewEndpointRateLimiter(endpoint string, requestsPerWindow, burstSize, windowMinutes int) gin.HandlerFunc {
+	limiter := NewIPRateLimiter(requestsPerWindow, burstSize, windowMinutes)
 
 	return func(c *gin.Context) {
 		clientIP := c.ClientIP()
 
 		if !limiter.GetLimiter(clientIP).Allow() {
-			AuditRateLimitExceeded(c, "/resend-confirmemail")
+			AuditRateLimitExceeded(c, endpoint)
 			c.JSON(http.StatusTooManyRequests, gin.H{
 				"error":       "Rate limit exceeded",
-				"retry_after": 60,
+				"retry_after": limiter.RetryAfterSeconds(),
 			})
 			c.Abort()
 			return
