@@ -343,7 +343,7 @@ func returnAccounts(ctx context.Context) (*Accounts, error) {
 		`SELECT a.id, a.username, a.email, a.firstname, a.lastname, a.role, a.status,
 		    a.preferred_currency, a.preferred_unit_system, a.youtube_url, a.instagram_url,
 		    CASE WHEN ai.account_id IS NOT NULL THEN true ELSE false END AS has_profile_image,
-		    a.image_position_x, a.image_position_y,
+		    a.image_position_x, a.image_position_y, a.is_profile_public,
 		    a.created_at, a.updated_at
 		FROM account a
 		LEFT JOIN account_images ai ON a.id = ai.account_id;`)
@@ -369,6 +369,7 @@ func returnAccounts(ctx context.Context) (*Accounts, error) {
 			&account.HasProfileImage,
 			&account.ImagePositionX,
 			&account.ImagePositionY,
+			&account.IsProfilePublic,
 			&account.CreatedAt,
 			&account.UpdatedAt)
 		if err != nil {
@@ -391,7 +392,7 @@ func findAccountByID(ctx context.Context, id uint) (*Account, error) {
 		`SELECT a.id, a.username, a.email, a.firstname, a.lastname, a.role, a.status,
 		    a.preferred_currency, a.preferred_unit_system, a.youtube_url, a.instagram_url,
 		    CASE WHEN ai.account_id IS NOT NULL THEN true ELSE false END AS has_profile_image,
-		    a.image_position_x, a.image_position_y,
+		    a.image_position_x, a.image_position_y, a.is_profile_public,
 		    a.created_at, a.updated_at
 		FROM account a
 		LEFT JOIN account_images ai ON a.id = ai.account_id
@@ -412,6 +413,7 @@ func findAccountByID(ctx context.Context, id uint) (*Account, error) {
 		&account.HasProfileImage,
 		&account.ImagePositionX,
 		&account.ImagePositionY,
+		&account.IsProfilePublic,
 		&account.CreatedAt,
 		&account.UpdatedAt)
 
@@ -521,18 +523,19 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 	now := time.Now().Truncate(time.Second)
 
 	// Update ONLY safe fields - explicitly excludes role, status, username
-	// COALESCE keeps existing image_position values when client omits them (nil)
+	// COALESCE keeps existing values when client omits them (nil)
 	statement, err := database.DB().PrepareContext(ctx,
 		`UPDATE account
 		 SET email=$1, firstname=$2, lastname=$3, preferred_currency=$4,
 		     preferred_unit_system=$5, youtube_url=$6, instagram_url=$7,
 		     image_position_x=COALESCE($8, image_position_x),
 		     image_position_y=COALESCE($9, image_position_y),
-		     updated_at=$10
-		 WHERE id=$11
+		     is_profile_public=COALESCE($10, is_profile_public),
+		     updated_at=$11
+		 WHERE id=$12
 		 RETURNING id, username, email, firstname, lastname, role, status,
 		           preferred_currency, preferred_unit_system, youtube_url, instagram_url,
-		           image_position_x, image_position_y,
+		           image_position_x, image_position_y, is_profile_public,
 		           created_at, updated_at;`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare statement: %w", err)
@@ -550,6 +553,7 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 		input.InstagramURL,
 		input.ImagePositionX,
 		input.ImagePositionY,
+		input.IsProfilePublic,
 		now,
 		userID,
 	).Scan(
@@ -566,6 +570,7 @@ func updateMyAccount(ctx context.Context, userID uint, input *AccountUpdateInput
 		&account.InstagramURL,
 		&account.ImagePositionX,
 		&account.ImagePositionY,
+		&account.IsProfilePublic,
 		&account.CreatedAt,
 		&account.UpdatedAt,
 	)

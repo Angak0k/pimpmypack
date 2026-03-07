@@ -330,6 +330,47 @@
                 }
             }
         },
+        "/user/{username}": {
+            "get": {
+                "description": "Returns public profile information and shared packs for a user.\nReturns 404 for non-existent users or users without a public profile (anti-enumeration).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Profiles"
+                ],
+                "summary": "Get public user profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Username",
+                        "name": "username",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/profiles.PublicProfile"
+                        }
+                    },
+                    "404": {
+                        "description": "Profile not found",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/accounts/{id}/image": {
             "get": {
                 "description": "Get the profile image for a user account",
@@ -1198,6 +1239,15 @@
                     },
                     "500": {
                         "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "503": {
+                        "description": "Feature disabled",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2446,6 +2496,9 @@
                 "instagram_url": {
                     "type": "string"
                 },
+                "is_profile_public": {
+                    "type": "boolean"
+                },
                 "lastname": {
                     "type": "string"
                 },
@@ -2494,6 +2547,9 @@
                 },
                 "instagram_url": {
                     "type": "string"
+                },
+                "is_profile_public": {
+                    "type": "boolean"
                 },
                 "lastname": {
                     "type": "string"
@@ -2982,6 +3038,76 @@
                 },
                 "pack": {
                     "$ref": "#/definitions/packs.SharedPackInfo"
+                }
+            }
+        },
+        "profiles.PublicProfile": {
+            "type": "object",
+            "properties": {
+                "firstname": {
+                    "type": "string"
+                },
+                "has_profile_image": {
+                    "type": "boolean"
+                },
+                "image_position_x": {
+                    "type": "integer"
+                },
+                "image_position_y": {
+                    "type": "integer"
+                },
+                "instagram_url": {
+                    "type": "string"
+                },
+                "shared_packs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/profiles.SharedPackSummary"
+                    }
+                },
+                "username": {
+                    "type": "string"
+                },
+                "youtube_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "profiles.SharedPackSummary": {
+            "type": "object",
+            "properties": {
+                "adventure": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "has_image": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "pack_description": {
+                    "type": "string"
+                },
+                "pack_items_count": {
+                    "type": "integer"
+                },
+                "pack_name": {
+                    "type": "string"
+                },
+                "pack_weight": {
+                    "type": "integer"
+                },
+                "season": {
+                    "type": "string"
+                },
+                "sharing_code": {
+                    "type": "string"
+                },
+                "trail": {
+                    "type": "string"
                 }
             }
         },

@@ -14,6 +14,7 @@ import (
 	"github.com/Angak0k/pimpmypack/pkg/images"
 	"github.com/Angak0k/pimpmypack/pkg/inventories"
 	"github.com/Angak0k/pimpmypack/pkg/packs"
+	"github.com/Angak0k/pimpmypack/pkg/profiles"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -124,6 +125,7 @@ func setupPublicRoutes(router *gin.Engine) {
 		),
 		accounts.ResendConfirmEmail)
 	public.GET("/sharedlist/:sharing_code", packs.SharedList)
+	public.GET("/user/:username", profiles.GetPublicProfile)
 	public.GET("/v1/packs/:id/image", images.GetPackImage)
 	public.GET("/v1/accounts/:id/image", images.GetProfileImage)
 }
