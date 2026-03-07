@@ -3263,6 +3263,9 @@ const docTemplate = `{
                 "adventure": {
                     "type": "string"
                 },
+                "base_weight": {
+                    "type": "integer"
+                },
                 "created_at": {
                     "type": "string"
                 },

@@ -220,6 +220,143 @@ func TestGetPublicProfile_Success(t *testing.T) {
 	if profile.SharedPacks[0].PackWeight != 1000 {
 		t.Errorf("Expected pack weight 1000, got %d", profile.SharedPacks[0].PackWeight)
 	}
+
+	// Item is neither worn nor consumable, so base_weight == pack_weight
+	if profile.SharedPacks[0].BaseWeight != 1000 {
+		t.Errorf("Expected base weight 1000, got %d", profile.SharedPacks[0].BaseWeight)
+	}
+}
+
+func TestGetPublicProfile_BaseWeightExcludesWornAndConsumable(t *testing.T) {
+	ctx := context.Background()
+	now := time.Now().Truncate(time.Second)
+
+	// Create a public user with a pack containing worn and consumable items
+	username := "bw-" + random.UniqueId()
+	var userID uint
+	err := database.DB().QueryRowContext(ctx,
+		`INSERT INTO account (username, email, firstname, lastname, role, status,
+			is_profile_public, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id;`,
+		username, username+"@test.com", "BaseW", "User",
+		"standard", "active", true, now, now,
+	).Scan(&userID)
+	if err != nil {
+		t.Fatalf("Failed to create user: %v", err)
+	}
+
+	hashedPassword, err := security.HashPassword("password")
+	if err != nil {
+		t.Fatalf("Failed to hash password: %v", err)
+	}
+	var pwID int
+	err = database.DB().QueryRowContext(ctx,
+		`INSERT INTO password (user_id, password, updated_at) VALUES ($1,$2,$3) RETURNING id;`,
+		userID, hashedPassword, now,
+	).Scan(&pwID)
+	if err != nil {
+		t.Fatalf("Failed to insert password: %v", err)
+	}
+
+	defer func() {
+		_, _ = database.DB().ExecContext(ctx, "DELETE FROM account WHERE id = $1", userID)
+	}()
+
+	// Create 3 inventory items: regular (500g), worn (300g), consumable (200g)
+	var regularItemID, wornItemID, consumableItemID uint
+	for _, tc := range []struct {
+		name   string
+		weight int
+		dest   *uint
+	}{
+		{"Regular Item", 500, &regularItemID},
+		{"Worn Item", 300, &wornItemID},
+		{"Consumable Item", 200, &consumableItemID},
+	} {
+		err = database.DB().QueryRowContext(ctx,
+			`INSERT INTO inventory (user_id, item_name, category, description,
+				weight, url, price, currency, created_at, updated_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id;`,
+			userID, tc.name, "Gear", "Test", tc.weight, "", 0, "USD", now, now,
+		).Scan(tc.dest)
+		if err != nil {
+			t.Fatalf("Failed to insert inventory item %s: %v", tc.name, err)
+		}
+	}
+
+	// Create shared pack
+	sharingCode := "bw-test-" + random.UniqueId()
+	var packID uint
+	err = database.DB().QueryRowContext(ctx,
+		`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6) RETURNING id;`,
+		userID, "Base Weight Test Pack", "Testing base weight", sharingCode, now, now,
+	).Scan(&packID)
+	if err != nil {
+		t.Fatalf("Failed to insert pack: %v", err)
+	}
+
+	// Add items: regular (not worn, not consumable), worn, consumable
+	for _, tc := range []struct {
+		itemID     uint
+		worn       bool
+		consumable bool
+	}{
+		{regularItemID, false, false},
+		{wornItemID, true, false},
+		{consumableItemID, false, true},
+	} {
+		var pcID uint
+		err = database.DB().QueryRowContext(ctx,
+			`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id;`,
+			packID, tc.itemID, 1, tc.worn, tc.consumable, now, now,
+		).Scan(&pcID)
+		if err != nil {
+			t.Fatalf("Failed to insert pack content: %v", err)
+		}
+	}
+
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.GET("/user/:username", GetPublicProfile)
+
+	req, err := http.NewRequest(http.MethodGet, "/user/"+username, nil)
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status %d, got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var profile PublicProfile
+	if err := json.Unmarshal(w.Body.Bytes(), &profile); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if len(profile.SharedPacks) != 1 {
+		t.Fatalf("Expected 1 shared pack, got %d", len(profile.SharedPacks))
+	}
+
+	pack := profile.SharedPacks[0]
+
+	// pack_weight = 500 + 300 + 200 = 1000
+	if pack.PackWeight != 1000 {
+		t.Errorf("Expected pack weight 1000, got %d", pack.PackWeight)
+	}
+
+	// base_weight = only regular item = 500 (excludes worn 300 and consumable 200)
+	if pack.BaseWeight != 500 {
+		t.Errorf("Expected base weight 500, got %d", pack.BaseWeight)
+	}
+
+	if pack.PackItemsCount != 3 {
+		t.Errorf("Expected 3 items in pack, got %d", pack.PackItemsCount)
+	}
 }
 
 func TestGetPublicProfile_NonExistentUser(t *testing.T) {
