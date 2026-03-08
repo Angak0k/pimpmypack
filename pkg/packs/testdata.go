@@ -179,6 +179,7 @@ var packWithItems = PackContentWithItems{
 		Quantity:        2,
 		Worn:            false,
 		Consumable:      false,
+		HasImage:        false,
 	},
 }
 

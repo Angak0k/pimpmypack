@@ -585,8 +585,11 @@ func returnPackContentsByPackID(ctx context.Context, id uint) (*PackContentWithI
 			i.currency,
 			pc.quantity,
 			pc.worn,
-			pc.consumable
-			FROM pack_content pc JOIN inventory i ON pc.item_id = i.id
+			pc.consumable,
+			CASE WHEN ii.item_id IS NOT NULL THEN true ELSE false END as has_image
+			FROM pack_content pc
+			JOIN inventory i ON pc.item_id = i.id
+			LEFT JOIN inventory_images ii ON i.id = ii.item_id
 			WHERE pc.pack_id = $1;`,
 		id)
 
@@ -610,7 +613,8 @@ func returnPackContentsByPackID(ctx context.Context, id uint) (*PackContentWithI
 			&item.Currency,
 			&item.Quantity,
 			&item.Worn,
-			&item.Consumable)
+			&item.Consumable,
+			&item.HasImage)
 		if err != nil {
 			return nil, err
 		}
@@ -622,6 +626,18 @@ func returnPackContentsByPackID(ctx context.Context, id uint) (*PackContentWithI
 	}
 
 	return &packWithItems, nil
+}
+
+// checkItemInPack verifies if an inventory item is part of a pack's contents
+func checkItemInPack(ctx context.Context, packID uint, itemID uint) (bool, error) {
+	var count int
+	err := database.DB().QueryRowContext(ctx,
+		"SELECT COUNT(*) FROM pack_content WHERE pack_id = $1 AND item_id = $2",
+		packID, itemID).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // Pack content writes

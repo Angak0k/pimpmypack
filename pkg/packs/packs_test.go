@@ -832,6 +832,9 @@ func TestGetPackContentsByPackID(t *testing.T) {
 		case packContentWithItems[0].Consumable != packWithItems[0].Consumable:
 			t.Errorf("Expected Consumable %v but got %v", packWithItems[0].Consumable,
 				packContentWithItems[0].Consumable)
+		case packContentWithItems[0].HasImage != packWithItems[0].HasImage:
+			t.Errorf("Expected HasImage %v but got %v", packWithItems[0].HasImage,
+				packContentWithItems[0].HasImage)
 		}
 	})
 
