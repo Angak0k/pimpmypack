@@ -354,11 +354,22 @@ func loadInventories(tx *sql.Tx) error {
 			return fmt.Errorf("foreign key violation: user_id %d does not exist in account table", packs[i].UserID)
 		}
 
+		// Resolve trail_id from trail name
+		var trailID *uint
+		if packs[i].Trail != nil {
+			var tid uint
+			tidErr := tx.QueryRowContext(context.Background(),
+				`SELECT id FROM trail WHERE name = $1`, *packs[i].Trail).Scan(&tid)
+			if tidErr == nil {
+				trailID = &tid
+			}
+		}
+
 		err = tx.QueryRowContext(context.Background(),
 			`INSERT INTO pack
-			(user_id, pack_name, pack_description, sharing_code, season, trail, adventure,
+			(user_id, pack_name, pack_description, sharing_code, season, trail, trail_id, adventure,
 			created_at, updated_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 			RETURNING id;`,
 			packs[i].UserID,
 			packs[i].PackName,
@@ -366,6 +377,7 @@ func loadInventories(tx *sql.Tx) error {
 			packs[i].SharingCode,
 			packs[i].Season,
 			packs[i].Trail,
+			trailID,
 			packs[i].Adventure,
 			time.Now().Truncate(time.Second),
 			time.Now().Truncate(time.Second)).Scan(&packs[i].ID)

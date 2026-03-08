@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS idx_trail_name;
+DROP TABLE IF EXISTS "trail";

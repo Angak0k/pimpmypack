@@ -63,18 +63,19 @@ func returnSharedPacksByUsername(ctx context.Context, username string) ([]Shared
 		    COALESCE(SUM(CASE WHEN pc.worn = false AND pc.consumable = false
 		        THEN i.weight * pc.quantity ELSE 0 END), 0) AS base_weight,
 		    COALESCE(SUM(pc.quantity), 0) AS pack_items_count,
-		    p.sharing_code, p.season, p.trail, p.adventure, p.created_at
+		    p.sharing_code, p.season, COALESCE(t.name, p.trail) as trail, p.adventure, p.created_at
 		FROM pack p
 		JOIN account a ON p.user_id = a.id
 		LEFT JOIN pack_content pc ON p.id = pc.pack_id
 		LEFT JOIN inventory i ON pc.item_id = i.id
 		LEFT JOIN pack_images pi ON p.id = pi.pack_id
+		LEFT JOIN trail t ON p.trail_id = t.id
 		WHERE a.username = $1
 		  AND a.status = 'active'
 		  AND a.is_profile_public = true
 		  AND p.sharing_code IS NOT NULL
 		GROUP BY p.id, p.pack_name, p.pack_description, p.sharing_code,
-		         pi.pack_id, p.season, p.trail, p.adventure, p.created_at
+		         pi.pack_id, p.season, t.name, p.trail, p.adventure, p.created_at
 		ORDER BY p.created_at DESC;`,
 		username,
 	)

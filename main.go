@@ -16,6 +16,7 @@ import (
 	"github.com/Angak0k/pimpmypack/pkg/packs"
 	"github.com/Angak0k/pimpmypack/pkg/profiles"
 	"github.com/Angak0k/pimpmypack/pkg/security"
+	"github.com/Angak0k/pimpmypack/pkg/trails"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -102,6 +103,7 @@ func main() {
 func setupRoutes(router *gin.Engine) {
 	setupPublicRoutes(router)
 	setupProtectedRoutes(router)
+	setupV2Routes(router)
 	setupPrivateRoutes(router)
 	setupSwaggerRoutes(router)
 }
@@ -174,6 +176,12 @@ func setupProtectedRoutes(router *gin.Engine) {
 	protected.DELETE("/myinventory/:id/image", images.DeleteInventoryItemImage)
 }
 
+func setupV2Routes(router *gin.Engine) {
+	v2 := router.Group("/api/v2")
+	v2.Use(security.JwtAuthProcessor())
+	v2.GET("/pack-options", packs.GetPackOptionsV2)
+}
+
 func setupPrivateRoutes(router *gin.Engine) {
 	private := router.Group("/api/admin")
 	private.Use(security.JwtAuthAdminProcessor())
@@ -198,6 +206,13 @@ func setupPrivateRoutes(router *gin.Engine) {
 	private.PUT("/packcontents/:id", packs.PutPackContentByID)
 	private.DELETE("/packcontents/:id", packs.DeletePackContentByID)
 	private.GET("/packs/:id/packcontents", packs.GetPackContentsByPackID)
+	private.GET("/trails", trails.GetTrails)
+	private.GET("/trails/:id", trails.GetTrailByID)
+	private.POST("/trails", trails.PostTrail)
+	private.PUT("/trails/:id", trails.PutTrailByID)
+	private.DELETE("/trails/:id", trails.DeleteTrailByID)
+	private.POST("/trails/bulk", trails.PostTrailsBulk)
+	private.DELETE("/trails/bulk", trails.DeleteTrailsBulk)
 }
 
 func setupSwaggerRoutes(router *gin.Engine) {

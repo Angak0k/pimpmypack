@@ -4,11 +4,13 @@ import (
 	"context"
 	"encoding/csv"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 
 	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/Angak0k/pimpmypack/pkg/security"
+	"github.com/Angak0k/pimpmypack/pkg/trails"
 	"github.com/gin-gonic/gin"
 )
 
@@ -97,8 +99,14 @@ func PostPack(c *gin.Context) {
 		return
 	}
 
-	if err := validatePackMetadata(input.Season, input.Trail, input.Adventure); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	trailID, err := validatePackMetadata(c.Request.Context(), input.Season, input.Trail, input.Adventure)
+	if err != nil {
+		if errors.Is(err, errTrailLookupFailed) {
+			helper.LogAndSanitize(err, "post pack: trail lookup failed")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
@@ -108,10 +116,11 @@ func PostPack(c *gin.Context) {
 		PackDescription: input.PackDescription,
 		Season:          input.Season,
 		Trail:           input.Trail,
+		TrailID:         trailID,
 		Adventure:       input.Adventure,
 	}
 
-	err := insertPack(c.Request.Context(), &newPack)
+	err = insertPack(c.Request.Context(), &newPack)
 	if err != nil {
 		helper.LogAndSanitize(err, "post pack: insert pack failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
@@ -147,8 +156,14 @@ func PutPackByID(c *gin.Context) {
 		return
 	}
 
-	if err := validatePackMetadata(input.Season, input.Trail, input.Adventure); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	trailID, err := validatePackMetadata(c.Request.Context(), input.Season, input.Trail, input.Adventure)
+	if err != nil {
+		if errors.Is(err, errTrailLookupFailed) {
+			helper.LogAndSanitize(err, "put pack by ID: trail lookup failed")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
@@ -171,6 +186,7 @@ func PutPackByID(c *gin.Context) {
 		PackDescription: input.PackDescription,
 		Season:          input.Season,
 		Trail:           input.Trail,
+		TrailID:         trailID,
 		Adventure:       input.Adventure,
 		CreatedAt:       existingPack.CreatedAt,      // Preserve existing CreatedAt
 		UpdatedAt:       existingPack.UpdatedAt,      // Preserve existing UpdatedAt
@@ -334,8 +350,14 @@ func PostMyPack(c *gin.Context) {
 		return
 	}
 
-	if err := validatePackMetadata(input.Season, input.Trail, input.Adventure); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	trailID, err := validatePackMetadata(c.Request.Context(), input.Season, input.Trail, input.Adventure)
+	if err != nil {
+		if errors.Is(err, errTrailLookupFailed) {
+			helper.LogAndSanitize(err, "post my pack: trail lookup failed")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
@@ -345,6 +367,7 @@ func PostMyPack(c *gin.Context) {
 		PackDescription: input.PackDescription,
 		Season:          input.Season,
 		Trail:           input.Trail,
+		TrailID:         trailID,
 		Adventure:       input.Adventure,
 	}
 
@@ -395,8 +418,14 @@ func PutMyPackByID(c *gin.Context) {
 		return
 	}
 
-	if err := validatePackMetadata(input.Season, input.Trail, input.Adventure); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	trailID, err := validatePackMetadata(c.Request.Context(), input.Season, input.Trail, input.Adventure)
+	if err != nil {
+		if errors.Is(err, errTrailLookupFailed) {
+			helper.LogAndSanitize(err, "put my pack by ID: trail lookup failed")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
@@ -427,6 +456,7 @@ func PutMyPackByID(c *gin.Context) {
 	updatedPack.PackDescription = input.PackDescription
 	updatedPack.Season = input.Season
 	updatedPack.Trail = input.Trail
+	updatedPack.TrailID = trailID
 	updatedPack.Adventure = input.Adventure
 
 	err = updatePackByID(c.Request.Context(), id, &updatedPack)
@@ -1389,18 +1419,45 @@ func ImportFromPimpMyPackURL(c *gin.Context) {
 }
 
 // validatePackMetadata checks that season, trail, and adventure values are allowed.
-// Returns nil if all values are valid or nil.
-func validatePackMetadata(season, trail, adventure *string) error {
+// Returns the resolved trail ID (nil if trail is nil) and an error.
+// Uses a single DB lookup for both validation and trail_id resolution.
+func validatePackMetadata(
+	ctx context.Context, season, trail, adventure *string,
+) (*uint, error) {
 	if !isAllowedValue(season, allowedSeasons) {
-		return errors.New("invalid season value")
+		return nil, errors.New("invalid season value")
 	}
-	if !isAllowedValue(trail, allowedTrails) {
-		return errors.New("invalid trail value")
+	trailID, err := resolveAndValidateTrail(ctx, trail)
+	if err != nil {
+		return nil, err
 	}
 	if !isAllowedValue(adventure, allowedAdventures) {
-		return errors.New("invalid adventure value")
+		return nil, errors.New("invalid adventure value")
 	}
-	return nil
+	return trailID, nil
+}
+
+// errTrailLookupFailed is a sentinel error used to distinguish internal
+// trail lookup failures (500) from validation errors (400).
+var errTrailLookupFailed = errors.New("trail lookup failed")
+
+// resolveAndValidateTrail resolves a trail name to its ID via a single DB lookup.
+// Returns nil ID if trail name is nil.
+// Returns errTrailLookupFailed (wrapped) for internal errors, plain error for validation.
+func resolveAndValidateTrail(
+	ctx context.Context, trailName *string,
+) (*uint, error) {
+	if trailName == nil {
+		return nil, nil //nolint:nilnil // nil trail name is valid (optional field)
+	}
+	trail, err := trails.FindTrailByName(ctx, *trailName)
+	if err != nil {
+		if errors.Is(err, trails.ErrTrailNotFound) {
+			return nil, errors.New("invalid trail value")
+		}
+		return nil, fmt.Errorf("%w: %w", errTrailLookupFailed, err)
+	}
+	return &trail.ID, nil
 }
 
 // Get pack options
@@ -1412,7 +1469,31 @@ func validatePackMetadata(season, trail, adventure *string) error {
 // @Success 200 {object} PackOptionsResponse
 // @Router /v1/pack-options [get]
 func GetPackOptions(c *gin.Context) {
-	c.IndentedJSON(http.StatusOK, GetPackOptionsValues())
+	options, err := GetPackOptionsValues(c.Request.Context())
+	if err != nil {
+		helper.LogAndSanitize(err, "get pack options: fetch trails failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, options)
+}
+
+// Get V2 pack options with grouped trails
+// @Summary Get allowed values for pack metadata (V2)
+// @Description Returns the allowed values for season, trail (grouped by continent/country), and adventure fields
+// @Tags Packs
+// @Produce json
+// @Security Bearer
+// @Success 200 {object} PackOptionsV2Response
+// @Router /v2/pack-options [get]
+func GetPackOptionsV2(c *gin.Context) {
+	options, err := GetPackOptionsV2Values(c.Request.Context())
+	if err != nil {
+		helper.LogAndSanitize(err, "get pack options v2: fetch trails failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, options)
 }
 
 // SharedList gets pack metadata and contents for a shared pack

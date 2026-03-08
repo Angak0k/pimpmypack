@@ -1,0 +1,132 @@
+name: "Trails Database & Admin Management"
+base_url: "http://localhost:8080/api"
+scenarios:
+  # --- Setup: Register admin user ---
+  - name: "Register admin user for trail testing"
+    request:
+      method: POST
+      endpoint: "/register"
+      body:
+        username: "test_trail_admin_{{timestamp}}"
+        email: "trail_admin_{{timestamp}}@example.com"
+        password: "TrailAdmin123!"
+        firstname: "Trail"
+        lastname: "Admin"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      admin_username: "{{request.body.username}}"
+      admin_email: "{{request.body.email}}"
+      admin_password: "{{request.body.password}}"
+
+  - name: "Confirm admin email"
+    request:
+      method: GET
+      endpoint: "/confirmemail?username={{admin_username}}&email={{admin_email}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Login admin user"
+    request:
+      method: POST
+      endpoint: "/login"
+      body:
+        username: "{{admin_username}}"
+        password: "{{admin_password}}"
+    assertions:
+      - type: status_code
+        expected: 200
+    store:
+      admin_token: "{{response.access_token}}"
+
+  # --- V1 backward compat: pack-options still returns flat trail names ---
+  - name: "V1 pack-options returns flat trail list from DB"
+    request:
+      method: GET
+      endpoint: "/v1/pack-options"
+      headers:
+        Authorization: "Bearer {{admin_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.seasons"
+        exists: true
+      - type: json_path
+        path: "$.trails"
+        exists: true
+      - type: json_path
+        path: "$.adventures"
+        exists: true
+
+  # --- V2 pack-options returns grouped trails ---
+  - name: "V2 pack-options returns grouped trail hierarchy"
+    request:
+      method: GET
+      endpoint: "/v2/pack-options"
+      headers:
+        Authorization: "Bearer {{admin_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.seasons"
+        exists: true
+      - type: json_path
+        path: "$.trails"
+        exists: true
+      - type: json_path
+        path: "$.adventures"
+        exists: true
+
+  # --- Pack create with trail name still works (V1 compat) ---
+  - name: "Create pack with valid trail name"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{admin_token}}"
+      body:
+        pack_name: "Trail Test Pack"
+        pack_description: "Pack with trail from DB"
+        season: "3-Season"
+        trail: "GR20"
+        adventure: "Thru-hike"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.trail"
+        equals: "GR20"
+      - type: json_path
+        path: "$.trail_id"
+        exists: true
+    store:
+      pack_id: "{{response.id}}"
+
+  - name: "Create pack with invalid trail name is rejected"
+    request:
+      method: POST
+      endpoint: "/v1/mypack"
+      headers:
+        Authorization: "Bearer {{admin_token}}"
+      body:
+        pack_name: "Invalid Trail Pack"
+        pack_description: "Should fail"
+        trail: "Nonexistent Trail XYZ"
+    assertions:
+      - type: status_code
+        expected: 400
+
+  # --- Cleanup: delete test pack ---
+  - name: "Delete test pack"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{pack_id}}"
+      headers:
+        Authorization: "Bearer {{admin_token}}"
+    assertions:
+      - type: status_code
+        expected: 200

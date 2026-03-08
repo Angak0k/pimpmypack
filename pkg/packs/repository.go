@@ -25,13 +25,14 @@ func returnPacks(ctx context.Context) (Packs, error) {
 		COALESCE(SUM(pc.quantity), 0) as items_count,
 		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight,
 		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image,
-		p.season, p.trail, p.adventure
+		p.season, COALESCE(t.name, p.trail) as trail, p.trail_id, p.adventure
 		FROM pack p
 		LEFT JOIN pack_content pc ON p.id = pc.pack_id
 		LEFT JOIN inventory i ON pc.item_id = i.id
 		LEFT JOIN pack_images pi ON p.id = pi.pack_id
+		LEFT JOIN trail t ON p.trail_id = t.id
 		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.is_favorite,
-		p.created_at, p.updated_at, pi.pack_id, p.season, p.trail, p.adventure
+		p.created_at, p.updated_at, pi.pack_id, p.season, t.name, p.trail, p.trail_id, p.adventure
 		ORDER BY p.id;`)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -57,6 +58,7 @@ func returnPacks(ctx context.Context) (Packs, error) {
 			&pack.HasImage,
 			&pack.Season,
 			&pack.Trail,
+			&pack.TrailID,
 			&pack.Adventure,
 		)
 		if err != nil {
@@ -82,14 +84,15 @@ func findPackByID(ctx context.Context, id uint) (*Pack, error) {
 		COALESCE(SUM(pc.quantity), 0) as items_count,
 		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight,
 		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image,
-		p.season, p.trail, p.adventure
+		p.season, COALESCE(t.name, p.trail) as trail, p.trail_id, p.adventure
 		FROM pack p
 		LEFT JOIN pack_content pc ON p.id = pc.pack_id
 		LEFT JOIN inventory i ON pc.item_id = i.id
 		LEFT JOIN pack_images pi ON p.id = pi.pack_id
+		LEFT JOIN trail t ON p.trail_id = t.id
 		WHERE p.id = $1
 		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.is_favorite,
-		p.created_at, p.updated_at, pi.pack_id, p.season, p.trail, p.adventure;`,
+		p.created_at, p.updated_at, pi.pack_id, p.season, t.name, p.trail, p.trail_id, p.adventure;`,
 		id)
 	err := row.Scan(
 		&pack.ID,
@@ -105,6 +108,7 @@ func findPackByID(ctx context.Context, id uint) (*Pack, error) {
 		&pack.HasImage,
 		&pack.Season,
 		&pack.Trail,
+		&pack.TrailID,
 		&pack.Adventure)
 
 	if err != nil {
@@ -126,14 +130,15 @@ func findPacksByUserID(ctx context.Context, id uint) (*Packs, error) {
 		COALESCE(SUM(pc.quantity), 0) as items_count,
 		COALESCE(SUM(i.weight * pc.quantity), 0) as total_weight,
 		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image,
-		p.season, p.trail, p.adventure
+		p.season, COALESCE(t.name, p.trail) as trail, p.trail_id, p.adventure
 		FROM pack p
 		LEFT JOIN pack_content pc ON p.id = pc.pack_id
 		LEFT JOIN inventory i ON pc.item_id = i.id
 		LEFT JOIN pack_images pi ON p.id = pi.pack_id
+		LEFT JOIN trail t ON p.trail_id = t.id
 		WHERE p.user_id = $1
 		GROUP BY p.id, p.user_id, p.pack_name, p.pack_description, p.sharing_code, p.is_favorite,
-		         p.created_at, p.updated_at, pi.pack_id, p.season, p.trail, p.adventure;`, id)
+		         p.created_at, p.updated_at, pi.pack_id, p.season, t.name, p.trail, p.trail_id, p.adventure;`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -155,6 +160,7 @@ func findPacksByUserID(ctx context.Context, id uint) (*Packs, error) {
 			&pack.HasImage,
 			&pack.Season,
 			&pack.Trail,
+			&pack.TrailID,
 			&pack.Adventure)
 		if err != nil {
 			return nil, err
@@ -205,8 +211,8 @@ func insertPack(ctx context.Context, p *Pack) error {
 
 	err := database.DB().QueryRowContext(ctx,
 		`INSERT INTO pack
-		(user_id, pack_name, pack_description, sharing_code, season, trail, adventure, created_at, updated_at)
-		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
+		(user_id, pack_name, pack_description, sharing_code, season, trail, trail_id, adventure, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
 		RETURNING id;`,
 		p.UserID,
 		p.PackName,
@@ -214,6 +220,7 @@ func insertPack(ctx context.Context, p *Pack) error {
 		p.SharingCode,
 		p.Season,
 		p.Trail,
+		p.TrailID,
 		p.Adventure,
 		p.CreatedAt,
 		p.UpdatedAt).Scan(&p.ID)
@@ -231,8 +238,9 @@ func updatePackByID(ctx context.Context, id uint, p *Pack) error {
 	p.UpdatedAt = time.Now().Truncate(time.Second)
 
 	statement, err := database.DB().PrepareContext(ctx,
-		`UPDATE pack SET user_id=$1, pack_name=$2, pack_description=$3, season=$4, trail=$5, adventure=$6, updated_at=$7
-		WHERE id=$8;`)
+		`UPDATE pack SET user_id=$1, pack_name=$2, pack_description=$3,
+		season=$4, trail=$5, trail_id=$6, adventure=$7, updated_at=$8
+		WHERE id=$9;`)
 	if err != nil {
 		return err
 	}
@@ -240,7 +248,7 @@ func updatePackByID(ctx context.Context, id uint, p *Pack) error {
 	defer statement.Close()
 
 	_, err = statement.ExecContext(ctx,
-		p.UserID, p.PackName, p.PackDescription, p.Season, p.Trail, p.Adventure, p.UpdatedAt, id)
+		p.UserID, p.PackName, p.PackDescription, p.Season, p.Trail, p.TrailID, p.Adventure, p.UpdatedAt, id)
 	if err != nil {
 		return err
 	}
@@ -431,9 +439,10 @@ func returnPackInfoBySharingCode(ctx context.Context, sharingCode string) (*Shar
 	query := `
 		SELECT p.id, p.pack_name, p.pack_description, p.created_at,
 		CASE WHEN pi.pack_id IS NOT NULL THEN true ELSE false END as has_image,
-		p.season, p.trail, p.adventure
+		p.season, COALESCE(t.name, p.trail) as trail, p.adventure
 		FROM pack p
 		LEFT JOIN pack_images pi ON p.id = pi.pack_id
+		LEFT JOIN trail t ON p.trail_id = t.id
 		WHERE p.sharing_code = $1 AND p.sharing_code IS NOT NULL
 	`
 
