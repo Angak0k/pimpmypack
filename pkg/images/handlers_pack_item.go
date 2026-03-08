@@ -2,7 +2,6 @@ package images
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	"github.com/Angak0k/pimpmypack/pkg/helper"
@@ -80,8 +79,6 @@ func GetPackItemImage(c *gin.Context) {
 
 	// Set cache headers for public access
 	c.Header("Cache-Control", "public, max-age=86400")
-	etag := fmt.Sprintf(`"%d-%d"`, packID, itemID)
-	c.Header("ETag", etag)
 
 	// Return image binary
 	c.Data(http.StatusOK, img.Metadata.MimeType, img.Data)

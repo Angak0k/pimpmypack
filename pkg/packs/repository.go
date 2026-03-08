@@ -630,14 +630,14 @@ func returnPackContentsByPackID(ctx context.Context, id uint) (*PackContentWithI
 
 // checkItemInPack verifies if an inventory item is part of a pack's contents
 func checkItemInPack(ctx context.Context, packID uint, itemID uint) (bool, error) {
-	var count int
+	var exists bool
 	err := database.DB().QueryRowContext(ctx,
-		"SELECT COUNT(*) FROM pack_content WHERE pack_id = $1 AND item_id = $2",
-		packID, itemID).Scan(&count)
+		"SELECT EXISTS(SELECT 1 FROM pack_content WHERE pack_id = $1 AND item_id = $2)",
+		packID, itemID).Scan(&exists)
 	if err != nil {
 		return false, err
 	}
-	return count > 0, nil
+	return exists, nil
 }
 
 // Pack content writes
