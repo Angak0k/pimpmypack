@@ -2632,6 +2632,31 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/v2/pack-options": {
+            "get": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Returns the allowed values for season, trail (grouped by continent/country), and adventure fields",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Packs"
+                ],
+                "summary": "Get allowed values for pack metadata (V2)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/packs.PackOptionsV2Response"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -3001,6 +3026,9 @@ const docTemplate = `{
                 "trail": {
                     "type": "string"
                 },
+                "trail_id": {
+                    "type": "integer"
+                },
                 "updated_at": {
                     "type": "string"
                 },
@@ -3146,6 +3174,35 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "type": "string"
+                    }
+                }
+            }
+        },
+        "packs.PackOptionsV2Response": {
+            "type": "object",
+            "properties": {
+                "adventures": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "seasons": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "trails": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/trails.TrailSummary"
+                            }
+                        }
                     }
                 }
             }
@@ -3337,6 +3394,23 @@ const docTemplate = `{
                 },
                 "token": {
                     "description": "Backward compatibility - same as AccessToken",
+                    "type": "string"
+                }
+            }
+        },
+        "trails.TrailSummary": {
+            "type": "object",
+            "properties": {
+                "distance_km": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "url": {
                     "type": "string"
                 }
             }
