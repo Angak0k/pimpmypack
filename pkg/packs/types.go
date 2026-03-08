@@ -108,6 +108,7 @@ type PackContentWithItem struct {
 	Quantity        int    `json:"quantity"`
 	Worn            bool   `json:"worn"`
 	Consumable      bool   `json:"consumable"`
+	HasImage        bool   `json:"has_image"`
 }
 
 // PackContentWithItems represents a collection of pack contents with item details

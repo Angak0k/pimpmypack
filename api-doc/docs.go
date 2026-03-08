@@ -2633,6 +2633,60 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/packs/{id}/items/{itemId}/image": {
+            "get": {
+                "description": "Get the image for an inventory item within a pack. Public packs are accessible without authentication.",
+                "produces": [
+                    "image/jpeg"
+                ],
+                "tags": [
+                    "Pack Images"
+                ],
+                "summary": "Get pack item image",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pack ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Item (Inventory) ID",
+                        "name": "itemId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid pack ID or item ID",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Pack not found, item not in pack, or has no image",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/v2/pack-options": {
             "get": {
                 "security": [
@@ -3099,6 +3153,9 @@ const docTemplate = `{
                 },
                 "currency": {
                     "type": "string"
+                },
+                "has_image": {
+                    "type": "boolean"
                 },
                 "inventory_id": {
                     "type": "integer"

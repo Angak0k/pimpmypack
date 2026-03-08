@@ -14,6 +14,11 @@ func CheckPackOwnership(ctx context.Context, packID uint, userID uint) (bool, er
 	return checkPackOwnership(ctx, packID, userID)
 }
 
+// CheckItemInPack verifies if an inventory item is part of a pack's contents
+func CheckItemInPack(ctx context.Context, packID uint, itemID uint) (bool, error) {
+	return checkItemInPack(ctx, packID, itemID)
+}
+
 // FindPackIDByPackName finds a pack ID by its name
 // Returns 0 if not found
 func FindPackIDByPackName(packs Packs, packname string) uint {
