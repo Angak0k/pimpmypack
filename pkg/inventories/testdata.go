@@ -2,6 +2,7 @@ package inventories
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -162,69 +163,66 @@ func loadingInventoryDataset() error {
 		}
 	}
 
-	// Insert a test pack for user 1
-	var testPackID int
-	err = tx.QueryRowContext(context.Background(),
+	// Insert test packs and pack_content for pack_count testing
+	if err := insertTestPackData(tx); err != nil {
+		return err
+	}
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
+// insertTestPackData creates test packs and links them to inventory items for pack_count testing.
+// Backpack → 2 packs, Tent → 1 pack, Sleeping Bag → 0 packs.
+func insertTestPackData(tx *sql.Tx) error {
+	now := time.Now().Truncate(time.Second)
+	ctx := context.Background()
+
+	var testPackID, testPackID2 int
+
+	err := tx.QueryRowContext(ctx,
 		`INSERT INTO pack (user_id, pack_name, pack_description, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id;`,
-		inventories[0].UserID,
-		"Test Pack",
-		"Pack for testing pack_count",
-		time.Now().Truncate(time.Second),
-		time.Now().Truncate(time.Second)).Scan(&testPackID)
+		inventories[0].UserID, "Test Pack", "Pack for testing pack_count", now, now).Scan(&testPackID)
 	if err != nil {
 		return fmt.Errorf("failed to insert test pack: %w", err)
 	}
 
-	// Insert a second test pack for user 1
-	var testPackID2 int
-	err = tx.QueryRowContext(context.Background(),
+	err = tx.QueryRowContext(ctx,
 		`INSERT INTO pack (user_id, pack_name, pack_description, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id;`,
-		inventories[0].UserID,
-		"Test Pack 2",
-		"Second pack for testing pack_count",
-		time.Now().Truncate(time.Second),
-		time.Now().Truncate(time.Second)).Scan(&testPackID2)
+		inventories[0].UserID, "Test Pack 2", "Second pack for testing pack_count", now, now).Scan(&testPackID2)
 	if err != nil {
 		return fmt.Errorf("failed to insert test pack 2: %w", err)
 	}
 
 	// Link Backpack (inventories[0]) to both packs → pack_count=2
 	for _, packID := range []int{testPackID, testPackID2} {
-		_, err = tx.ExecContext(context.Background(),
+		_, err = tx.ExecContext(ctx,
 			`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at)
 			VALUES ($1, $2, 1, false, false, $3, $4);`,
-			packID, inventories[0].ID,
-			time.Now().Truncate(time.Second),
-			time.Now().Truncate(time.Second))
+			packID, inventories[0].ID, now, now)
 		if err != nil {
 			return fmt.Errorf("failed to insert pack_content: %w", err)
 		}
 	}
 
 	// Link Tent (inventories[1]) to first pack only → pack_count=1
-	_, err = tx.ExecContext(context.Background(),
+	_, err = tx.ExecContext(ctx,
 		`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at)
 		VALUES ($1, $2, 1, false, false, $3, $4);`,
-		testPackID, inventories[1].ID,
-		time.Now().Truncate(time.Second),
-		time.Now().Truncate(time.Second))
+		testPackID, inventories[1].ID, now, now)
 	if err != nil {
 		return fmt.Errorf("failed to insert pack_content for tent: %w", err)
 	}
 
-	// Sleeping Bag (inventories[2]) is not linked to any pack → pack_count=0
-
-	// Store pack IDs for cleanup
 	testPackIDs = []int{testPackID, testPackID2}
-
-	// Commit the transaction
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("failed to commit transaction: %w", err)
-	}
 
 	return nil
 }
