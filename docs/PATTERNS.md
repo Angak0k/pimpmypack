@@ -980,7 +980,7 @@ if err != nil {
 ```go
 // JWT configuration
 config.APISecret          // JWT signing secret
-config.AccessTokenMinutes // Access token duration (minutes)
+config.AccessTokenMinutes  // Access token duration (minutes)
 
 // Database configuration
 config.DBHost
