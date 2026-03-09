@@ -76,6 +76,11 @@ var inventories = Inventories{
 	},
 }
 
+// mergeTestItems holds extra inventory items created specifically for merge tests.
+// These are populated by createMergeTestData and cleaned up by cleanupMergeTestData.
+var mergeTestItems []Inventory
+var mergeTestPackIDs []int
+
 func loadingInventoryDataset() error {
 	// Start a transaction
 	tx, err := database.DB().BeginTx(context.Background(), nil)
@@ -268,4 +273,118 @@ func cleanupInventoryDataset() error {
 
 	println("-> Inventory test data cleaned up...")
 	return nil
+}
+
+// createMergeTestData creates inventory items and pack_content rows for merge testing.
+// It creates a source and target item, a shared pack, and a non-shared pack.
+// Returns (sourceItem, targetItem, sharedPackID, nonSharedPackID).
+func createMergeTestData(ctx context.Context) error {
+	now := time.Now().Truncate(time.Second)
+
+	// Create source item
+	source := Inventory{
+		UserID:      users[0].ID,
+		ItemName:    "Merge Source",
+		Category:    "Test",
+		Description: "Source item for merge test",
+		Weight:      100,
+		URL:         "https://example.com/source",
+		Price:       10,
+		Currency:    "USD",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+	err := database.DB().QueryRowContext(ctx,
+		`INSERT INTO inventory (user_id, item_name, category, description, weight, url, price, currency, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id;`,
+		source.UserID, source.ItemName, source.Category, source.Description,
+		source.Weight, source.URL, source.Price, source.Currency, now, now).Scan(&source.ID)
+	if err != nil {
+		return fmt.Errorf("failed to insert merge source item: %w", err)
+	}
+
+	// Create target item
+	target := Inventory{
+		UserID:      users[0].ID,
+		ItemName:    "Merge Target",
+		Category:    "Test",
+		Description: "Target item for merge test",
+		Weight:      200,
+		URL:         "https://example.com/target",
+		Price:       20,
+		Currency:    "USD",
+		CreatedAt:   now,
+		UpdatedAt:   now,
+	}
+	err = database.DB().QueryRowContext(ctx,
+		`INSERT INTO inventory (user_id, item_name, category, description, weight, url, price, currency, created_at, updated_at)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id;`,
+		target.UserID, target.ItemName, target.Category, target.Description,
+		target.Weight, target.URL, target.Price, target.Currency, now, now).Scan(&target.ID)
+	if err != nil {
+		return fmt.Errorf("failed to insert merge target item: %w", err)
+	}
+
+	mergeTestItems = []Inventory{source, target}
+
+	// Create a shared pack (both items in it)
+	var sharedPackID, nonSharedPackID int
+	err = database.DB().QueryRowContext(ctx,
+		`INSERT INTO pack (user_id, pack_name, pack_description, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5) RETURNING id;`,
+		users[0].ID, "Merge Shared Pack", "Shared pack for merge test", now, now).Scan(&sharedPackID)
+	if err != nil {
+		return fmt.Errorf("failed to insert merge shared pack: %w", err)
+	}
+
+	// Add both source and target to the shared pack with different quantities
+	_, err = database.DB().ExecContext(ctx,
+		`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at)
+		VALUES ($1, $2, 2, false, false, $3, $4);`,
+		sharedPackID, source.ID, now, now)
+	if err != nil {
+		return fmt.Errorf("failed to insert source into shared pack: %w", err)
+	}
+	_, err = database.DB().ExecContext(ctx,
+		`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at)
+		VALUES ($1, $2, 3, false, false, $3, $4);`,
+		sharedPackID, target.ID, now, now)
+	if err != nil {
+		return fmt.Errorf("failed to insert target into shared pack: %w", err)
+	}
+
+	// Create a non-shared pack (only source in it)
+	err = database.DB().QueryRowContext(ctx,
+		`INSERT INTO pack (user_id, pack_name, pack_description, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5) RETURNING id;`,
+		users[0].ID, "Merge Non-Shared Pack", "Non-shared pack for merge test", now, now).Scan(&nonSharedPackID)
+	if err != nil {
+		return fmt.Errorf("failed to insert merge non-shared pack: %w", err)
+	}
+	_, err = database.DB().ExecContext(ctx,
+		`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at)
+		VALUES ($1, $2, 1, false, false, $3, $4);`,
+		nonSharedPackID, source.ID, now, now)
+	if err != nil {
+		return fmt.Errorf("failed to insert source into non-shared pack: %w", err)
+	}
+
+	mergeTestPackIDs = []int{sharedPackID, nonSharedPackID}
+
+	return nil
+}
+
+// cleanupMergeTestData removes all merge test data
+func cleanupMergeTestData(ctx context.Context) {
+	for _, packID := range mergeTestPackIDs {
+		_, _ = database.DB().ExecContext(ctx, "DELETE FROM pack WHERE id = $1", packID)
+	}
+	for _, item := range mergeTestItems {
+		if item.ID != 0 {
+			_, _ = database.DB().ExecContext(ctx, "DELETE FROM inventory_images WHERE item_id = $1", item.ID)
+			_, _ = database.DB().ExecContext(ctx, "DELETE FROM inventory WHERE id = $1", item.ID)
+		}
+	}
+	mergeTestItems = nil
+	mergeTestPackIDs = nil
 }

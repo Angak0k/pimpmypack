@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
@@ -696,6 +697,452 @@ func TestGetMyInventoryByID(t *testing.T) {
 		// Check the HTTP status code
 		if w.Code != http.StatusForbidden {
 			t.Errorf("Expected status code %d but got %d", http.StatusForbidden, w.Code)
+		}
+	})
+}
+
+func TestPostMyInventoryMerge(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctx := context.Background()
+
+	t.Run("Merge with shared pack - quantities summed", func(t *testing.T) {
+		// Setup merge test data
+		err := createMergeTestData(ctx)
+		if err != nil {
+			t.Fatalf("Failed to create merge test data: %v", err)
+		}
+		defer cleanupMergeTestData(ctx)
+
+		source := mergeTestItems[0]
+		target := mergeTestItems[1]
+
+		router := gin.Default()
+		router.POST("/myinventory/merge", PostMyInventoryMerge)
+
+		token, err := security.GenerateToken(users[0].ID)
+		if err != nil {
+			t.Fatalf("Failed to generate token: %v", err)
+		}
+
+		mergeReq := MergeInventoryRequest{
+			SourceItemID: int(source.ID),
+			TargetItemID: int(target.ID),
+			ItemName:     "Merged Item",
+			Category:     "Merged Category",
+			Description:  "Merged description",
+			Weight:       300,
+			URL:          "https://example.com/merged",
+			Price:        30,
+			Currency:     "EUR",
+			ImageSource:  "none",
+		}
+
+		jsonData, err := json.Marshal(mergeReq)
+		if err != nil {
+			t.Fatalf("Failed to marshal merge request: %v", err)
+		}
+
+		req, err := http.NewRequest(http.MethodPost, "/myinventory/merge", bytes.NewBuffer(jsonData))
+		if err != nil {
+			t.Fatalf("Failed to create request: %v", err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+			return
+		}
+
+		var mergedItem Inventory
+		if err := json.Unmarshal(w.Body.Bytes(), &mergedItem); err != nil {
+			t.Fatalf("Failed to unmarshal response body: %v", err)
+		}
+
+		// Verify merged item properties
+		if mergedItem.ID != target.ID {
+			t.Errorf("Expected merged item ID %d but got %d", target.ID, mergedItem.ID)
+		}
+		if mergedItem.ItemName != "Merged Item" {
+			t.Errorf("Expected item name 'Merged Item' but got '%s'", mergedItem.ItemName)
+		}
+		if mergedItem.Category != "Merged Category" {
+			t.Errorf("Expected category 'Merged Category' but got '%s'", mergedItem.Category)
+		}
+		if mergedItem.Weight != 300 {
+			t.Errorf("Expected weight 300 but got %d", mergedItem.Weight)
+		}
+
+		// Verify target is in 2 packs (shared + non-shared reassigned)
+		if mergedItem.PackCount != 2 {
+			t.Errorf("Expected pack count 2 but got %d", mergedItem.PackCount)
+		}
+
+		// Verify source item is deleted
+		_, err = findInventoryByID(ctx, source.ID)
+		if !errors.Is(err, ErrNoItemFound) {
+			t.Errorf("Expected source item to be deleted, got err: %v", err)
+		}
+
+		// Verify shared pack quantity was summed (2 + 3 = 5)
+		var quantity int
+		err = database.DB().QueryRowContext(ctx,
+			`SELECT quantity FROM pack_content WHERE pack_id = $1 AND item_id = $2`,
+			mergeTestPackIDs[0], target.ID).Scan(&quantity)
+		if err != nil {
+			t.Fatalf("Failed to query pack_content: %v", err)
+		}
+		if quantity != 5 {
+			t.Errorf("Expected quantity 5 in shared pack but got %d", quantity)
+		}
+
+		// Verify non-shared pack was reassigned to target
+		var nonSharedQuantity int
+		err = database.DB().QueryRowContext(ctx,
+			`SELECT quantity FROM pack_content WHERE pack_id = $1 AND item_id = $2`,
+			mergeTestPackIDs[1], target.ID).Scan(&nonSharedQuantity)
+		if err != nil {
+			t.Fatalf("Failed to query non-shared pack_content: %v", err)
+		}
+		if nonSharedQuantity != 1 {
+			t.Errorf("Expected quantity 1 in non-shared pack but got %d", nonSharedQuantity)
+		}
+	})
+
+	t.Run("Merge with no pack overlap", func(t *testing.T) {
+		err := createMergeTestData(ctx)
+		if err != nil {
+			t.Fatalf("Failed to create merge test data: %v", err)
+		}
+		defer cleanupMergeTestData(ctx)
+
+		source := mergeTestItems[0]
+		target := mergeTestItems[1]
+
+		// Remove target from shared pack so there's no overlap
+		_, err = database.DB().ExecContext(ctx,
+			`DELETE FROM pack_content WHERE pack_id = $1 AND item_id = $2`,
+			mergeTestPackIDs[0], target.ID)
+		if err != nil {
+			t.Fatalf("Failed to remove target from shared pack: %v", err)
+		}
+
+		router := gin.Default()
+		router.POST("/myinventory/merge", PostMyInventoryMerge)
+
+		token, err := security.GenerateToken(users[0].ID)
+		if err != nil {
+			t.Fatalf("Failed to generate token: %v", err)
+		}
+
+		mergeReq := MergeInventoryRequest{
+			SourceItemID: int(source.ID),
+			TargetItemID: int(target.ID),
+			ItemName:     "No Overlap Merged",
+			Category:     "Test",
+			Description:  "",
+			Weight:       150,
+			URL:          "",
+			Price:        15,
+			Currency:     "USD",
+			ImageSource:  "none",
+		}
+
+		jsonData, _ := json.Marshal(mergeReq)
+		req, _ := http.NewRequest(http.MethodPost, "/myinventory/merge", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+			return
+		}
+
+		var mergedItem Inventory
+		if err := json.Unmarshal(w.Body.Bytes(), &mergedItem); err != nil {
+			t.Fatalf("Failed to unmarshal response: %v", err)
+		}
+
+		// Source had 2 packs (shared + non-shared), all reassigned to target
+		if mergedItem.PackCount != 2 {
+			t.Errorf("Expected pack count 2 but got %d", mergedItem.PackCount)
+		}
+	})
+
+	t.Run("Merge with image_source=source", func(t *testing.T) {
+		err := createMergeTestData(ctx)
+		if err != nil {
+			t.Fatalf("Failed to create merge test data: %v", err)
+		}
+		defer cleanupMergeTestData(ctx)
+
+		source := mergeTestItems[0]
+		target := mergeTestItems[1]
+
+		// Insert a source image
+		now := time.Now()
+		_, err = database.DB().ExecContext(ctx,
+			`INSERT INTO inventory_images (item_id, image_data, mime_type, file_size, width, height, uploaded_at, updated_at)
+			VALUES ($1, $2, 'image/jpeg', 100, 50, 50, $3, $4)`,
+			source.ID, []byte("fake-source-image"), now, now)
+		if err != nil {
+			t.Fatalf("Failed to insert source image: %v", err)
+		}
+
+		// Insert a target image
+		_, err = database.DB().ExecContext(ctx,
+			`INSERT INTO inventory_images (item_id, image_data, mime_type, file_size, width, height, uploaded_at, updated_at)
+			VALUES ($1, $2, 'image/jpeg', 200, 100, 100, $3, $4)`,
+			target.ID, []byte("fake-target-image"), now, now)
+		if err != nil {
+			t.Fatalf("Failed to insert target image: %v", err)
+		}
+
+		router := gin.Default()
+		router.POST("/myinventory/merge", PostMyInventoryMerge)
+
+		token, _ := security.GenerateToken(users[0].ID)
+		mergeReq := MergeInventoryRequest{
+			SourceItemID: int(source.ID),
+			TargetItemID: int(target.ID),
+			ItemName:     "Image Source Test",
+			Category:     "Test",
+			Weight:       100,
+			Currency:     "USD",
+			ImageSource:  "source",
+		}
+
+		jsonData, _ := json.Marshal(mergeReq)
+		req, _ := http.NewRequest(http.MethodPost, "/myinventory/merge", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+			return
+		}
+
+		var mergedItem Inventory
+		json.Unmarshal(w.Body.Bytes(), &mergedItem)
+
+		// Verify the merged item has an image (source image was reassigned to target)
+		if !mergedItem.HasImage {
+			t.Errorf("Expected merged item to have image (source image reassigned)")
+		}
+
+		// Verify the image data is the source image
+		var imageData []byte
+		err = database.DB().QueryRowContext(ctx,
+			`SELECT image_data FROM inventory_images WHERE item_id = $1`, target.ID).Scan(&imageData)
+		if err != nil {
+			t.Fatalf("Failed to query image: %v", err)
+		}
+		if string(imageData) != "fake-source-image" {
+			t.Errorf("Expected source image data but got different data")
+		}
+	})
+
+	t.Run("Merge with image_source=target", func(t *testing.T) {
+		err := createMergeTestData(ctx)
+		if err != nil {
+			t.Fatalf("Failed to create merge test data: %v", err)
+		}
+		defer cleanupMergeTestData(ctx)
+
+		source := mergeTestItems[0]
+		target := mergeTestItems[1]
+
+		// Insert a target image only
+		now := time.Now()
+		_, err = database.DB().ExecContext(ctx,
+			`INSERT INTO inventory_images (item_id, image_data, mime_type, file_size, width, height, uploaded_at, updated_at)
+			VALUES ($1, $2, 'image/jpeg', 200, 100, 100, $3, $4)`,
+			target.ID, []byte("fake-target-image"), now, now)
+		if err != nil {
+			t.Fatalf("Failed to insert target image: %v", err)
+		}
+
+		router := gin.Default()
+		router.POST("/myinventory/merge", PostMyInventoryMerge)
+
+		token, _ := security.GenerateToken(users[0].ID)
+		mergeReq := MergeInventoryRequest{
+			SourceItemID: int(source.ID),
+			TargetItemID: int(target.ID),
+			ItemName:     "Image Target Test",
+			Category:     "Test",
+			Weight:       100,
+			Currency:     "USD",
+			ImageSource:  "target",
+		}
+
+		jsonData, _ := json.Marshal(mergeReq)
+		req, _ := http.NewRequest(http.MethodPost, "/myinventory/merge", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+			return
+		}
+
+		var mergedItem Inventory
+		json.Unmarshal(w.Body.Bytes(), &mergedItem)
+
+		// Verify the merged item still has the target image
+		if !mergedItem.HasImage {
+			t.Errorf("Expected merged item to have image (target image kept)")
+		}
+	})
+
+	t.Run("Merge with image_source=none", func(t *testing.T) {
+		err := createMergeTestData(ctx)
+		if err != nil {
+			t.Fatalf("Failed to create merge test data: %v", err)
+		}
+		defer cleanupMergeTestData(ctx)
+
+		source := mergeTestItems[0]
+		target := mergeTestItems[1]
+
+		// Insert images for both
+		now := time.Now()
+		_, _ = database.DB().ExecContext(ctx,
+			`INSERT INTO inventory_images (item_id, image_data, mime_type, file_size, width, height, uploaded_at, updated_at)
+			VALUES ($1, $2, 'image/jpeg', 100, 50, 50, $3, $4)`,
+			source.ID, []byte("fake-source-image"), now, now)
+		_, _ = database.DB().ExecContext(ctx,
+			`INSERT INTO inventory_images (item_id, image_data, mime_type, file_size, width, height, uploaded_at, updated_at)
+			VALUES ($1, $2, 'image/jpeg', 200, 100, 100, $3, $4)`,
+			target.ID, []byte("fake-target-image"), now, now)
+
+		router := gin.Default()
+		router.POST("/myinventory/merge", PostMyInventoryMerge)
+
+		token, _ := security.GenerateToken(users[0].ID)
+		mergeReq := MergeInventoryRequest{
+			SourceItemID: int(source.ID),
+			TargetItemID: int(target.ID),
+			ItemName:     "Image None Test",
+			Category:     "Test",
+			Weight:       100,
+			Currency:     "USD",
+			ImageSource:  "none",
+		}
+
+		jsonData, _ := json.Marshal(mergeReq)
+		req, _ := http.NewRequest(http.MethodPost, "/myinventory/merge", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("Expected status code %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+			return
+		}
+
+		var mergedItem Inventory
+		json.Unmarshal(w.Body.Bytes(), &mergedItem)
+
+		// Verify no image on the merged item
+		if mergedItem.HasImage {
+			t.Errorf("Expected merged item to have no image with image_source=none")
+		}
+	})
+
+	t.Run("Merge fails - source equals target", func(t *testing.T) {
+		router := gin.Default()
+		router.POST("/myinventory/merge", PostMyInventoryMerge)
+
+		token, _ := security.GenerateToken(users[0].ID)
+		mergeReq := MergeInventoryRequest{
+			SourceItemID: int(inventories[0].ID),
+			TargetItemID: int(inventories[0].ID),
+			ItemName:     "Same Item",
+			Category:     "Test",
+			Currency:     "USD",
+			ImageSource:  "none",
+		}
+
+		jsonData, _ := json.Marshal(mergeReq)
+		req, _ := http.NewRequest(http.MethodPost, "/myinventory/merge", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusBadRequest {
+			t.Errorf("Expected status code %d but got %d", http.StatusBadRequest, w.Code)
+		}
+	})
+
+	t.Run("Merge fails - ownership validation", func(t *testing.T) {
+		router := gin.Default()
+		router.POST("/myinventory/merge", PostMyInventoryMerge)
+
+		// User 2 tries to merge user 1's items
+		token, _ := security.GenerateToken(users[1].ID)
+		mergeReq := MergeInventoryRequest{
+			SourceItemID: int(inventories[0].ID),
+			TargetItemID: int(inventories[1].ID),
+			ItemName:     "Stolen Merge",
+			Category:     "Test",
+			Currency:     "USD",
+			ImageSource:  "none",
+		}
+
+		jsonData, _ := json.Marshal(mergeReq)
+		req, _ := http.NewRequest(http.MethodPost, "/myinventory/merge", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusForbidden {
+			t.Errorf("Expected status code %d but got %d", http.StatusForbidden, w.Code)
+		}
+	})
+
+	t.Run("Merge fails - source not found", func(t *testing.T) {
+		router := gin.Default()
+		router.POST("/myinventory/merge", PostMyInventoryMerge)
+
+		token, _ := security.GenerateToken(users[0].ID)
+		mergeReq := MergeInventoryRequest{
+			SourceItemID: 999999,
+			TargetItemID: int(inventories[0].ID),
+			ItemName:     "Missing Source",
+			Category:     "Test",
+			Currency:     "USD",
+			ImageSource:  "none",
+		}
+
+		jsonData, _ := json.Marshal(mergeReq)
+		req, _ := http.NewRequest(http.MethodPost, "/myinventory/merge", bytes.NewBuffer(jsonData))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer "+token)
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("Expected status code %d but got %d", http.StatusNotFound, w.Code)
 		}
 	})
 }

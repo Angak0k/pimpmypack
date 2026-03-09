@@ -424,6 +424,85 @@ func PutMyInventoryByID(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, updatedInventory)
 }
 
+// PostMyInventoryMerge merges two inventory items into one
+// @Summary Merge two inventory items
+// @Description Merges the source inventory item into the target item. Pack references are consolidated.
+// @Security Bearer
+// @Tags Inventories
+// @Accept json
+// @Produce json
+// @Param merge body inventories.MergeInventoryRequest true "Merge request"
+// @Success 200 {object} inventories.Inventory "Merged inventory item"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid payload or source equals target"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "Item does not belong to you"
+// @Failure 404 {object} apitypes.ErrorResponse "Item not found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
+// @Router /v1/myinventory/merge [post]
+func PostMyInventoryMerge(c *gin.Context) {
+	userID, err := security.ExtractTokenID(c)
+	if err != nil {
+		helper.LogAndSanitize(err, "post my inventory merge: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
+		return
+	}
+
+	var input MergeInventoryRequest
+	if err := c.BindJSON(&input); err != nil {
+		helper.LogAndSanitize(err, "post my inventory merge: bind JSON failed")
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
+		return
+	}
+
+	// Verify source != target
+	if input.SourceItemID == input.TargetItemID {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Source and target items must be different"})
+		return
+	}
+
+	// Verify ownership of source item
+	sourceItem, err := findInventoryByID(c.Request.Context(), uint(input.SourceItemID))
+	if err != nil {
+		if errors.Is(err, ErrNoItemFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Source inventory item not found"})
+			return
+		}
+		helper.LogAndSanitize(err, "post my inventory merge: find source item failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+	if sourceItem.UserID != userID {
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
+		return
+	}
+
+	// Verify ownership of target item
+	targetItem, err := findInventoryByID(c.Request.Context(), uint(input.TargetItemID))
+	if err != nil {
+		if errors.Is(err, ErrNoItemFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Target inventory item not found"})
+			return
+		}
+		helper.LogAndSanitize(err, "post my inventory merge: find target item failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+	if targetItem.UserID != userID {
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
+		return
+	}
+
+	// Perform merge
+	mergedItem, err := mergeInventoryItems(c.Request.Context(), &input)
+	if err != nil {
+		helper.LogAndSanitize(err, "post my inventory merge: merge items failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	c.IndentedJSON(http.StatusOK, mergedItem)
+}
+
 // DeleteInventoryByID deletes an inventory by ID
 // @Summary [ADMIN] Delete an inventory by ID
 // @Description Deletes an inventory by ID - for admin use only
