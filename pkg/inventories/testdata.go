@@ -277,7 +277,7 @@ func cleanupInventoryDataset() error {
 
 // createMergeTestData creates inventory items and pack_content rows for merge testing.
 // It creates a source and target item, a shared pack, and a non-shared pack.
-// Returns (sourceItem, targetItem, sharedPackID, nonSharedPackID).
+// It returns an error if any of the test data creation steps fail.
 func createMergeTestData(ctx context.Context) error {
 	now := time.Now().Truncate(time.Second)
 
@@ -377,16 +377,26 @@ func createMergeTestData(ctx context.Context) error {
 }
 
 // cleanupMergeTestData removes all merge test data
-func cleanupMergeTestData(ctx context.Context) {
+func cleanupMergeTestData(ctx context.Context) error {
 	for _, packID := range mergeTestPackIDs {
-		_, _ = database.DB().ExecContext(ctx, "DELETE FROM pack WHERE id = $1", packID)
+		if _, err := database.DB().ExecContext(ctx,
+			"DELETE FROM pack WHERE id = $1", packID); err != nil {
+			return fmt.Errorf("failed to delete merge test pack %d: %w", packID, err)
+		}
 	}
 	for _, item := range mergeTestItems {
 		if item.ID != 0 {
-			_, _ = database.DB().ExecContext(ctx, "DELETE FROM inventory_images WHERE item_id = $1", item.ID)
-			_, _ = database.DB().ExecContext(ctx, "DELETE FROM inventory WHERE id = $1", item.ID)
+			if _, err := database.DB().ExecContext(ctx,
+				"DELETE FROM inventory_images WHERE item_id = $1", item.ID); err != nil {
+				return fmt.Errorf("failed to delete merge test image for item %d: %w", item.ID, err)
+			}
+			if _, err := database.DB().ExecContext(ctx,
+				"DELETE FROM inventory WHERE id = $1", item.ID); err != nil {
+				return fmt.Errorf("failed to delete merge test item %d: %w", item.ID, err)
+			}
 		}
 	}
 	mergeTestItems = nil
 	mergeTestPackIDs = nil
+	return nil
 }

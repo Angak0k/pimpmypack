@@ -454,6 +454,11 @@ func PostMyInventoryMerge(c *gin.Context) {
 		return
 	}
 
+	// Default currency if empty
+	if input.Currency == "" {
+		input.Currency = DefaultCurrency
+	}
+
 	// Verify source != target
 	if input.SourceItemID == input.TargetItemID {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Source and target items must be different"})

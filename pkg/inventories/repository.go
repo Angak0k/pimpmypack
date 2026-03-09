@@ -367,7 +367,7 @@ func mergeUpdateTargetAndPackContent(ctx context.Context, tx *sql.Tx, req *Merge
 	// Sum quantities for packs containing both items
 	_, err = tx.ExecContext(ctx,
 		`UPDATE pack_content AS t
-		SET quantity = t.quantity + s.quantity, updated_at = NOW()
+		SET quantity = COALESCE(t.quantity, 0) + COALESCE(s.quantity, 0), updated_at = NOW()
 		FROM pack_content AS s
 		WHERE s.item_id = $1 AND t.item_id = $2 AND s.pack_id = t.pack_id;`,
 		req.SourceItemID, req.TargetItemID)
@@ -386,7 +386,7 @@ func mergeUpdateTargetAndPackContent(ctx context.Context, tx *sql.Tx, req *Merge
 
 	// Reassign remaining source pack_content rows to target
 	_, err = tx.ExecContext(ctx,
-		`UPDATE pack_content SET item_id = $1 WHERE item_id = $2;`,
+		`UPDATE pack_content SET item_id = $1, updated_at = NOW() WHERE item_id = $2;`,
 		req.TargetItemID, req.SourceItemID)
 	return err
 }

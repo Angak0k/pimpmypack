@@ -736,7 +736,11 @@ func testMergeSharedPack(ctx context.Context, t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create merge test data: %v", err)
 	}
-	defer cleanupMergeTestData(ctx)
+	defer func() {
+		if err := cleanupMergeTestData(ctx); err != nil {
+			t.Errorf("Failed to cleanup merge test data: %v", err)
+		}
+	}()
 
 	source := mergeTestItems[0]
 	target := mergeTestItems[1]
@@ -797,7 +801,11 @@ func testMergeNoPackOverlap(ctx context.Context, t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create merge test data: %v", err)
 	}
-	defer cleanupMergeTestData(ctx)
+	defer func() {
+		if err := cleanupMergeTestData(ctx); err != nil {
+			t.Errorf("Failed to cleanup merge test data: %v", err)
+		}
+	}()
 
 	source := mergeTestItems[0]
 	target := mergeTestItems[1]
@@ -840,7 +848,11 @@ func testMergeImageSource(ctx context.Context, t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create merge test data: %v", err)
 	}
-	defer cleanupMergeTestData(ctx)
+	defer func() {
+		if err := cleanupMergeTestData(ctx); err != nil {
+			t.Errorf("Failed to cleanup merge test data: %v", err)
+		}
+	}()
 
 	source := mergeTestItems[0]
 	target := mergeTestItems[1]
@@ -888,7 +900,11 @@ func testMergeImageTarget(ctx context.Context, t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create merge test data: %v", err)
 	}
-	defer cleanupMergeTestData(ctx)
+	defer func() {
+		if err := cleanupMergeTestData(ctx); err != nil {
+			t.Errorf("Failed to cleanup merge test data: %v", err)
+		}
+	}()
 
 	source := mergeTestItems[0]
 	target := mergeTestItems[1]
@@ -923,7 +939,11 @@ func testMergeImageNone(ctx context.Context, t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create merge test data: %v", err)
 	}
-	defer cleanupMergeTestData(ctx)
+	defer func() {
+		if err := cleanupMergeTestData(ctx); err != nil {
+			t.Errorf("Failed to cleanup merge test data: %v", err)
+		}
+	}()
 
 	source := mergeTestItems[0]
 	target := mergeTestItems[1]
