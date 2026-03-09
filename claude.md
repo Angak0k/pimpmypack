@@ -173,7 +173,7 @@ func TestGetMyInventory_Success(t *testing.T) {
 
 2. ✅ **Verify build**: `make build`
 
-   - All packages must compile without errors
+   - Application (main package) must compile without errors
 
 3. ✅ **Run unit tests**: `make test`
 
