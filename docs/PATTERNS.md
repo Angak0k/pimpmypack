@@ -13,6 +13,7 @@ This document contains detailed code patterns, examples, and templates used in t
 - [Error Handling](#error-handling)
 - [Database Operations](#database-operations)
 - [Swagger Documentation](#swagger-documentation)
+- [Security & Configuration Utilities](#security--configuration-utilities)
 
 ## Architecture & Package Organization
 
@@ -937,6 +938,56 @@ When referencing types in Swagger comments:
 
 // Cross-package references
 // @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+```
+
+## Security & Configuration Utilities
+
+### Database Connection
+
+```go
+// Returns *sql.DB singleton — use this everywhere for DB access
+db := database.DB()
+```
+
+### JWT Token Generation
+
+```go
+// Generate a JWT token for an authenticated user
+token, err := security.GenerateToken(userID)
+if err != nil {
+    return fmt.Errorf("failed to generate token: %w", err)
+}
+```
+
+### Password Hashing & Verification
+
+```go
+// Hash a password (registration, password change)
+hashedPassword, err := security.HashPassword(password)
+if err != nil {
+    return fmt.Errorf("failed to hash password: %w", err)
+}
+
+// Verify a password (login)
+err := security.VerifyPassword(password, hashedPassword)
+if err != nil {
+    // Invalid credentials
+}
+```
+
+### Configuration Access
+
+```go
+// JWT configuration
+config.APISecret          // JWT signing secret
+config.AccessTokenMinutes  // Access token duration (minutes)
+
+// Database configuration
+config.DBHost
+config.DBPort
+config.DBUser
+config.DBPassword
+config.DBName
 ```
 
 ## Recurring Patterns Summary

@@ -161,32 +161,61 @@ func TestGetMyInventory_Success(t *testing.T) {
 4. ✅ **Write specs** in `specs/*.md` before implementation (for non-trivial features)
 5. ✅ **Use SQL direct queries** - verify examples in `pkg/accounts/accounts.go`
 
-## ⚠️ Critical Workflow: Before Pushing to GitHub
+## ⚠️ Critical Workflow: Before Opening a PR
 
-**MANDATORY steps before every push**:
+**MANDATORY steps before every PR — run ALL of them systematically, in order. Do NOT skip any step.**
 
-1. ✅ **Run full test suite**: `make test`
+1. ✅ **Run linter**: `make lint`
+
+   - **CRITICAL**: Fix ALL linter issues before proceeding
+   - This catches common mistakes (wrong assertions, code quality issues)
+   - CI will reject PRs with linter violations
+
+2. ✅ **Verify build**: `make build`
+
+   - Application (main package) must compile without errors
+
+3. ✅ **Run unit tests**: `make test`
 
    - All tests must pass
    - No race conditions detected (`-race` flag enabled)
 
-2. ✅ **ALWAYS run linter**: `make lint`
+4. ✅ **Build API documentation**: `make api-doc`
 
-   - **CRITICAL**: Fix ALL linter issues before pushing
-   - This catches common mistakes (wrong assertions, code quality issues)
-   - CI will reject PRs with linter violations
+   - Swagger docs must generate without errors
+   - Ensures API documentation stays in sync with code
 
-3. ✅ **Run API tests** (non-regression): `make api-test`
+5. ✅ **Run E2E tests** (non-regression): `make api-test-full`
 
    - Verifies all API endpoints still work correctly
    - Tests authentication, CRUD operations, file uploads
    - **ESPECIALLY important** after changes to handlers, middleware, or database schema
 
-4. ✅ **Verify build**: `go build ./...`
+**⚠️ ALL 5 steps are required. Do not open a PR if any step fails. Fix the issue and re-run from the failing step.**
 
-   - All packages must compile without errors
+**Why this matters**: The linter catches subtle bugs that tests might miss (e.g., using `assert.Equal` for pointer comparison instead of `assert.Same`). API tests catch regressions in endpoint behavior. Always run all checks locally before pushing to avoid CI failures and wasted review cycles.
 
-**Why this matters**: The linter catches subtle bugs that tests might miss (e.g., using `assert.Equal` for pointer comparison instead of `assert.Same`). API tests catch regressions in endpoint behavior. Always run both locally before pushing to avoid CI failures and wasted review cycles.
+## 🔍 After Opening a PR: Copilot Review Handling
+
+**MANDATORY workflow after every PR is opened:**
+
+1. ✅ **Monitor Copilot review**: After creating the PR, poll for the Copilot review to complete
+   - Use `gh pr reviews <PR_NUMBER>` and `gh api repos/{owner}/{repo}/pulls/{pr}/comments` to check status
+   - Wait until Copilot has finished reviewing (it reviews 100% of the PR)
+
+2. ✅ **Handle every comment carefully**: Read and address each Copilot review comment
+   - Evaluate whether the suggestion is valid and should be applied
+   - If valid: make the code change
+   - If not applicable: prepare a clear explanation why
+
+3. ✅ **Reply and resolve**: For each comment:
+   - Post a reply explaining what was done (fix applied, or why it was dismissed)
+   - Resolve the comment thread
+   - Use `gh api` to post replies and resolve conversations
+
+4. ✅ **Re-run checks if code changed**: If any fixes were applied, re-run the pre-PR checklist (lint, build, test, api-doc, api-test-full)
+
+**⚠️ Do NOT consider the PR ready for human review until all Copilot comments are addressed and resolved.**
 
 ## 🤖 Available Agents
 
@@ -253,79 +282,15 @@ make api-test
 - ❌ Don't store passwords in plain text (always bcrypt)
 - ❌ Don't skip JWT validation on protected routes
 
-## 🔍 Quick Code Reference
-
-**Database connection**:
-```go
-database.DB() // Returns *sql.DB singleton
-```
-
-**Generate JWT token**:
-```go
-token, err := security.GenerateToken(userID)
-```
-
-**Hash password**:
-```go
-hashedPassword, err := security.HashPassword(password)
-```
-
-**Verify password**:
-```go
-err := security.VerifyPassword(password, hashedPassword)
-```
-
-**Load config**:
-```go
-config.APISecret          // JWT secret
-config.TokenLifespan      // Token duration (hours)
-config.DBHost, config.DBPort, etc.
-```
-
 ## 📖 Additional Resources
 
 - **[agents.md](agents.md)** - Complete architecture & contribution guidelines
-- **[docs/PATTERNS.md](docs/PATTERNS.md)** - Detailed code patterns & templates
+- **[docs/PATTERNS.md](docs/PATTERNS.md)** - Detailed code patterns, templates & security/config utilities
 - **[docs/COLLABORATION.md](docs/COLLABORATION.md)** - Spec-driven development workflow
 - **[specs/](specs/)** - Technical specifications for features
 - **[.env.sample](.env.sample)** - Environment variables documentation
 
-## 💡 Example: Read User from Database
-
-```go
-func getUserByID(ctx context.Context, userID uint) (*User, error) {
-    var user User
-
-    err := database.DB().QueryRowContext(ctx,
-        `SELECT id, username, email, firstname, lastname, role, status,
-                created_at, updated_at
-         FROM account
-         WHERE id = $1`,
-        userID,
-    ).Scan(
-        &user.ID,
-        &user.Username,
-        &user.Email,
-        &user.Firstname,
-        &user.Lastname,
-        &user.Role,
-        &user.Status,
-        &user.CreatedAt,
-        &user.UpdatedAt,
-    )
-
-    if err == sql.ErrNoRows {
-        return nil, fmt.Errorf("user not found")
-    }
-    if err != nil {
-        return nil, fmt.Errorf("failed to get user: %w", err)
-    }
-
-    return &user, nil
-}
-```
-
 ---
 
-**Last Updated**: 2026-02-02
+**Last Updated**: 2026-03-09
 **Project Version**: See [go.mod](go.mod) for Go version and dependencies
