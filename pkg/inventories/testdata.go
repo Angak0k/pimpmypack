@@ -34,6 +34,8 @@ var users = []accounts.User{
 	},
 }
 
+var testPackIDs []int
+
 var inventories = Inventories{
 	{
 		UserID:   1,
@@ -160,6 +162,65 @@ func loadingInventoryDataset() error {
 		}
 	}
 
+	// Insert a test pack for user 1
+	var testPackID int
+	err = tx.QueryRowContext(context.Background(),
+		`INSERT INTO pack (user_id, pack_name, pack_description, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id;`,
+		inventories[0].UserID,
+		"Test Pack",
+		"Pack for testing pack_count",
+		time.Now().Truncate(time.Second),
+		time.Now().Truncate(time.Second)).Scan(&testPackID)
+	if err != nil {
+		return fmt.Errorf("failed to insert test pack: %w", err)
+	}
+
+	// Insert a second test pack for user 1
+	var testPackID2 int
+	err = tx.QueryRowContext(context.Background(),
+		`INSERT INTO pack (user_id, pack_name, pack_description, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id;`,
+		inventories[0].UserID,
+		"Test Pack 2",
+		"Second pack for testing pack_count",
+		time.Now().Truncate(time.Second),
+		time.Now().Truncate(time.Second)).Scan(&testPackID2)
+	if err != nil {
+		return fmt.Errorf("failed to insert test pack 2: %w", err)
+	}
+
+	// Link Backpack (inventories[0]) to both packs → pack_count=2
+	for _, packID := range []int{testPackID, testPackID2} {
+		_, err = tx.ExecContext(context.Background(),
+			`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at)
+			VALUES ($1, $2, 1, false, false, $3, $4);`,
+			packID, inventories[0].ID,
+			time.Now().Truncate(time.Second),
+			time.Now().Truncate(time.Second))
+		if err != nil {
+			return fmt.Errorf("failed to insert pack_content: %w", err)
+		}
+	}
+
+	// Link Tent (inventories[1]) to first pack only → pack_count=1
+	_, err = tx.ExecContext(context.Background(),
+		`INSERT INTO pack_content (pack_id, item_id, quantity, worn, consumable, created_at, updated_at)
+		VALUES ($1, $2, 1, false, false, $3, $4);`,
+		testPackID, inventories[1].ID,
+		time.Now().Truncate(time.Second),
+		time.Now().Truncate(time.Second))
+	if err != nil {
+		return fmt.Errorf("failed to insert pack_content for tent: %w", err)
+	}
+
+	// Sleeping Bag (inventories[2]) is not linked to any pack → pack_count=0
+
+	// Store pack IDs for cleanup
+	testPackIDs = []int{testPackID, testPackID2}
+
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
@@ -174,7 +235,15 @@ func cleanupInventoryDataset() error {
 
 	println("-> Cleaning up inventory test data...")
 
-	// Delete inventories first
+	// Delete test packs first (pack_content will cascade)
+	for _, packID := range testPackIDs {
+		_, err := database.DB().ExecContext(ctx, "DELETE FROM pack WHERE id = $1", packID)
+		if err != nil {
+			return fmt.Errorf("failed to delete test pack %d: %w", packID, err)
+		}
+	}
+
+	// Delete inventories
 	for _, inv := range inventories {
 		if inv.ID != 0 {
 			_, err := database.DB().ExecContext(ctx, "DELETE FROM inventory WHERE id = $1", inv.ID)

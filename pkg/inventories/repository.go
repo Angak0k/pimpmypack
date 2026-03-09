@@ -26,6 +26,7 @@ func returnInventories(ctx context.Context) (*Inventories, error) {
 			i.price,
 			i.currency,
 			CASE WHEN ii.item_id IS NOT NULL THEN true ELSE false END as has_image,
+			(SELECT COUNT(DISTINCT pc.pack_id) FROM pack_content pc WHERE pc.item_id = i.id) as pack_count,
 			i.created_at,
 			i.updated_at
 		FROM inventory i
@@ -48,6 +49,7 @@ func returnInventories(ctx context.Context) (*Inventories, error) {
 			&inventory.Price,
 			&inventory.Currency,
 			&inventory.HasImage,
+			&inventory.PackCount,
 			&inventory.CreatedAt,
 			&inventory.UpdatedAt)
 		if err != nil {
@@ -78,6 +80,7 @@ func returnInventoriesByUserID(ctx context.Context, userID uint) (*Inventories, 
 			i.price,
 			i.currency,
 			CASE WHEN ii.item_id IS NOT NULL THEN true ELSE false END as has_image,
+			(SELECT COUNT(DISTINCT pc.pack_id) FROM pack_content pc WHERE pc.item_id = i.id) as pack_count,
 			i.created_at,
 			i.updated_at
 		FROM inventory i
@@ -102,6 +105,7 @@ func returnInventoriesByUserID(ctx context.Context, userID uint) (*Inventories, 
 			&inventory.Price,
 			&inventory.Currency,
 			&inventory.HasImage,
+			&inventory.PackCount,
 			&inventory.CreatedAt,
 			&inventory.UpdatedAt)
 		if err != nil {
@@ -132,6 +136,7 @@ func findInventoryByID(ctx context.Context, id uint) (*Inventory, error) {
 			i.price,
 			i.currency,
 			CASE WHEN ii.item_id IS NOT NULL THEN true ELSE false END as has_image,
+			(SELECT COUNT(DISTINCT pc.pack_id) FROM pack_content pc WHERE pc.item_id = i.id) as pack_count,
 			i.created_at,
 			i.updated_at
 		FROM inventory i
@@ -149,6 +154,7 @@ func findInventoryByID(ctx context.Context, id uint) (*Inventory, error) {
 		&inventory.Price,
 		&inventory.Currency,
 		&inventory.HasImage,
+		&inventory.PackCount,
 		&inventory.CreatedAt,
 		&inventory.UpdatedAt)
 
@@ -182,6 +188,7 @@ func findInventoryItemByAttributes(
 			i.price,
 			i.currency,
 			CASE WHEN ii.item_id IS NOT NULL THEN true ELSE false END as has_image,
+			(SELECT COUNT(DISTINCT pc.pack_id) FROM pack_content pc WHERE pc.item_id = i.id) as pack_count,
 			i.created_at,
 			i.updated_at
 		FROM inventory i
@@ -201,6 +208,7 @@ func findInventoryItemByAttributes(
 		&inventory.Price,
 		&inventory.Currency,
 		&inventory.HasImage,
+		&inventory.PackCount,
 		&inventory.CreatedAt,
 		&inventory.UpdatedAt)
 
