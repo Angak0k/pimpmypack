@@ -119,6 +119,46 @@ func TestGetInventories(t *testing.T) {
 	})
 }
 
+func TestGetInventoriesPackCount(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.GET("/inventories", GetInventories)
+
+	t.Run("PackCount values are correct", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, "/inventories", nil)
+		if err != nil {
+			t.Fatalf("Failed to create request: %v", err)
+		}
+
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+
+		var allInventories Inventories
+		if err := json.Unmarshal(w.Body.Bytes(), &allInventories); err != nil {
+			t.Fatalf("Failed to unmarshal response body: %v", err)
+		}
+
+		// Build a lookup by ID
+		byID := make(map[uint]Inventory)
+		for _, inv := range allInventories {
+			byID[inv.ID] = inv
+		}
+
+		// Backpack (inventories[0]) is in 2 packs
+		if got := byID[inventories[0].ID].PackCount; got != 2 {
+			t.Errorf("Expected Backpack PackCount=2, got %d", got)
+		}
+		// Tent (inventories[1]) is in 1 pack
+		if got := byID[inventories[1].ID].PackCount; got != 1 {
+			t.Errorf("Expected Tent PackCount=1, got %d", got)
+		}
+		// Sleeping Bag (inventories[2]) is in 0 packs
+		if got := byID[inventories[2].ID].PackCount; got != 0 {
+			t.Errorf("Expected Sleeping Bag PackCount=0, got %d", got)
+		}
+	})
+}
+
 // validateInventory checks if the expected inventory exists in the response and validates its fields
 func validateInventory(t *testing.T, responseInventories Inventories, expectedInventory Inventory) {
 	// Find the matching inventory in the response by both UserID and ItemName
@@ -159,6 +199,8 @@ func compareInventoryFields(t *testing.T, found, expected *Inventory) {
 		t.Errorf("Expected Price %v but got %v", expected.Price, found.Price)
 	case !cmp.Equal(found.Currency, expected.Currency):
 		t.Errorf("Expected Currency %v but got %v", expected.Currency, found.Currency)
+	case !cmp.Equal(found.PackCount, expected.PackCount):
+		t.Errorf("Expected PackCount %v but got %v", expected.PackCount, found.PackCount)
 	}
 }
 
