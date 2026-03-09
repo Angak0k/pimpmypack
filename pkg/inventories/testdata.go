@@ -168,6 +168,11 @@ func loadingInventoryDataset() error {
 		return err
 	}
 
+	// Set expected PackCount values to match inserted pack_content data
+	inventories[0].PackCount = 2 // Backpack → 2 packs
+	inventories[1].PackCount = 1 // Tent → 1 pack
+	// inventories[2] and inventories[3] remain 0 (not linked to any pack)
+
 	// Commit the transaction
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("failed to commit transaction: %w", err)
