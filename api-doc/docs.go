@@ -1068,6 +1068,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/myinventory/merge": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Merges the source inventory item into the target item. Pack references are consolidated.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Inventories"
+                ],
+                "summary": "Merge two inventory items",
+                "parameters": [
+                    {
+                        "description": "Merge request",
+                        "name": "merge",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/inventories.MergeInventoryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Merged inventory item",
+                        "schema": {
+                            "$ref": "#/definitions/inventories.Inventory"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid payload or source equals target",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Item does not belong to you",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Item not found",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/myinventory/{id}": {
             "get": {
                 "security": [
@@ -2942,6 +3011,9 @@ const docTemplate = `{
                 "item_name": {
                     "type": "string"
                 },
+                "pack_count": {
+                    "type": "integer"
+                },
                 "price": {
                     "type": "integer"
                 },
@@ -3009,6 +3081,53 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "price": {
+                    "type": "integer"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
+                }
+            }
+        },
+        "inventories.MergeInventoryRequest": {
+            "type": "object",
+            "required": [
+                "category",
+                "image_source",
+                "item_name",
+                "source_item_id",
+                "target_item_id"
+            ],
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "image_source": {
+                    "type": "string",
+                    "enum": [
+                        "source",
+                        "target",
+                        "none"
+                    ]
+                },
+                "item_name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "source_item_id": {
+                    "type": "integer"
+                },
+                "target_item_id": {
                     "type": "integer"
                 },
                 "url": {

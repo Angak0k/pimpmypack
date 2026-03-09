@@ -62,8 +62,8 @@ type InventoryUpdateRequest struct {
 
 // MergeInventoryRequest represents the input for merging two inventory items
 type MergeInventoryRequest struct {
-	SourceItemID int    `json:"source_item_id" binding:"required"`
-	TargetItemID int    `json:"target_item_id" binding:"required"`
+	SourceItemID uint   `json:"source_item_id" binding:"required"`
+	TargetItemID uint   `json:"target_item_id" binding:"required"`
 	ItemName     string `json:"item_name" binding:"required"`
 	Category     string `json:"category" binding:"required"`
 	Description  string `json:"description"`

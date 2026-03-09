@@ -461,7 +461,7 @@ func PostMyInventoryMerge(c *gin.Context) {
 	}
 
 	// Verify ownership of source item
-	sourceItem, err := findInventoryByID(c.Request.Context(), uint(input.SourceItemID))
+	sourceItem, err := findInventoryByID(c.Request.Context(), input.SourceItemID)
 	if err != nil {
 		if errors.Is(err, ErrNoItemFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Source inventory item not found"})
@@ -477,7 +477,7 @@ func PostMyInventoryMerge(c *gin.Context) {
 	}
 
 	// Verify ownership of target item
-	targetItem, err := findInventoryByID(c.Request.Context(), uint(input.TargetItemID))
+	targetItem, err := findInventoryByID(c.Request.Context(), input.TargetItemID)
 	if err != nil {
 		if errors.Is(err, ErrNoItemFound) {
 			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Target inventory item not found"})

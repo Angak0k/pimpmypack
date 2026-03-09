@@ -295,7 +295,8 @@ func createMergeTestData(ctx context.Context) error {
 		UpdatedAt:   now,
 	}
 	err := database.DB().QueryRowContext(ctx,
-		`INSERT INTO inventory (user_id, item_name, category, description, weight, url, price, currency, created_at, updated_at)
+		`INSERT INTO inventory (user_id, item_name, category, description,
+		weight, url, price, currency, created_at, updated_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id;`,
 		source.UserID, source.ItemName, source.Category, source.Description,
 		source.Weight, source.URL, source.Price, source.Currency, now, now).Scan(&source.ID)
@@ -317,7 +318,8 @@ func createMergeTestData(ctx context.Context) error {
 		UpdatedAt:   now,
 	}
 	err = database.DB().QueryRowContext(ctx,
-		`INSERT INTO inventory (user_id, item_name, category, description, weight, url, price, currency, created_at, updated_at)
+		`INSERT INTO inventory (user_id, item_name, category, description,
+		weight, url, price, currency, created_at, updated_at)
 		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id;`,
 		target.UserID, target.ItemName, target.Category, target.Description,
 		target.Weight, target.URL, target.Price, target.Currency, now, now).Scan(&target.ID)
