@@ -59,3 +59,17 @@ type InventoryUpdateRequest struct {
 	Price       int    `json:"price"`
 	Currency    string `json:"currency"`
 }
+
+// MergeInventoryRequest represents the input for merging two inventory items
+type MergeInventoryRequest struct {
+	SourceItemID uint   `json:"source_item_id" binding:"required,gt=0"`
+	TargetItemID uint   `json:"target_item_id" binding:"required,gt=0"`
+	ItemName     string `json:"item_name" binding:"required"`
+	Category     string `json:"category" binding:"required"`
+	Description  string `json:"description"`
+	Weight       int    `json:"weight"`
+	URL          string `json:"url"`
+	Price        int    `json:"price"`
+	Currency     string `json:"currency"`
+	ImageSource  string `json:"image_source" binding:"required,oneof=source target none"`
+}

@@ -158,6 +158,7 @@ func setupProtectedRoutes(router *gin.Engine) {
 	protected.POST("/mypack/:id/packcontent", packs.PostMyPackContent)
 	protected.PUT("/mypack/:id/packcontent/:item_id", packs.PutMyPackContentByID)
 	protected.DELETE("/mypack/:id/packcontent/:item_id", packs.DeleteMyPackContentByID)
+	protected.POST("/myinventory/merge", inventories.PostMyInventoryMerge)
 	protected.GET("/myinventory/:id", inventories.GetMyInventoryByID)
 	protected.POST("/myinventory", inventories.PostMyInventory)
 	protected.PUT("/myinventory/:id", inventories.PutMyInventoryByID)

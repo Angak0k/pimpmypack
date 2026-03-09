@@ -310,6 +310,135 @@ func deleteInventoryByID(ctx context.Context, id uint) error {
 	return nil
 }
 
+// mergeInventoryItems merges the source inventory item into the target inventory item within a transaction.
+// It updates the target item properties, consolidates pack_content references, handles images,
+// and deletes the source item.
+func mergeInventoryItems(ctx context.Context, req *MergeInventoryRequest) (*Inventory, error) {
+	tx, err := database.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	if err = mergeUpdateTargetAndPackContent(ctx, tx, req); err != nil {
+		return nil, err
+	}
+
+	if err = mergeHandleImages(ctx, tx, req); err != nil {
+		return nil, err
+	}
+
+	// Delete source inventory item (CASCADE cleans up remaining refs)
+	_, err = tx.ExecContext(ctx, `DELETE FROM inventory WHERE id = $1;`, req.SourceItemID)
+	if err != nil {
+		return nil, err
+	}
+
+	inventory, err := mergeQueryResult(ctx, tx, req.TargetItemID)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return inventory, nil
+}
+
+// mergeUpdateTargetAndPackContent updates the target item properties and consolidates pack_content rows.
+func mergeUpdateTargetAndPackContent(ctx context.Context, tx *sql.Tx, req *MergeInventoryRequest) error {
+	// Update target item with merged property values
+	_, err := tx.ExecContext(ctx,
+		`UPDATE inventory
+		SET item_name = $1, category = $2, description = $3, weight = $4,
+			url = $5, price = $6, currency = $7, updated_at = NOW()
+		WHERE id = $8;`,
+		req.ItemName, req.Category, req.Description, req.Weight,
+		req.URL, req.Price, req.Currency, req.TargetItemID)
+	if err != nil {
+		return err
+	}
+
+	// Sum quantities for packs containing both items
+	_, err = tx.ExecContext(ctx,
+		`UPDATE pack_content AS t
+		SET quantity = COALESCE(t.quantity, 0) + COALESCE(s.quantity, 0), updated_at = NOW()
+		FROM pack_content AS s
+		WHERE s.item_id = $1 AND t.item_id = $2 AND s.pack_id = t.pack_id;`,
+		req.SourceItemID, req.TargetItemID)
+	if err != nil {
+		return err
+	}
+
+	// Delete overlapping source pack_content rows
+	_, err = tx.ExecContext(ctx,
+		`DELETE FROM pack_content WHERE item_id = $1
+		AND pack_id IN (SELECT pack_id FROM pack_content WHERE item_id = $2);`,
+		req.SourceItemID, req.TargetItemID)
+	if err != nil {
+		return err
+	}
+
+	// Reassign remaining source pack_content rows to target
+	_, err = tx.ExecContext(ctx,
+		`UPDATE pack_content SET item_id = $1, updated_at = NOW() WHERE item_id = $2;`,
+		req.TargetItemID, req.SourceItemID)
+	return err
+}
+
+// mergeHandleImages handles image reassignment based on the image_source selection.
+func mergeHandleImages(ctx context.Context, tx *sql.Tx, req *MergeInventoryRequest) error {
+	switch req.ImageSource {
+	case "source":
+		if _, err := tx.ExecContext(ctx,
+			`DELETE FROM inventory_images WHERE item_id = $1;`, req.TargetItemID); err != nil {
+			return err
+		}
+		_, err := tx.ExecContext(ctx,
+			`UPDATE inventory_images SET item_id = $1 WHERE item_id = $2;`,
+			req.TargetItemID, req.SourceItemID)
+		return err
+	case "target":
+		_, err := tx.ExecContext(ctx,
+			`DELETE FROM inventory_images WHERE item_id = $1;`, req.SourceItemID)
+		return err
+	case "none":
+		_, err := tx.ExecContext(ctx,
+			`DELETE FROM inventory_images WHERE item_id IN ($1, $2);`,
+			req.SourceItemID, req.TargetItemID)
+		return err
+	}
+	return nil
+}
+
+// mergeQueryResult queries the updated target item after the merge.
+func mergeQueryResult(ctx context.Context, tx *sql.Tx, targetID uint) (*Inventory, error) {
+	var inventory Inventory
+	err := tx.QueryRowContext(ctx,
+		`SELECT i.id, i.user_id, i.item_name, i.category, i.description,
+			i.weight, i.url, i.price, i.currency,
+			CASE WHEN ii.item_id IS NOT NULL THEN true ELSE false END as has_image,
+			(SELECT COUNT(DISTINCT pc.pack_id) FROM pack_content pc WHERE pc.item_id = i.id) as pack_count,
+			i.created_at, i.updated_at
+		FROM inventory i
+		LEFT JOIN inventory_images ii ON i.id = ii.item_id
+		WHERE i.id = $1;`,
+		targetID).Scan(
+		&inventory.ID, &inventory.UserID, &inventory.ItemName, &inventory.Category,
+		&inventory.Description, &inventory.Weight, &inventory.URL, &inventory.Price,
+		&inventory.Currency, &inventory.HasImage, &inventory.PackCount,
+		&inventory.CreatedAt, &inventory.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return &inventory, nil
+}
+
 // checkInventoryOwnership verifies if an inventory item belongs to a specific user
 func checkInventoryOwnership(ctx context.Context, id uint, userID uint) (bool, error) {
 	var rows int

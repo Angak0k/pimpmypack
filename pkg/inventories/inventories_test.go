@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
@@ -698,6 +699,374 @@ func TestGetMyInventoryByID(t *testing.T) {
 			t.Errorf("Expected status code %d but got %d", http.StatusForbidden, w.Code)
 		}
 	})
+}
+
+func TestPostMyInventoryMerge(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	ctx := context.Background()
+
+	t.Run("Merge with shared pack - quantities summed", func(t *testing.T) {
+		testMergeSharedPack(ctx, t)
+	})
+	t.Run("Merge with no pack overlap", func(t *testing.T) {
+		testMergeNoPackOverlap(ctx, t)
+	})
+	t.Run("Merge with image_source=source", func(t *testing.T) {
+		testMergeImageSource(ctx, t)
+	})
+	t.Run("Merge with image_source=target", func(t *testing.T) {
+		testMergeImageTarget(ctx, t)
+	})
+	t.Run("Merge with image_source=none", func(t *testing.T) {
+		testMergeImageNone(ctx, t)
+	})
+	t.Run("Merge fails - source equals target", func(t *testing.T) {
+		testMergeSourceEqualsTarget(t)
+	})
+	t.Run("Merge fails - ownership validation", func(t *testing.T) {
+		testMergeOwnershipValidation(t)
+	})
+	t.Run("Merge fails - source not found", func(t *testing.T) {
+		testMergeSourceNotFound(t)
+	})
+}
+
+func testMergeSharedPack(ctx context.Context, t *testing.T) {
+	err := createMergeTestData(ctx)
+	if err != nil {
+		t.Fatalf("Failed to create merge test data: %v", err)
+	}
+	defer func() {
+		if err := cleanupMergeTestData(ctx); err != nil {
+			t.Errorf("Failed to cleanup merge test data: %v", err)
+		}
+	}()
+
+	source := mergeTestItems[0]
+	target := mergeTestItems[1]
+
+	w := executeMergeRequest(t, MergeInventoryRequest{
+		SourceItemID: source.ID,
+		TargetItemID: target.ID,
+		ItemName:     "Merged Item",
+		Category:     "Merged Category",
+		Description:  "Merged description",
+		Weight:       300,
+		URL:          "https://example.com/merged",
+		Price:        30,
+		Currency:     "EUR",
+		ImageSource:  "none",
+	}, users[0].ID)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var mergedItem Inventory
+	if err := json.Unmarshal(w.Body.Bytes(), &mergedItem); err != nil {
+		t.Fatalf("Failed to unmarshal response body: %v", err)
+	}
+
+	if mergedItem.ID != target.ID {
+		t.Errorf("Expected merged item ID %d but got %d", target.ID, mergedItem.ID)
+	}
+	if mergedItem.ItemName != "Merged Item" {
+		t.Errorf("Expected item name 'Merged Item' but got '%s'", mergedItem.ItemName)
+	}
+	if mergedItem.PackCount != 2 {
+		t.Errorf("Expected pack count 2 but got %d", mergedItem.PackCount)
+	}
+
+	// Verify source item is deleted
+	_, err = findInventoryByID(ctx, source.ID)
+	if !errors.Is(err, ErrNoItemFound) {
+		t.Errorf("Expected source item to be deleted, got err: %v", err)
+	}
+
+	// Verify shared pack quantity was summed (2 + 3 = 5)
+	var quantity int
+	err = database.DB().QueryRowContext(ctx,
+		`SELECT quantity FROM pack_content WHERE pack_id = $1 AND item_id = $2`,
+		mergeTestPackIDs[0], target.ID).Scan(&quantity)
+	if err != nil {
+		t.Fatalf("Failed to query pack_content: %v", err)
+	}
+	if quantity != 5 {
+		t.Errorf("Expected quantity 5 in shared pack but got %d", quantity)
+	}
+}
+
+func testMergeNoPackOverlap(ctx context.Context, t *testing.T) {
+	err := createMergeTestData(ctx)
+	if err != nil {
+		t.Fatalf("Failed to create merge test data: %v", err)
+	}
+	defer func() {
+		if err := cleanupMergeTestData(ctx); err != nil {
+			t.Errorf("Failed to cleanup merge test data: %v", err)
+		}
+	}()
+
+	source := mergeTestItems[0]
+	target := mergeTestItems[1]
+
+	// Remove target from shared pack so there's no overlap
+	_, err = database.DB().ExecContext(ctx,
+		`DELETE FROM pack_content WHERE pack_id = $1 AND item_id = $2`,
+		mergeTestPackIDs[0], target.ID)
+	if err != nil {
+		t.Fatalf("Failed to remove target from shared pack: %v", err)
+	}
+
+	w := executeMergeRequest(t, MergeInventoryRequest{
+		SourceItemID: source.ID,
+		TargetItemID: target.ID,
+		ItemName:     "No Overlap Merged",
+		Category:     "Test",
+		Weight:       150,
+		Price:        15,
+		Currency:     "USD",
+		ImageSource:  "none",
+	}, users[0].ID)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var mergedItem Inventory
+	if err := json.Unmarshal(w.Body.Bytes(), &mergedItem); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if mergedItem.PackCount != 2 {
+		t.Errorf("Expected pack count 2 but got %d", mergedItem.PackCount)
+	}
+}
+
+func testMergeImageSource(ctx context.Context, t *testing.T) {
+	err := createMergeTestData(ctx)
+	if err != nil {
+		t.Fatalf("Failed to create merge test data: %v", err)
+	}
+	defer func() {
+		if err := cleanupMergeTestData(ctx); err != nil {
+			t.Errorf("Failed to cleanup merge test data: %v", err)
+		}
+	}()
+
+	source := mergeTestItems[0]
+	target := mergeTestItems[1]
+	now := time.Now()
+
+	insertTestImage(ctx, t, source.ID, "fake-source-image", now)
+	insertTestImage(ctx, t, target.ID, "fake-target-image", now)
+
+	w := executeMergeRequest(t, MergeInventoryRequest{
+		SourceItemID: source.ID,
+		TargetItemID: target.ID,
+		ItemName:     "Image Source Test",
+		Category:     "Test",
+		Weight:       100,
+		Currency:     "USD",
+		ImageSource:  "source",
+	}, users[0].ID)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var mergedItem Inventory
+	if err := json.Unmarshal(w.Body.Bytes(), &mergedItem); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if !mergedItem.HasImage {
+		t.Errorf("Expected merged item to have image (source image reassigned)")
+	}
+
+	var imageData []byte
+	err = database.DB().QueryRowContext(ctx,
+		`SELECT image_data FROM inventory_images WHERE item_id = $1`,
+		target.ID).Scan(&imageData)
+	if err != nil {
+		t.Fatalf("Failed to query image: %v", err)
+	}
+	if string(imageData) != "fake-source-image" {
+		t.Errorf("Expected source image data but got different data")
+	}
+}
+
+func testMergeImageTarget(ctx context.Context, t *testing.T) {
+	err := createMergeTestData(ctx)
+	if err != nil {
+		t.Fatalf("Failed to create merge test data: %v", err)
+	}
+	defer func() {
+		if err := cleanupMergeTestData(ctx); err != nil {
+			t.Errorf("Failed to cleanup merge test data: %v", err)
+		}
+	}()
+
+	source := mergeTestItems[0]
+	target := mergeTestItems[1]
+
+	insertTestImage(ctx, t, target.ID, "fake-target-image", time.Now())
+
+	w := executeMergeRequest(t, MergeInventoryRequest{
+		SourceItemID: source.ID,
+		TargetItemID: target.ID,
+		ItemName:     "Image Target Test",
+		Category:     "Test",
+		Weight:       100,
+		Currency:     "USD",
+		ImageSource:  "target",
+	}, users[0].ID)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var mergedItem Inventory
+	if err := json.Unmarshal(w.Body.Bytes(), &mergedItem); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if !mergedItem.HasImage {
+		t.Errorf("Expected merged item to have image (target image kept)")
+	}
+}
+
+func testMergeImageNone(ctx context.Context, t *testing.T) {
+	err := createMergeTestData(ctx)
+	if err != nil {
+		t.Fatalf("Failed to create merge test data: %v", err)
+	}
+	defer func() {
+		if err := cleanupMergeTestData(ctx); err != nil {
+			t.Errorf("Failed to cleanup merge test data: %v", err)
+		}
+	}()
+
+	source := mergeTestItems[0]
+	target := mergeTestItems[1]
+	now := time.Now()
+
+	insertTestImage(ctx, t, source.ID, "fake-source-image", now)
+	insertTestImage(ctx, t, target.ID, "fake-target-image", now)
+
+	w := executeMergeRequest(t, MergeInventoryRequest{
+		SourceItemID: source.ID,
+		TargetItemID: target.ID,
+		ItemName:     "Image None Test",
+		Category:     "Test",
+		Weight:       100,
+		Currency:     "USD",
+		ImageSource:  "none",
+	}, users[0].ID)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("Expected status %d but got %d. Body: %s", http.StatusOK, w.Code, w.Body.String())
+	}
+
+	var mergedItem Inventory
+	if err := json.Unmarshal(w.Body.Bytes(), &mergedItem); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if mergedItem.HasImage {
+		t.Errorf("Expected merged item to have no image with image_source=none")
+	}
+}
+
+func testMergeSourceEqualsTarget(t *testing.T) {
+	w := executeMergeRequest(t, MergeInventoryRequest{
+		SourceItemID: inventories[0].ID,
+		TargetItemID: inventories[0].ID,
+		ItemName:     "Same Item",
+		Category:     "Test",
+		Currency:     "USD",
+		ImageSource:  "none",
+	}, users[0].ID)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("Expected status %d but got %d", http.StatusBadRequest, w.Code)
+	}
+}
+
+func testMergeOwnershipValidation(t *testing.T) {
+	w := executeMergeRequest(t, MergeInventoryRequest{
+		SourceItemID: inventories[0].ID,
+		TargetItemID: inventories[1].ID,
+		ItemName:     "Stolen Merge",
+		Category:     "Test",
+		Currency:     "USD",
+		ImageSource:  "none",
+	}, users[1].ID)
+
+	if w.Code != http.StatusForbidden {
+		t.Errorf("Expected status %d but got %d", http.StatusForbidden, w.Code)
+	}
+}
+
+func testMergeSourceNotFound(t *testing.T) {
+	w := executeMergeRequest(t, MergeInventoryRequest{
+		SourceItemID: 999999,
+		TargetItemID: inventories[0].ID,
+		ItemName:     "Missing Source",
+		Category:     "Test",
+		Currency:     "USD",
+		ImageSource:  "none",
+	}, users[0].ID)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d but got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+// executeMergeRequest is a helper that sends a merge request and returns the recorder.
+func executeMergeRequest(
+	t *testing.T,
+	mergeReq MergeInventoryRequest,
+	userID uint,
+) *httptest.ResponseRecorder {
+	t.Helper()
+
+	router := gin.Default()
+	router.POST("/myinventory/merge", PostMyInventoryMerge)
+
+	token, err := security.GenerateToken(userID)
+	if err != nil {
+		t.Fatalf("Failed to generate token: %v", err)
+	}
+
+	jsonData, err := json.Marshal(mergeReq)
+	if err != nil {
+		t.Fatalf("Failed to marshal merge request: %v", err)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost, "/myinventory/merge", bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to create request: %v", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	return w
+}
+
+// insertTestImage inserts a fake image for testing merge image handling.
+func insertTestImage(
+	ctx context.Context, t *testing.T, itemID uint, data string, now time.Time,
+) {
+	t.Helper()
+	_, err := database.DB().ExecContext(ctx,
+		`INSERT INTO inventory_images
+		(item_id, image_data, mime_type, file_size, width, height, uploaded_at, updated_at)
+		VALUES ($1, $2, 'image/jpeg', 100, 50, 50, $3, $4)`,
+		itemID, []byte(data), now, now)
+	if err != nil {
+		t.Fatalf("Failed to insert test image: %v", err)
+	}
 }
 
 // Helper functions to reduce cognitive complexity
