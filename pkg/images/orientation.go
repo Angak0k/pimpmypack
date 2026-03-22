@@ -10,63 +10,58 @@ import (
 // Returns 1-8 for valid orientations, defaults to 1 (normal) on any error,
 // non-JPEG input, or missing EXIF data.
 func readEXIFOrientation(data []byte) int {
-	// Need at least enough bytes for JPEG SOI + APP1 marker
-	if len(data) < 14 {
+	exifBody := findEXIFSegment(data)
+	if exifBody == nil {
 		return 1
 	}
+	return parseEXIFOrientation(exifBody)
+}
 
-	// Verify JPEG SOI marker
-	if data[0] != 0xFF || data[1] != 0xD8 {
-		return 1
+// findEXIFSegment walks JPEG markers and returns the body of the first EXIF APP1 segment.
+// Returns nil if not found or if the data is not a valid JPEG.
+func findEXIFSegment(data []byte) []byte {
+	// Need at least JPEG SOI + one marker header
+	if len(data) < 14 || data[0] != 0xFF || data[1] != 0xD8 {
+		return nil
 	}
 
-	// Walk through JPEG markers to find APP1 (EXIF)
 	offset := 2
 	for offset+4 <= len(data) {
 		if data[offset] != 0xFF {
-			return 1
+			return nil
 		}
 
 		marker := data[offset+1]
-		// Skip padding bytes
 		if marker == 0xFF {
 			offset++
 			continue
 		}
-
 		// SOS marker — no more metadata segments
 		if marker == 0xDA {
-			return 1
+			return nil
 		}
 
-		// Read segment length
-		if offset+4 > len(data) {
-			return 1
-		}
 		segLen := int(binary.BigEndian.Uint16(data[offset+2 : offset+4]))
 		if segLen < 2 {
-			return 1
+			return nil
 		}
 
 		segEnd := offset + 2 + segLen
 		if segEnd > len(data) {
-			return 1
+			return nil
 		}
 
-		// APP1 marker (0xE1) — possible EXIF data
 		if marker == 0xE1 {
-			segmentBody := data[offset+4 : segEnd]
-			// Only treat as EXIF if it has the standard header; skip XMP or other APP1 segments
-			if len(segmentBody) >= 6 && string(segmentBody[0:6]) == "Exif\x00\x00" {
-				return parseEXIFOrientation(segmentBody)
+			body := data[offset+4 : segEnd]
+			if len(body) >= 6 && string(body[0:6]) == "Exif\x00\x00" {
+				return body
 			}
 		}
 
-		// Skip to next marker
 		offset = segEnd
 	}
 
-	return 1
+	return nil
 }
 
 // parseEXIFOrientation extracts the orientation value from an APP1 EXIF segment body.
@@ -158,26 +153,33 @@ func applyOrientation(img image.Image, orientation int) image.Image {
 	for y := 0; y < h; y++ {
 		for x := 0; x < w; x++ {
 			c := img.At(bounds.Min.X+x, bounds.Min.Y+y)
-			var dx, dy int
-			switch orientation {
-			case 2: // Flip horizontal
-				dx, dy = w-1-x, y
-			case 3: // Rotate 180
-				dx, dy = w-1-x, h-1-y
-			case 4: // Flip vertical
-				dx, dy = x, h-1-y
-			case 5: // Transpose
-				dx, dy = y, x
-			case 6: // Rotate 90 CW
-				dx, dy = h-1-y, x
-			case 7: // Transverse
-				dx, dy = h-1-y, w-1-x
-			case 8: // Rotate 270 CW
-				dx, dy = y, w-1-x
-			}
+			dx, dy := mapOrientation(orientation, x, y, w, h)
 			dst.Set(dx, dy, color.NRGBAModel.Convert(c))
 		}
 	}
 
 	return dst
+}
+
+// mapOrientation returns the destination coordinates for a pixel at (x, y)
+// given the EXIF orientation value and image dimensions w×h.
+func mapOrientation(orientation, x, y, w, h int) (int, int) {
+	switch orientation {
+	case 2: // Flip horizontal
+		return w - 1 - x, y
+	case 3: // Rotate 180
+		return w - 1 - x, h - 1 - y
+	case 4: // Flip vertical
+		return x, h - 1 - y
+	case 5: // Transpose
+		return y, x
+	case 6: // Rotate 90 CW
+		return h - 1 - y, x
+	case 7: // Transverse
+		return h - 1 - y, w - 1 - x
+	case 8: // Rotate 270 CW
+		return y, w - 1 - x
+	default:
+		return x, y
+	}
 }
