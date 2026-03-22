@@ -4,7 +4,7 @@
 > It should be used in conjunction with any frontend candidates.  
 > It could replace [Lighterpack](https://lighterpack.com/) if this project dies (because it's not maintained anymore)
 
-Application is available here: https://app.alki.earth
+Application is available [here](https://app.alki.earth).
 
 ## PimpMyPack API
 
