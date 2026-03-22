@@ -48,13 +48,22 @@ func readEXIFOrientation(data []byte) int {
 			return 1
 		}
 
-		// APP1 marker (0xE1) — EXIF data
+		segEnd := offset + 2 + segLen
+		if segEnd > len(data) {
+			return 1
+		}
+
+		// APP1 marker (0xE1) — possible EXIF data
 		if marker == 0xE1 {
-			return parseEXIFOrientation(data[offset+4 : offset+2+segLen])
+			segmentBody := data[offset+4 : segEnd]
+			// Only treat as EXIF if it has the standard header; skip XMP or other APP1 segments
+			if len(segmentBody) >= 6 && string(segmentBody[0:6]) == "Exif\x00\x00" {
+				return parseEXIFOrientation(segmentBody)
+			}
 		}
 
 		// Skip to next marker
-		offset += 2 + segLen
+		offset = segEnd
 	}
 
 	return 1

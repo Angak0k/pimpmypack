@@ -119,6 +119,33 @@ func buildEXIFSegment(orientation int, bigEndian bool) []byte {
 	return buf.Bytes()
 }
 
+// buildXMPThenEXIFJPEG creates a JPEG with a non-EXIF APP1 segment (XMP) followed
+// by a real EXIF APP1 segment with the given orientation. This tests that the parser
+// correctly skips non-EXIF APP1 segments.
+func buildXMPThenEXIFJPEG(t *testing.T, w, h, orientation int) []byte {
+	t.Helper()
+
+	base := buildEXIFJPEG(t, w, h, orientation, false)
+
+	// Build a fake XMP APP1 segment (starts with "http://ns.adobe.com/xap/", not "Exif\0\0")
+	xmpBody := []byte("http://ns.adobe.com/xap/1.0/\x00<x:xmpmeta/>")
+	xmpSegLen := len(xmpBody) + 2
+	var xmpSeg bytes.Buffer
+	xmpSeg.Write([]byte{0xFF, 0xE1})
+	lenBytes := make([]byte, 2)
+	binary.BigEndian.PutUint16(lenBytes, uint16(xmpSegLen))
+	xmpSeg.Write(lenBytes)
+	xmpSeg.Write(xmpBody)
+
+	// Insert XMP segment after SOI, before the existing EXIF APP1
+	var result bytes.Buffer
+	result.Write(base[:2]) // SOI
+	result.Write(xmpSeg.Bytes())
+	result.Write(base[2:]) // EXIF APP1 + rest of JPEG
+
+	return result.Bytes()
+}
+
 func TestReadEXIFOrientation(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -175,6 +202,11 @@ func TestReadEXIFOrientation(t *testing.T) {
 			data:     []byte("hello world this is not an image"),
 			expected: 1,
 		},
+		{
+			name:     "XMP APP1 before EXIF APP1",
+			data:     buildXMPThenEXIFJPEG(t, 100, 80, 6),
+			expected: 6,
+		},
 	}
 
 	for _, tt := range tests {
@@ -210,12 +242,8 @@ func TestApplyOrientation(t *testing.T) {
 	}
 
 	red := color.NRGBA{255, 0, 0, 255}
-	green := color.NRGBA{0, 255, 0, 255}
-	blue := color.NRGBA{0, 0, 255, 255}
 	white := color.NRGBA{255, 255, 255, 255}
 	yellow := color.NRGBA{255, 255, 0, 255}
-	cyan := color.NRGBA{0, 255, 255, 255}
-	magenta := color.NRGBA{255, 0, 255, 255}
 	black := color.NRGBA{0, 0, 0, 255}
 
 	tests := []struct {
@@ -327,11 +355,6 @@ func TestApplyOrientation(t *testing.T) {
 		},
 	}
 
-	_ = green
-	_ = blue
-	_ = cyan
-	_ = magenta
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			result := applyOrientation(img, tt.orientation)
@@ -358,9 +381,8 @@ func TestApplyOrientation(t *testing.T) {
 // TestProcessImage_EXIFOrientation6 verifies the full pipeline correctly rotates
 // a JPEG with EXIF orientation 6 (iPhone portrait).
 func TestProcessImage_EXIFOrientation6(t *testing.T) {
-	// Create a 200x300 JPEG (landscape pixels) with orientation 6
-	// After EXIF correction, it should become 300x200 (portrait → rotated to landscape dims swapped)
-	// Actually: 200w x 300h pixels stored, orientation 6 = rotate 90 CW → output should be 300w x 200h
+	// Stored pixels: 200w × 300h, tagged with EXIF orientation 6 (rotate 90° CW).
+	// After applying the EXIF orientation, the output image should be 300w × 200h.
 	data := buildEXIFJPEG(t, 200, 300, 6, false)
 
 	result, err := ProcessImage(data)
