@@ -75,6 +75,9 @@ func DecodeImage(data []byte) (image.Image, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrCorrupted, err)
 	}
+	// Apply EXIF orientation correction (no-op for non-JPEG or orientation=1)
+	orientation := readEXIFOrientation(data)
+	img = applyOrientation(img, orientation)
 	return img, nil
 }
 
