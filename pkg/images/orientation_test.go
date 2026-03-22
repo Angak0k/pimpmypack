@@ -105,7 +105,8 @@ func buildEXIFSegment(orientation int, bigEndian bool) []byte {
 
 	// Build APP1 segment
 	exifHeader := []byte("Exif\x00\x00")
-	segBody := append(exifHeader, tiff.Bytes()...)
+	exifHeader = append(exifHeader, tiff.Bytes()...)
+	segBody := exifHeader
 	segLen := len(segBody) + 2 // +2 for the length field itself
 
 	// APP1 marker + length + body
@@ -341,7 +342,11 @@ func TestApplyOrientation(t *testing.T) {
 			}
 
 			for _, check := range tt.checks {
-				got := color.NRGBAModel.Convert(result.At(check.x, check.y)).(color.NRGBA)
+				converted := color.NRGBAModel.Convert(result.At(check.x, check.y))
+				got, ok := converted.(color.NRGBA)
+				if !ok {
+					t.Fatalf("pixel(%d,%d) failed color conversion", check.x, check.y)
+				}
 				if got != check.c {
 					t.Errorf("pixel(%d,%d) = %v, want %v", check.x, check.y, got, check.c)
 				}
