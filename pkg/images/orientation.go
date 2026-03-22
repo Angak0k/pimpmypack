@@ -1,0 +1,185 @@
+package images
+
+import (
+	"encoding/binary"
+	"image"
+	"image/color"
+)
+
+// readEXIFOrientation parses JPEG EXIF data to extract the orientation tag.
+// Returns 1-8 for valid orientations, defaults to 1 (normal) on any error,
+// non-JPEG input, or missing EXIF data.
+func readEXIFOrientation(data []byte) int {
+	exifBody := findEXIFSegment(data)
+	if exifBody == nil {
+		return 1
+	}
+	return parseEXIFOrientation(exifBody)
+}
+
+// findEXIFSegment walks JPEG markers and returns the body of the first EXIF APP1 segment.
+// Returns nil if not found or if the data is not a valid JPEG.
+func findEXIFSegment(data []byte) []byte {
+	// Need at least JPEG SOI + one marker header
+	if len(data) < 14 || data[0] != 0xFF || data[1] != 0xD8 {
+		return nil
+	}
+
+	offset := 2
+	for offset+4 <= len(data) {
+		if data[offset] != 0xFF {
+			return nil
+		}
+
+		marker := data[offset+1]
+		if marker == 0xFF {
+			offset++
+			continue
+		}
+		// SOS marker — no more metadata segments
+		if marker == 0xDA {
+			return nil
+		}
+
+		segLen := int(binary.BigEndian.Uint16(data[offset+2 : offset+4]))
+		if segLen < 2 {
+			return nil
+		}
+
+		segEnd := offset + 2 + segLen
+		if segEnd > len(data) {
+			return nil
+		}
+
+		if marker == 0xE1 {
+			body := data[offset+4 : segEnd]
+			if len(body) >= 6 && string(body[0:6]) == "Exif\x00\x00" {
+				return body
+			}
+		}
+
+		offset = segEnd
+	}
+
+	return nil
+}
+
+// parseEXIFOrientation extracts the orientation value from an APP1 EXIF segment body.
+func parseEXIFOrientation(exif []byte) int {
+	// Verify "Exif\0\0" header
+	if len(exif) < 14 || string(exif[0:6]) != "Exif\x00\x00" {
+		return 1
+	}
+
+	tiff := exif[6:]
+
+	// Determine byte order
+	var bo binary.ByteOrder
+	switch string(tiff[0:2]) {
+	case "II":
+		bo = binary.LittleEndian
+	case "MM":
+		bo = binary.BigEndian
+	default:
+		return 1
+	}
+
+	// Verify TIFF magic number (42)
+	if bo.Uint16(tiff[2:4]) != 0x002A {
+		return 1
+	}
+
+	// Get offset to IFD0
+	ifdOffset := int(bo.Uint32(tiff[4:8]))
+	if ifdOffset+2 > len(tiff) {
+		return 1
+	}
+
+	// Read number of IFD entries
+	numEntries := int(bo.Uint16(tiff[ifdOffset : ifdOffset+2]))
+	entryStart := ifdOffset + 2
+
+	// Walk IFD0 entries looking for orientation tag (0x0112)
+	for i := 0; i < numEntries; i++ {
+		entryOffset := entryStart + i*12
+		if entryOffset+12 > len(tiff) {
+			return 1
+		}
+
+		tag := bo.Uint16(tiff[entryOffset : entryOffset+2])
+		if tag == 0x0112 {
+			// Orientation tag found — value is a SHORT (uint16)
+			val := int(bo.Uint16(tiff[entryOffset+8 : entryOffset+10]))
+			if val >= 1 && val <= 8 {
+				return val
+			}
+			return 1
+		}
+	}
+
+	return 1
+}
+
+// applyOrientation transforms an image according to the EXIF orientation value.
+// Returns the original image unchanged for orientation 1 (normal) or invalid values.
+//
+// EXIF orientation values:
+//
+//	1 = Normal (no transform)
+//	2 = Flip horizontal
+//	3 = Rotate 180°
+//	4 = Flip vertical
+//	5 = Transpose (flip horizontal + rotate 270° CW)
+//	6 = Rotate 90° CW
+//	7 = Transverse (flip horizontal + rotate 90° CW)
+//	8 = Rotate 270° CW
+func applyOrientation(img image.Image, orientation int) image.Image {
+	if orientation <= 1 || orientation > 8 {
+		return img
+	}
+
+	bounds := img.Bounds()
+	w := bounds.Dx()
+	h := bounds.Dy()
+
+	// For orientations 5-8, width and height are swapped
+	var dst *image.NRGBA
+	if orientation >= 5 {
+		dst = image.NewNRGBA(image.Rect(0, 0, h, w))
+	} else {
+		dst = image.NewNRGBA(image.Rect(0, 0, w, h))
+	}
+
+	for y := 0; y < h; y++ {
+		for x := 0; x < w; x++ {
+			c := img.At(bounds.Min.X+x, bounds.Min.Y+y)
+			dx, dy := mapOrientation(orientation, x, y, w, h)
+			dst.Set(dx, dy, color.NRGBAModel.Convert(c))
+		}
+	}
+
+	return dst
+}
+
+// mapOrientation returns the destination coordinates for a pixel at (x, y)
+// given the EXIF orientation value and image dimensions w×h.
+func mapOrientation(orientation, x, y, w, h int) (int, int) {
+	switch orientation {
+	case 2: // Flip horizontal
+		return w - 1 - x, y
+	case 3: // Rotate 180
+		return w - 1 - x, h - 1 - y
+	case 4: // Flip vertical
+		return x, h - 1 - y
+	case 5: // Transpose
+		return y, x
+	case 6: // Rotate 90 CW
+		return h - 1 - y, x
+	case 7: // Transverse
+		return h - 1 - y, w - 1 - x
+	case 8: // Rotate 270 CW
+		return y, w - 1 - x
+	default:
+		return x, y
+	}
+}
