@@ -14,8 +14,8 @@ import (
 
 var users = []accounts.User{
 	{
-		Username:     "user-" + random.UniqueId(),
-		Email:        "user-" + random.UniqueId() + "@exemple.com",
+		Username:     "user-" + random.UniqueID(),
+		Email:        "user-" + random.UniqueID() + "@exemple.com",
 		Firstname:    "Joseph",
 		Lastname:     "Doe",
 		Role:         "standard",
@@ -24,8 +24,8 @@ var users = []accounts.User{
 		LastPassword: "password",
 	},
 	{
-		Username:     "user-" + random.UniqueId(),
-		Email:        "user-" + random.UniqueId() + "@exemple.com",
+		Username:     "user-" + random.UniqueID(),
+		Email:        "user-" + random.UniqueID() + "@exemple.com",
 		Firstname:    "Syvie",
 		Lastname:     "Doe",
 		Role:         "standard",

@@ -15,8 +15,8 @@ import (
 
 var users = []User{
 	{
-		Username:            "user-" + random.UniqueId(),
-		Email:               "user-" + random.UniqueId() + "@exemple.com",
+		Username:            "user-" + random.UniqueID(),
+		Email:               "user-" + random.UniqueID() + "@exemple.com",
 		Firstname:           "John",
 		Lastname:            "Doe",
 		Role:                "admin",
@@ -27,8 +27,8 @@ var users = []User{
 		PreferredUnitSystem: "METRIC",
 	},
 	{
-		Username:            "user-" + random.UniqueId(),
-		Email:               "user-" + random.UniqueId() + "@exemple.com",
+		Username:            "user-" + random.UniqueID(),
+		Email:               "user-" + random.UniqueID() + "@exemple.com",
 		Firstname:           "Jane",
 		Lastname:            "Smith",
 		Role:                "standard",
@@ -39,8 +39,8 @@ var users = []User{
 		PreferredUnitSystem: "METRIC",
 	},
 	{
-		Username:            "user-" + random.UniqueId(),
-		Email:               "user-" + random.UniqueId() + "@exemple.com",
+		Username:            "user-" + random.UniqueID(),
+		Email:               "user-" + random.UniqueID() + "@exemple.com",
 		Firstname:           "Alice",
 		Lastname:            "Johnson",
 		Role:                "standard",
@@ -146,7 +146,7 @@ func setupLoginTestData(t *testing.T) (*gin.Engine, User, []byte) {
 	router.POST("/login", Login)
 
 	newUser := User{
-		Username:  "user-" + random.UniqueId(),
+		Username:  "user-" + random.UniqueID(),
 		Password:  "password2",
 		Email:     "newuser2@pmp.com",
 		Firstname: "Jules",

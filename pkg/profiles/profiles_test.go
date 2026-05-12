@@ -65,8 +65,8 @@ func loadingProfileDataset() error {
 	ctx := context.Background()
 	now := time.Now().Truncate(time.Second)
 
-	publicUsername = "pub-" + random.UniqueId()
-	privateUsername = "priv-" + random.UniqueId()
+	publicUsername = "pub-" + random.UniqueID()
+	privateUsername = "priv-" + random.UniqueID()
 
 	// Create public user (is_profile_public = true)
 	err := database.DB().QueryRowContext(ctx,
@@ -126,7 +126,7 @@ func loadingProfileDataset() error {
 	}
 
 	// Create shared pack for public user
-	sharingCode := "profile-test-" + random.UniqueId()
+	sharingCode := "profile-test-" + random.UniqueID()
 	err = database.DB().QueryRowContext(ctx,
 		`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at)
 		VALUES ($1,$2,$3,$4,$5,$6) RETURNING id;`,
@@ -232,7 +232,7 @@ func TestGetPublicProfile_BaseWeightExcludesWornAndConsumable(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 
 	// Create a public user with a pack containing worn and consumable items
-	username := "bw-" + random.UniqueId()
+	username := "bw-" + random.UniqueID()
 	var userID uint
 	err := database.DB().QueryRowContext(ctx,
 		`INSERT INTO account (username, email, firstname, lastname, role, status,
@@ -285,7 +285,7 @@ func TestGetPublicProfile_BaseWeightExcludesWornAndConsumable(t *testing.T) {
 	}
 
 	// Create shared pack
-	sharingCode := "bw-test-" + random.UniqueId()
+	sharingCode := "bw-test-" + random.UniqueID()
 	var packID uint
 	err = database.DB().QueryRowContext(ctx,
 		`INSERT INTO pack (user_id, pack_name, pack_description, sharing_code, created_at, updated_at)
@@ -401,7 +401,7 @@ func TestGetPublicProfile_NoSharedPacks(t *testing.T) {
 	now := time.Now().Truncate(time.Second)
 
 	// Create a public user with no shared packs
-	username := "nopacks-" + random.UniqueId()
+	username := "nopacks-" + random.UniqueID()
 	var userID uint
 	err := database.DB().QueryRowContext(ctx,
 		`INSERT INTO account (username, email, firstname, lastname, role, status,

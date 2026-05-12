@@ -390,7 +390,7 @@ func TestRegisterOK(t *testing.T) {
 	t.Run("Register account", func(t *testing.T) {
 		// Sample account data
 		newAccount := RegisterInput{
-			Username:  "user-" + random.UniqueId(),
+			Username:  "user-" + random.UniqueID(),
 			Password:  "password",
 			Email:     "jane.doe@exemple.com",
 			Firstname: "Jane",
@@ -494,7 +494,7 @@ func TestRegisterKO(t *testing.T) {
 func testRegisterWithDuplicateEmail(t *testing.T, router *gin.Engine) {
 	t.Helper()
 	newAccount := RegisterInput{
-		Username:  "user-" + random.UniqueId(),
+		Username:  "user-" + random.UniqueID(),
 		Password:  "password",
 		Email:     users[0].Email,
 		Firstname: "Duplicate",
@@ -533,7 +533,7 @@ func testRegisterWithAtInUsername(t *testing.T, router *gin.Engine) {
 	newAccount := RegisterInput{
 		Username:  "user@example.com",
 		Password:  "password",
-		Email:     "valid-" + random.UniqueId() + "@example.com",
+		Email:     "valid-" + random.UniqueID() + "@example.com",
 		Firstname: "At",
 		Lastname:  "Username",
 	}
@@ -568,7 +568,7 @@ func testRegisterWithAtInUsername(t *testing.T, router *gin.Engine) {
 func testRegisterWithBadEmail(t *testing.T, router *gin.Engine) {
 	t.Helper()
 	newAccount := RegisterInput{
-		Username:  "user-" + random.UniqueId(),
+		Username:  "user-" + random.UniqueID(),
 		Password:  "password",
 		Email:     "jane.doe@exemple",
 		Firstname: "Jane",
@@ -597,7 +597,7 @@ func testRegisterWithBadEmail(t *testing.T, router *gin.Engine) {
 func testLoginWithInvalidUsername(t *testing.T, router *gin.Engine) {
 	// Try to login with a username that doesn't exist
 	invalidLogin := LoginInput{
-		Username: "nonexistent-user-" + random.UniqueId(),
+		Username: "nonexistent-user-" + random.UniqueID(),
 		Password: "anypassword",
 	}
 	invalidJSON, err := json.Marshal(invalidLogin)
@@ -748,7 +748,7 @@ func testLoginWithEmailPendingUser(t *testing.T, router *gin.Engine, user User) 
 
 func testLoginWithNonexistentEmail(t *testing.T, router *gin.Engine) {
 	emailLogin := LoginInput{
-		Username: "nonexistent-" + random.UniqueId() + "@example.com",
+		Username: "nonexistent-" + random.UniqueID() + "@example.com",
 		Password: "anypassword",
 	}
 	emailJSON, err := json.Marshal(emailLogin)
