@@ -15,8 +15,8 @@ import (
 
 var testUsers = []accounts.User{
 	{
-		Username:     "trailuser-" + random.UniqueId(),
-		Email:        "trailuser-" + random.UniqueId() + "@example.com",
+		Username:     "trailuser-" + random.UniqueID(),
+		Email:        "trailuser-" + random.UniqueID() + "@example.com",
 		Firstname:    "Trail",
 		Lastname:     "Tester",
 		Role:         "admin",

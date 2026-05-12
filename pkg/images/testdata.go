@@ -16,8 +16,8 @@ import (
 
 // Test user for image storage tests
 var testUser = accounts.User{
-	Username:     "image-test-user-" + random.UniqueId(),
-	Email:        "image-test-" + random.UniqueId() + "@example.com",
+	Username:     "image-test-user-" + random.UniqueID(),
+	Email:        "image-test-" + random.UniqueID() + "@example.com",
 	Firstname:    "Image",
 	Lastname:     "Tester",
 	Role:         "standard",

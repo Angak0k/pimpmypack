@@ -16,8 +16,8 @@ import (
 
 var users = []accounts.User{
 	{
-		Username:     "user-" + random.UniqueId(),
-		Email:        "user-" + random.UniqueId() + "@exemple.com",
+		Username:     "user-" + random.UniqueID(),
+		Email:        "user-" + random.UniqueID() + "@exemple.com",
 		Firstname:    "John",
 		Lastname:     "Doe",
 		Role:         "standard",
@@ -26,8 +26,8 @@ var users = []accounts.User{
 		LastPassword: "password",
 	},
 	{
-		Username:     "user-" + random.UniqueId(),
-		Email:        "user-" + random.UniqueId() + "@exemple.com",
+		Username:     "user-" + random.UniqueID(),
+		Email:        "user-" + random.UniqueID() + "@exemple.com",
 		Firstname:    "Jane",
 		Lastname:     "Doe",
 		Role:         "standard",
@@ -71,9 +71,9 @@ var inventoriesUserPack1 = inventories.Inventories{
 }
 
 var (
-	sharingCode1 = "share1-" + random.UniqueId()
-	sharingCode2 = "share2-" + random.UniqueId()
-	sharingCode3 = "share3-" + random.UniqueId()
+	sharingCode1 = "share1-" + random.UniqueID()
+	sharingCode2 = "share2-" + random.UniqueID()
+	sharingCode3 = "share3-" + random.UniqueID()
 )
 
 var (
