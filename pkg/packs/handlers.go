@@ -1205,6 +1205,10 @@ func DuplicateMyPack(c *gin.Context) {
 			c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
 			return
 		}
+		if errors.Is(err, ErrPackNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
 		helper.LogAndSanitize(err, "duplicate my pack: duplicate pack failed")
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 		return

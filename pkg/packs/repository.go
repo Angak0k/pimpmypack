@@ -472,6 +472,10 @@ func duplicatePackByID(ctx context.Context, sourceID uint, userID uint) (uint, e
 		RETURNING id;`,
 		userID, now, sourceID).Scan(&newPackID)
 	if err != nil {
+		// The source pack was removed between the ownership check and the INSERT.
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, ErrPackNotFound
+		}
 		return 0, fmt.Errorf("failed to insert duplicated pack: %w", err)
 	}
 

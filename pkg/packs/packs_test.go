@@ -1901,6 +1901,9 @@ func testDuplicateSuccess(t *testing.T, router *gin.Engine, token string) {
 	if !season.Valid || season.String != "Winter" {
 		t.Errorf("Expected season 'Winter', got %+v", season)
 	}
+	if !trail.Valid || trail.String != "GR20" {
+		t.Errorf("Expected trail 'GR20', got %+v", trail)
+	}
 	if !adventure.Valid || adventure.String != "Thru-hike" {
 		t.Errorf("Expected adventure 'Thru-hike', got %+v", adventure)
 	}
