@@ -2016,6 +2016,17 @@ func TestDuplicateMyPack(t *testing.T) {
 	t.Run("Unauthorized - no token", func(t *testing.T) {
 		testDuplicateUnauthorized(t, router)
 	})
+	// Direct repository call: ensures the not-exists case maps to
+	// ErrPackNotFound (not ErrPackNotOwned). This is the race path —
+	// if the source pack is deleted between the handler's FindPackByID
+	// and duplicatePackByID, the repo must still return 404 semantics,
+	// not 403.
+	t.Run("Repository returns ErrPackNotFound for deleted source", func(t *testing.T) {
+		_, err := duplicatePackByID(context.Background(), 99999, users[0].ID)
+		if !errors.Is(err, ErrPackNotFound) {
+			t.Errorf("Expected ErrPackNotFound, got %v", err)
+		}
+	})
 }
 
 func TestGetPackOptions(t *testing.T) {

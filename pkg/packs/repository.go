@@ -439,12 +439,23 @@ func unfavoritePackByID(ctx context.Context, packID uint, userID uint) error {
 // for the same user, in a single transaction. The new pack's name is prefixed with
 // "COPY - ", its sharing_code is NULL and is_favorite is false. The pack image is
 // intentionally not copied.
+//
+// Returns ErrPackNotFound if the source pack does not exist and ErrPackNotOwned if
+// it exists but belongs to another user. We fetch user_id in one query (instead of
+// going through checkPackOwnership) so that a concurrently deleted pack maps to a
+// 404 rather than a misleading 403.
 func duplicatePackByID(ctx context.Context, sourceID uint, userID uint) (uint, error) {
-	owns, err := checkPackOwnership(ctx, sourceID, userID)
+	var owner uint
+	err := database.DB().QueryRowContext(ctx,
+		`SELECT user_id FROM pack WHERE id = $1`, sourceID,
+	).Scan(&owner)
 	if err != nil {
-		return 0, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, ErrPackNotFound
+		}
+		return 0, fmt.Errorf("failed to fetch pack owner: %w", err)
 	}
-	if !owns {
+	if owner != userID {
 		return 0, ErrPackNotOwned
 	}
 
