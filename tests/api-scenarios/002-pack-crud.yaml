@@ -365,6 +365,78 @@ scenarios:
       - type: status_code
         expected: 200
 
+  - name: "Duplicate the pack"
+    request:
+      method: POST
+      endpoint: "/v1/mypack/{{pack_id}}/duplicate"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+      - type: json_path
+        path: "$.pack_name"
+        equals: "COPY - Updated Weekend Pack"
+      - type: json_path
+        path: "$.pack_description"
+        equals: "An updated description for the pack"
+      - type: json_path
+        path: "$.season"
+        equals: "Winter"
+      - type: json_path
+        path: "$.trail"
+        equals: "Pacific Crest Trail"
+      - type: json_path
+        path: "$.adventure"
+        equals: "Thru-hike"
+      - type: json_path
+        path: "$.is_favorite"
+        equals: "false"
+      - type: json_path
+        path: "$.pack_items_count"
+        equals: "2"
+    store:
+      duplicated_pack_id: "{{response.id}}"
+
+  - name: "Verify the duplicate has the source pack's items"
+    request:
+      method: GET
+      endpoint: "/v1/mypack/{{duplicated_pack_id}}/packcontents"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$[0].inventory_id"
+        equals: "{{inventory_item_id}}"
+      - type: json_path
+        path: "$[0].quantity"
+        equals: "2"
+
+  - name: "Duplicate not found (id 99999)"
+    request:
+      method: POST
+      endpoint: "/v1/mypack/99999/duplicate"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 404
+
+  - name: "Cleanup: Delete duplicated pack"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{duplicated_pack_id}}"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
   - name: "Cleanup: Delete pack content"
     request:
       method: DELETE
