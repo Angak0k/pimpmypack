@@ -1157,6 +1157,69 @@ func UnfavoriteMyPack(c *gin.Context) {
 	packAction(c, "unfavorite", unfavoritePackByID, "Pack unfavorited successfully")
 }
 
+// Duplicate a pack by ID
+// @Summary Duplicate a pack by ID
+// @Description Clone an existing pack (metadata + all pack contents) into a new pack
+// @Description owned by the same user. The new pack's name is prefixed with "COPY - ",
+// @Description is_favorite is reset to false and sharing_code is not copied. The pack
+// @Description image is intentionally not copied.
+// @Security Bearer
+// @Tags Packs
+// @Produce  json
+// @Param id path int true "Pack ID"
+// @Success 201 {object} Pack "Pack duplicated successfully"
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid ID format"
+// @Failure 401 {object} apitypes.ErrorResponse "Unauthorized"
+// @Failure 403 {object} apitypes.ErrorResponse "This pack does not belong to you"
+// @Failure 404 {object} apitypes.ErrorResponse "Pack not found"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
+// @Router /v1/mypack/{id}/duplicate [post]
+func DuplicateMyPack(c *gin.Context) {
+	id, err := helper.StringToUint(c.Param("id"))
+	if err != nil {
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		return
+	}
+
+	userID, err := security.ExtractTokenID(c)
+	if err != nil {
+		helper.LogAndSanitize(err, "duplicate my pack: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
+		return
+	}
+
+	_, err = FindPackByID(c.Request.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrPackNotFound) {
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			return
+		}
+		helper.LogAndSanitize(err, "duplicate my pack: find pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	newPackID, err := duplicatePackByID(c.Request.Context(), id, userID)
+	if err != nil {
+		if errors.Is(err, ErrPackNotOwned) {
+			c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+			return
+		}
+		helper.LogAndSanitize(err, "duplicate my pack: duplicate pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	newPack, err := FindPackByID(c.Request.Context(), newPackID)
+	if err != nil {
+		helper.LogAndSanitize(err, "duplicate my pack: re-read new pack failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	c.IndentedJSON(http.StatusCreated, newPack)
+}
+
 // packAction is a shared helper for pack operations that follow the same pattern:
 // parse ID, extract token, check pack exists, call action, handle ownership error.
 func packAction(c *gin.Context, actionName string,

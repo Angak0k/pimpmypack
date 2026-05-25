@@ -1879,6 +1879,70 @@ const docTemplate = `{
                 }
             }
         },
+        "/v1/mypack/{id}/duplicate": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Clone an existing pack (metadata + all pack contents) into a new pack\nowned by the same user. The new pack's name is prefixed with \"COPY - \",\nis_favorite is reset to false and sharing_code is not copied. The pack\nimage is intentionally not copied.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Packs"
+                ],
+                "summary": "Duplicate a pack by ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Pack ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Pack duplicated successfully",
+                        "schema": {
+                            "$ref": "#/definitions/packs.Pack"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID format",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "This pack does not belong to you",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Pack not found",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/v1/mypack/{id}/favorite": {
             "post": {
                 "security": [

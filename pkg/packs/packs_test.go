@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
@@ -1809,6 +1810,208 @@ func TestUnfavoriteMyPack(t *testing.T) {
 	})
 	t.Run("Pack not found", func(t *testing.T) {
 		testUnfavoriteNotFound(t, router, token)
+	})
+}
+
+type duplicateContentRow struct {
+	itemID     uint
+	quantity   int
+	worn       bool
+	consumable bool
+}
+
+func loadPackContentRows(t *testing.T, packID uint) []duplicateContentRow {
+	t.Helper()
+	rows, err := database.DB().Query(
+		`SELECT item_id, quantity, worn, consumable
+		 FROM pack_content WHERE pack_id = $1 ORDER BY item_id`, packID)
+	if err != nil {
+		t.Fatalf("Failed to query pack_content for pack %d: %v", packID, err)
+	}
+	defer rows.Close()
+	var out []duplicateContentRow
+	for rows.Next() {
+		var r duplicateContentRow
+		if err := rows.Scan(&r.itemID, &r.quantity, &r.worn, &r.consumable); err != nil {
+			t.Fatalf("Failed to scan pack_content row: %v", err)
+		}
+		out = append(out, r)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("pack_content rows error: %v", err)
+	}
+	return out
+}
+
+func testDuplicateSuccess(t *testing.T, router *gin.Engine, token string) {
+	sourceID := FindPackIDByPackName(packs, "First Pack")
+	sourceContents := loadPackContentRows(t, sourceID)
+	if len(sourceContents) == 0 {
+		t.Fatalf("Expected source pack to have items, got 0")
+	}
+
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/duplicate", sourceID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Expected status %d but got %d. Body: %s", http.StatusCreated, w.Code, w.Body.String())
+	}
+
+	var newPack Pack
+	if err := json.Unmarshal(w.Body.Bytes(), &newPack); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+
+	if newPack.ID == 0 || newPack.ID == sourceID {
+		t.Errorf("Expected a new pack ID distinct from source %d, got %d", sourceID, newPack.ID)
+	}
+	if newPack.PackName != "COPY - First Pack" {
+		t.Errorf("Expected pack name 'COPY - First Pack', got %q", newPack.PackName)
+	}
+	if newPack.UserID != users[0].ID {
+		t.Errorf("Expected new pack to be owned by user %d, got %d", users[0].ID, newPack.UserID)
+	}
+	if newPack.IsFavorite {
+		t.Error("Expected new pack to not be favorited")
+	}
+	if newPack.SharingCode != nil {
+		t.Errorf("Expected new pack sharing_code to be nil, got %v", *newPack.SharingCode)
+	}
+
+	dupContents := loadPackContentRows(t, newPack.ID)
+	if diff := cmp.Diff(sourceContents, dupContents, cmp.AllowUnexported(duplicateContentRow{})); diff != "" {
+		t.Errorf("Pack contents mismatch (-want +got):\n%s", diff)
+	}
+
+	// Verify metadata copied verbatim in DB (description, season, trail, adventure)
+	var description string
+	var season, trail, adventure sql.NullString
+	err := database.DB().QueryRow(
+		"SELECT pack_description, season, trail, adventure FROM pack WHERE id = $1", newPack.ID,
+	).Scan(&description, &season, &trail, &adventure)
+	if err != nil {
+		t.Fatalf("Failed to read duplicated pack metadata: %v", err)
+	}
+	if description != "Description for the first pack" {
+		t.Errorf("Expected description copied verbatim, got %q", description)
+	}
+	if !season.Valid || season.String != "Winter" {
+		t.Errorf("Expected season 'Winter', got %+v", season)
+	}
+	if !adventure.Valid || adventure.String != "Thru-hike" {
+		t.Errorf("Expected adventure 'Thru-hike', got %+v", adventure)
+	}
+
+	// Cleanup so reruns don't pile up duplicates and downstream tests aren't affected.
+	if _, err := database.DB().Exec("DELETE FROM pack WHERE id = $1", newPack.ID); err != nil {
+		t.Fatalf("Failed to clean up duplicated pack: %v", err)
+	}
+}
+
+func testDuplicateEmptyPack(t *testing.T, router *gin.Engine, token string) {
+	now := time.Now().Truncate(time.Second)
+	var emptyPackID uint
+	err := database.DB().QueryRow(
+		`INSERT INTO pack (user_id, pack_name, pack_description, created_at, updated_at)
+		 VALUES ($1, $2, $3, $4, $4) RETURNING id`,
+		users[0].ID, "Empty Pack For Duplicate", "no items here", now,
+	).Scan(&emptyPackID)
+	if err != nil {
+		t.Fatalf("Failed to seed empty pack: %v", err)
+	}
+	defer func() {
+		_, _ = database.DB().Exec("DELETE FROM pack WHERE id = $1 OR pack_name = $2",
+			emptyPackID, "COPY - Empty Pack For Duplicate")
+	}()
+
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/duplicate", emptyPackID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Expected status %d but got %d. Body: %s", http.StatusCreated, w.Code, w.Body.String())
+	}
+
+	var newPack Pack
+	if err := json.Unmarshal(w.Body.Bytes(), &newPack); err != nil {
+		t.Fatalf("Failed to unmarshal response: %v", err)
+	}
+	if newPack.PackName != "COPY - Empty Pack For Duplicate" {
+		t.Errorf("Expected COPY - prefix, got %q", newPack.PackName)
+	}
+	if got := loadPackContentRows(t, newPack.ID); len(got) != 0 {
+		t.Errorf("Expected zero pack_content rows in duplicate, got %d", len(got))
+	}
+}
+
+func testDuplicateForbidden(t *testing.T, router *gin.Engine, token string) {
+	// Third Pack belongs to users[1]; users[0]'s token must be rejected.
+	packID := FindPackIDByPackName(packs, "Third Pack")
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/duplicate", packID), nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusForbidden && w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d or %d but got %d", http.StatusForbidden, http.StatusNotFound, w.Code)
+	}
+}
+
+func testDuplicateNotFound(t *testing.T, router *gin.Engine, token string) {
+	req, _ := http.NewRequest(http.MethodPost, "/mypack/99999/duplicate", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusNotFound {
+		t.Errorf("Expected status %d but got %d", http.StatusNotFound, w.Code)
+	}
+}
+
+func testDuplicateUnauthorized(t *testing.T, router *gin.Engine) {
+	packID := FindPackIDByPackName(packs, "First Pack")
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("/mypack/%d/duplicate", packID), nil)
+	// No Authorization header
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusUnauthorized {
+		t.Errorf("Expected status %d but got %d", http.StatusUnauthorized, w.Code)
+	}
+}
+
+func TestDuplicateMyPack(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.POST("/mypack/:id/duplicate", DuplicateMyPack)
+
+	token, err := security.GenerateToken(users[0].ID)
+	if err != nil {
+		t.Fatalf("Failed to generate token: %v", err)
+	}
+
+	t.Run("Successfully duplicate a pack with items", func(t *testing.T) {
+		testDuplicateSuccess(t, router, token)
+	})
+	t.Run("Successfully duplicate an empty pack", func(t *testing.T) {
+		testDuplicateEmptyPack(t, router, token)
+	})
+	t.Run("Forbidden - pack does not belong to user", func(t *testing.T) {
+		testDuplicateForbidden(t, router, token)
+	})
+	t.Run("Pack not found", func(t *testing.T) {
+		testDuplicateNotFound(t, router, token)
+	})
+	t.Run("Unauthorized - no token", func(t *testing.T) {
+		testDuplicateUnauthorized(t, router)
 	})
 }
 

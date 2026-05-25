@@ -193,6 +193,16 @@ scenarios:
       - type: status_code
         expected: 403
 
+  - name: "User B tries to duplicate User A's pack (should fail with 403)"
+    request:
+      method: POST
+      endpoint: "/v1/mypack/{{user_a_pack_id}}/duplicate"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+    assertions:
+      - type: status_code
+        expected: 403
+
   # User A adds pack content (inventory item to pack)
   - name: "User A adds inventory item to their pack"
     request:

@@ -433,6 +433,66 @@ func unfavoritePackByID(ctx context.Context, packID uint, userID uint) error {
 	return nil
 }
 
+// Pack duplication
+
+// duplicatePackByID clones a pack (metadata + every pack_content row) into a new pack
+// for the same user, in a single transaction. The new pack's name is prefixed with
+// "COPY - ", its sharing_code is NULL and is_favorite is false. The pack image is
+// intentionally not copied.
+func duplicatePackByID(ctx context.Context, sourceID uint, userID uint) (uint, error) {
+	owns, err := checkPackOwnership(ctx, sourceID, userID)
+	if err != nil {
+		return 0, err
+	}
+	if !owns {
+		return 0, ErrPackNotOwned
+	}
+
+	tx, err := database.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			_ = tx.Rollback()
+		}
+	}()
+
+	now := time.Now().Truncate(time.Second)
+
+	var newPackID uint
+	err = tx.QueryRowContext(ctx,
+		`INSERT INTO pack
+		(user_id, pack_name, pack_description, sharing_code, is_favorite,
+		 season, trail, trail_id, adventure, created_at, updated_at)
+		SELECT $1, 'COPY - ' || pack_name, pack_description, NULL, false,
+		       season, trail, trail_id, adventure, $2, $2
+		FROM pack
+		WHERE id = $3
+		RETURNING id;`,
+		userID, now, sourceID).Scan(&newPackID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to insert duplicated pack: %w", err)
+	}
+
+	_, err = tx.ExecContext(ctx,
+		`INSERT INTO pack_content
+		(pack_id, item_id, quantity, worn, consumable, created_at, updated_at)
+		SELECT $1, item_id, quantity, worn, consumable, $2, $2
+		FROM pack_content
+		WHERE pack_id = $3;`,
+		newPackID, now, sourceID)
+	if err != nil {
+		return 0, fmt.Errorf("failed to copy pack contents: %w", err)
+	}
+
+	if err = tx.Commit(); err != nil {
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return newPackID, nil
+}
+
 // returnPackInfoBySharingCode retrieves pack metadata using sharing code.
 // Returns nil if pack not found or sharing_code is NULL.
 func returnPackInfoBySharingCode(ctx context.Context, sharingCode string) (*SharedPackInfo, error) {
