@@ -169,6 +169,7 @@ func setupProtectedRoutes(router *gin.Engine) {
 	protected.POST("/importfromlighterpack", packs.ImportFromLighterPack)
 	protected.POST("/importfromlighterpackurl", packs.ImportFromLighterPackURL)
 	protected.POST("/importfrompimpmypackurl", packs.ImportFromPimpMyPackURL)
+	protected.POST("/importpack", packs.ImportPack)
 	protected.POST("/mypack/:id/image", images.UploadPackImage)
 	protected.DELETE("/mypack/:id/image", images.DeletePackImage)
 	protected.POST("/myaccount/image", images.UploadMyProfileImage)
