@@ -1416,6 +1416,100 @@ func ImportFromLighterPackURL(c *gin.Context) {
 	})
 }
 
+// Import a pack from a structured payload (authenticated bulk import).
+// @Summary Import a pack from structured items
+// @Description Create a pack and its contents from a client-provided item list
+// @Tags Packs
+// @Accept json
+// @Produce json
+// @Security Bearer
+// @Param input body ImportPackRequest true "Pack name, description and items"
+// @Success 200 {object} ImportExternalPackResponse
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid request"
+// @Failure 422 {object} apitypes.ErrorResponse "Empty payload"
+// @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
+// @Router /v1/importpack [post]
+func ImportPack(c *gin.Context) {
+	var input ImportPackRequest
+
+	userID, err := security.ExtractTokenID(c)
+	if err != nil {
+		helper.LogAndSanitize(err, "import pack: extract token ID failed")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
+		return
+	}
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		helper.LogAndSanitize(err, "import pack: bind json failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
+		return
+	}
+
+	if len(input.Items) == 0 {
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "payload is empty"})
+		return
+	}
+
+	packID, err := insertExternalPack(c.Request.Context(), &input.Items, userID, input.PackName, input.PackDescription)
+	if err != nil {
+		helper.LogAndSanitize(err, "import pack: insert external pack failed")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	c.JSON(http.StatusOK, ImportExternalPackResponse{
+		Message: "Pack imported successfully",
+		PackID:  packID,
+	})
+}
+
+// Parse a LighterPack URL without persisting (public, no auth).
+// @Summary Parse a LighterPack sharing URL
+// @Description Fetch and parse a LighterPack sharing URL and return its items without saving
+// @Tags Packs
+// @Accept json
+// @Produce json
+// @Param input body ImportFromURLRequest true "LighterPack URL"
+// @Success 200 {object} ParseExternalPackResponse
+// @Failure 400 {object} apitypes.ErrorResponse "Invalid URL"
+// @Failure 422 {object} apitypes.ErrorResponse "Failed to parse page"
+// @Failure 502 {object} apitypes.ErrorResponse "Failed to fetch page"
+// @Router /parselighterpackurl [post]
+func ParseLighterPackURL(c *gin.Context) {
+	var input ImportFromURLRequest
+
+	if err := c.ShouldBindJSON(&input); err != nil {
+		helper.LogAndSanitize(err, "parse lighterpack url: bind json failed")
+		c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
+		return
+	}
+
+	if err := validateLighterPackURL(input.URL); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	body, err := fetchLighterPackPage(c.Request.Context(), input.URL)
+	if err != nil {
+		helper.LogAndSanitize(err, "parse lighterpack url: fetch page failed")
+		c.JSON(http.StatusBadGateway, gin.H{"error": "failed to fetch LighterPack page"})
+		return
+	}
+
+	packName, packDescription, items, err := parseLighterPackHTML(body)
+	if err != nil {
+		helper.LogAndSanitize(err, "parse lighterpack url: parse HTML failed")
+		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "failed to parse LighterPack page: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, ParseExternalPackResponse{
+		PackName:        packName,
+		PackDescription: packDescription,
+		Items:           items,
+	})
+}
+
 // Import from PimpMyPack URL
 // @Summary Import a pack from a PimpMyPack sharing URL
 // @Description Import items from a PimpMyPack sharing URL into a new pack
