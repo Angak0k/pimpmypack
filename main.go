@@ -132,6 +132,7 @@ func setupPublicRoutes(router *gin.Engine) {
 		accounts.ResendConfirmEmail)
 	public.GET("/sharedlist/:sharing_code", packs.SharedList)
 	public.GET("/user/:username", profiles.GetPublicProfile)
+	public.POST("/parselighterpackurl", packs.ParseLighterPackURL)
 	public.GET("/v1/packs/:id/image", images.GetPackImage)
 	public.GET("/v1/packs/:id/items/:itemId/image", images.GetPackItemImage)
 	public.GET("/v1/accounts/:id/image", images.GetProfileImage)
