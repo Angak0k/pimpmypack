@@ -88,8 +88,8 @@ _, err := database.DB().ExecContext(ctx,
 
 Refactored packages split responsibilities across files (NOT inline in one file):
 - `handlers.go`    — Gin HTTP handlers (binding, validation, response)
-- `service.go`     — business logic
-- `repository.go`  — direct SQL data access
+- `service.go`     — public wrappers for cross-package use only (thin; no business logic)
+- `repository.go`  — direct SQL data access and private business functions
 - `types.go`       — package types
 - `testdata.go`    — test fixtures
 
@@ -97,7 +97,7 @@ Fully split: `inventories`, `packs`, `trails`. Partially migrated: `accounts` (h
 
 ### HTTP Handlers Structure
 
-All Gin handlers follow this pattern (business logic lives in `service.go`, not the handler):
+All Gin handlers follow this pattern (business logic is in private package functions, not the handler):
 
 ```go
 func PostMyResource(c *gin.Context) {
@@ -110,7 +110,7 @@ func PostMyResource(c *gin.Context) {
         return
     }
 
-    // 2. Execute business logic (lives in service.go)
+    // 2. Execute business logic (private function in repository.go)
     result, err := createResource(c.Request.Context(), input)
     if err != nil {
         helper.LogAndSanitize(err, "post my resource: create failed")

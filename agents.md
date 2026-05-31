@@ -2,11 +2,11 @@
 
 This document outlines the main design and architecture principles to contribute in the PimpMyPack project.
 
-> **For AI Agents**: See [CLAUDE.md](CLAUDE.md) for quick reference (automatically loaded by Claude Code). This file provides comprehensive details.
+> **For AI Agents**: See [claude.md](claude.md) for quick reference (automatically loaded by Claude Code). This file provides comprehensive details.
 >
 > **Related Documentation**:
 >
-> - [CLAUDE.md](CLAUDE.md) - Quick reference for Claude Code (stack, conventions, critical info)
+> - [claude.md](claude.md) - Quick reference for Claude Code (stack, conventions, critical info)
 > - [Code Patterns & Examples](docs/PATTERNS.md) - Detailed code patterns and templates
 > - [Collaboration Guide](docs/COLLABORATION.md) - Spec-driven development and learnings
 > - [Code Templates](docs/agent-templates/) - Ready-to-use code templates
