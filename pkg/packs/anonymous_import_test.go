@@ -55,7 +55,7 @@ func TestImportPack_Success(t *testing.T) {
 	router := gin.Default()
 	router.POST("/importpack", ImportPack)
 
-	payload := ParseExternalPackResponse{
+	payload := ImportPackRequest{
 		PackName:        "Imported Pack",
 		PackDescription: "from anonymous flow",
 		Items: ExternalPack{
@@ -95,7 +95,7 @@ func TestImportPack_EmptyItems(t *testing.T) {
 	router := gin.Default()
 	router.POST("/importpack", ImportPack)
 
-	payload := ParseExternalPackResponse{
+	payload := ImportPackRequest{
 		PackName:        "Empty Pack",
 		PackDescription: "no items",
 		Items:           ExternalPack{},

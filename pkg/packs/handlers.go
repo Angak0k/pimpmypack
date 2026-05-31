@@ -1423,14 +1423,14 @@ func ImportFromLighterPackURL(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security Bearer
-// @Param input body ParseExternalPackResponse true "Pack name, description and items"
+// @Param input body ImportPackRequest true "Pack name, description and items"
 // @Success 200 {object} ImportExternalPackResponse
 // @Failure 400 {object} apitypes.ErrorResponse "Invalid request"
 // @Failure 422 {object} apitypes.ErrorResponse "Empty payload"
 // @Failure 500 {object} apitypes.ErrorResponse "Internal Server Error"
 // @Router /v1/importpack [post]
 func ImportPack(c *gin.Context) {
-	var input ParseExternalPackResponse
+	var input ImportPackRequest
 
 	userID, err := security.ExtractTokenID(c)
 	if err != nil {

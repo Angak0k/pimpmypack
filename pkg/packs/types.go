@@ -178,6 +178,16 @@ type ParseExternalPackResponse struct {
 	Items           ExternalPack `json:"items"`
 }
 
+// ImportPackRequest is the request body of the authenticated bulk import
+// endpoint. It mirrors ParseExternalPackResponse's fields but is a distinct
+// type so generated OpenAPI clients model the import payload as a request,
+// not a response.
+type ImportPackRequest struct {
+	PackName        string       `json:"pack_name"`
+	PackDescription string       `json:"pack_description"`
+	Items           ExternalPack `json:"items"`
+}
+
 // SharedPackResponse represents the response structure for shared pack endpoint
 type SharedPackResponse struct {
 	Pack     SharedPackInfo       `json:"pack"`
