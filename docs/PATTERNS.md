@@ -102,8 +102,8 @@ func GetAccounts(c *gin.Context) { /* ... */ }
 // Service functions (public, framework-agnostic)
 func GetAllAccounts(ctx context.Context) ([]Account, error) { /* ... */ }
 
-// Repository functions (private, database access)
-func getAllAccounts(ctx context.Context, db *sql.DB) ([]Account, error) { /* ... */ }
+// Repository functions (private, database access) — call database.DB() internally
+func getAllAccounts(ctx context.Context) ([]Account, error) { /* ... */ }
 
 // Helper functions (package-specific)
 func FindUserIDByUsername(users []Account, username string) uint { /* ... */ }
@@ -128,7 +128,7 @@ func GetAllInventoriesByUserID(ctx context.Context, userID uint) (Inventories, e
 
 // pkg/inventories/repository.go or pkg/packs/repository.go (private data access)
 package inventories
-func getAllInventoriesByUserID(ctx context.Context, db *sql.DB, userID uint) (Inventories, error) { /* ... */ }
+func getAllInventoriesByUserID(ctx context.Context, userID uint) (Inventories, error) { /* ... */ }
 ```
 
 **Examples**: Both `pkg/inventories/` and `pkg/packs/` follow this pattern.
@@ -176,32 +176,39 @@ func FindPackIDByPackName(packs dataset.Packs, packname string) uint { /* ... */
 
 ### Service Layer Pattern
 
-Use a clean separation between handlers (HTTP), service (business logic), and repository (data access):
+Separate handlers (HTTP), service (cross-package public API), and repository (data access). Note the real layout:
+- **`repository.go`**: private (lowercase) functions that call the `database.DB()` singleton directly — they do NOT take a `db *sql.DB` parameter.
+- **`service.go`**: public (Uppercase) thin re-exports of repository functions, exposed so **other packages** can reuse the logic (e.g. `packs` calling `trails.FindTrailByName`).
+- **`handlers.go`**: same-package handlers call the private repository functions directly.
 
 ```go
-// Handler layer (Gin-specific, public)
-func GetMyInventories(c *gin.Context) {
+// Repository layer (repository.go, private) — uses the database.DB() singleton, no db param
+func returnInventoriesByUserID(ctx context.Context, userID uint) (*Inventories, error) {
+    query := `SELECT id, user_id, item_name, category, weight FROM inventory WHERE user_id = $1`
+    rows, err := database.DB().QueryContext(ctx, query, userID)
+    if err != nil {
+        return nil, fmt.Errorf("failed to query inventory: %w", err)
+    }
+    defer rows.Close()
+    // ... scan rows
+}
+
+// Service layer (service.go, public) — re-export for OTHER packages to reuse
+func FindInventoryByID(ctx context.Context, id uint) (*Inventory, error) {
+    return findInventoryByID(ctx, id)
+}
+
+// Handler layer (handlers.go, Gin-specific) — calls the private repository function directly
+func GetMyInventory(c *gin.Context) {
     userID := c.GetUint("user_id")
 
-    inventories, err := GetAllInventoriesByUserID(c.Request.Context(), userID)
+    inventories, err := returnInventoriesByUserID(c.Request.Context(), userID)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        c.JSON(http.StatusInternalServerError, apitypes.ErrorResponse{Error: err.Error()})
         return
     }
 
     c.JSON(http.StatusOK, inventories)
-}
-
-// Service layer (framework-agnostic, public)
-func GetAllInventoriesByUserID(ctx context.Context, userID uint) (Inventories, error) {
-    db := database.DB()
-    return getAllInventoriesByUserID(ctx, db, userID)
-}
-
-// Repository layer (data access, private)
-func getAllInventoriesByUserID(ctx context.Context, db *sql.DB, userID uint) (Inventories, error) {
-    query := `SELECT id, user_id, item_name, category, weight FROM inventory WHERE user_id = $1`
-    // ... database query logic
 }
 ```
 
@@ -361,31 +368,25 @@ func CreateInventoryItem(ctx context.Context, userID uint, item *Inventory) erro
 func UpdatePackContent(ctx context.Context, content *PackContent) error
 func DeletePackByID(ctx context.Context, packID uint) error
 
-// Repository layer: Private functions (lowercase)
-// Read operations: prefix with "get" or "return"
-func getAllInventories(ctx context.Context, db *sql.DB, userID uint) (Inventories, error)
-func getPackByID(ctx context.Context, db *sql.DB, packID uint) (*Pack, error)
+// Repository layer: Private functions (lowercase) — call database.DB() internally, no db param
+// Read operations: prefix with "return" (collections) or "find" (single item / lookup)
+func returnInventoriesByUserID(ctx context.Context, userID uint) (*Inventories, error)
+func findPackByID(ctx context.Context, packID uint) (*Pack, error)
 
 // Write operations: descriptive verbs
-func createInventoryItem(ctx context.Context, db *sql.DB, item *Inventory) error
-func updatePackContent(ctx context.Context, db *sql.DB, content *PackContent) error
-func deletePackByID(ctx context.Context, db *sql.DB, packID uint) error
+func insertInventory(ctx context.Context, item *Inventory) error
+func updatePackContent(ctx context.Context, content *PackContent) error
+func deletePackByID(ctx context.Context, packID uint) error
 ```
 
 ### Context Propagation Pattern
 
 ```go
-// Service layer: Always accept context.Context as first parameter
-func GetInventoryItems(ctx context.Context, userID uint) (Inventories, error) {
-    db := database.DB()
-    return getInventoryItems(ctx, db, userID)
-}
-
-// Repository layer: Accept context and db connection
-func getInventoryItems(ctx context.Context, db *sql.DB, userID uint) (Inventories, error) {
+// Repository layer: always accept context.Context as first parameter; use the database.DB() singleton
+func returnInventoryItems(ctx context.Context, userID uint) (Inventories, error) {
     query := `SELECT id, item_name, category, weight FROM inventory WHERE user_id = $1`
 
-    rows, err := db.QueryContext(ctx, query, userID)
+    rows, err := database.DB().QueryContext(ctx, query, userID)
     if err != nil {
         return nil, fmt.Errorf("failed to query inventory: %w", err)
     }
@@ -415,18 +416,13 @@ var (
     ErrUnauthorized     = errors.New("unauthorized access")
 )
 
-// Use in service functions
-// pkg/accounts/accounts.go
-func GetAccountByID(ctx context.Context, accountID uint) (*Account, error) {
-    db := database.DB()
-    return getAccountByID(ctx, db, accountID)
-}
-
-func getAccountByID(ctx context.Context, db *sql.DB, accountID uint) (*Account, error) {
+// Use in repository functions
+// pkg/accounts/accounts.go (repository) — uses database.DB() directly, no db param
+func findAccountByID(ctx context.Context, accountID uint) (*Account, error) {
     query := `SELECT id, username, email, firstname, lastname FROM account WHERE id = $1`
 
     var account Account
-    err := db.QueryRowContext(ctx, query, accountID).Scan(
+    err := database.DB().QueryRowContext(ctx, query, accountID).Scan(
         &account.ID,
         &account.Username,
         &account.Email,
@@ -501,7 +497,7 @@ func TestHandlerName(t *testing.T) {
             t.Errorf("Expected %d but got %d", http.StatusOK, w.Code)
         }
 
-        var response dataset.Response
+        var response SuccessResponse
         if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
             t.Errorf("Failed to parse response: %v", err)
         }
@@ -650,7 +646,7 @@ func HandlerWithErrors(c *gin.Context) {
 ### Query Pattern with Context
 
 ```go
-func returnItems(ctx context.Context, userID uint) (*dataset.Items, error) {
+func returnItems(ctx context.Context, userID uint) (*Items, error) {
     query := `
         SELECT id, name, description, created_at, updated_at
         FROM items
@@ -658,15 +654,15 @@ func returnItems(ctx context.Context, userID uint) (*dataset.Items, error) {
         ORDER BY created_at DESC
     `
 
-    rows, err := database.DB.QueryContext(ctx, query, userID)
+    rows, err := database.DB().QueryContext(ctx, query, userID)
     if err != nil {
         return nil, fmt.Errorf("failed to query items: %w", err)
     }
     defer rows.Close()
 
-    var items dataset.Items
+    var items Items
     for rows.Next() {
-        var item dataset.Item
+        var item Item
         if err := rows.Scan(&item.ID, &item.Name, &item.Description, &item.CreatedAt, &item.UpdatedAt); err != nil {
             return nil, fmt.Errorf("failed to scan item: %w", err)
         }
@@ -684,15 +680,15 @@ func returnItems(ctx context.Context, userID uint) (*dataset.Items, error) {
 ### Single Row Query Pattern
 
 ```go
-func returnItemByID(ctx context.Context, itemID uint) (*dataset.Item, error) {
+func returnItemByID(ctx context.Context, itemID uint) (*Item, error) {
     query := `
         SELECT id, name, description, created_at, updated_at
         FROM items
         WHERE id = $1
     `
 
-    var item dataset.Item
-    err := database.DB.QueryRowContext(ctx, query, itemID).Scan(
+    var item Item
+    err := database.DB().QueryRowContext(ctx, query, itemID).Scan(
         &item.ID,
         &item.Name,
         &item.Description,
@@ -714,14 +710,14 @@ func returnItemByID(ctx context.Context, itemID uint) (*dataset.Item, error) {
 ### Exec Pattern (INSERT/UPDATE/DELETE)
 
 ```go
-func createItem(ctx context.Context, item dataset.ItemInput, userID uint) error {
+func createItem(ctx context.Context, item ItemInput, userID uint) error {
     query := `
         INSERT INTO items (user_id, name, description, created_at, updated_at)
         VALUES ($1, $2, $3, $4, $5)
     `
 
     now := time.Now().Truncate(time.Second)
-    _, err := database.DB.ExecContext(ctx, query, userID, item.Name, item.Description, now, now)
+    _, err := database.DB().ExecContext(ctx, query, userID, item.Name, item.Description, now, now)
     if err != nil {
         return fmt.Errorf("failed to create item: %w", err)
     }
@@ -729,14 +725,14 @@ func createItem(ctx context.Context, item dataset.ItemInput, userID uint) error 
     return nil
 }
 
-func updateItem(ctx context.Context, itemID uint, updates dataset.ItemInput) error {
+func updateItem(ctx context.Context, itemID uint, updates ItemInput) error {
     query := `
         UPDATE items
         SET name = $1, description = $2, updated_at = $3
         WHERE id = $4
     `
 
-    result, err := database.DB.ExecContext(ctx, query, updates.Name, updates.Description, time.Now().Truncate(time.Second), itemID)
+    result, err := database.DB().ExecContext(ctx, query, updates.Name, updates.Description, time.Now().Truncate(time.Second), itemID)
     if err != nil {
         return fmt.Errorf("failed to update item: %w", err)
     }
@@ -757,9 +753,9 @@ func updateItem(ctx context.Context, itemID uint, updates dataset.ItemInput) err
 ### Transaction Pattern
 
 ```go
-func complexOperation(ctx context.Context, data dataset.ComplexInput) error {
+func complexOperation(ctx context.Context, data ComplexInput) error {
     // Begin transaction
-    tx, err := database.DB.BeginTx(ctx, nil)
+    tx, err := database.DB().BeginTx(ctx, nil)
     if err != nil {
         return fmt.Errorf("failed to begin transaction: %w", err)
     }
@@ -804,13 +800,13 @@ type Pack struct {
 }
 
 // Query with nullable fields
-func returnPack(ctx context.Context, packID uint) (*dataset.Pack, error) {
+func returnPack(ctx context.Context, packID uint) (*Pack, error) {
     query := `SELECT id, name, sharing_code, created_at FROM packs WHERE id = $1`
 
-    var pack dataset.Pack
+    var pack Pack
     var sharingCode sql.NullString
 
-    err := database.DB.QueryRowContext(ctx, query, packID).Scan(
+    err := database.DB().QueryRowContext(ctx, query, packID).Scan(
         &pack.ID,
         &pack.Name,
         &sharingCode,

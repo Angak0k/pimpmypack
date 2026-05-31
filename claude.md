@@ -7,11 +7,11 @@
 **Purpose**: Backend API for managing user packs and gear inventories (hiking, camping, etc.)
 
 **Stack**:
-- **Go 1.21+** (Gin Web Framework)
+- **Go 1.26** (Gin Web Framework)
 - **PostgreSQL** with **direct SQL** (`database/sql`, **NO GORM**)
 - **JWT authentication** (golang-jwt/jwt v5)
 - **bcrypt** for password hashing
-- **Testing**: stdlib testing, httptest, testify/assert
+- **Testing**: stdlib `testing` (table-driven) + `httptest`; `testify/assert` in some packages
 
 **⚠️ CRITICAL**: Always use `QueryContext`, `ExecContext`, `QueryRowContext` - **NEVER use GORM or any ORM**.
 
@@ -22,12 +22,16 @@ pimpmypack/
 ├── main.go                 # Application entry point, routing
 ├── pkg/
 │   ├── accounts/           # User accounts, login, registration
+│   ├── apitypes/           # Shared API request/response types (OkResponse, ErrorResponse...)
+│   ├── images/             # Image subsystem: upload/serve pack/profile/banner/inventory, EXIF, DB storage
 │   ├── inventories/        # User gear inventories
 │   ├── packs/              # Pack management (user packs with items)
+│   ├── profiles/           # Public user profiles
+│   ├── trails/             # Trails feature
 │   ├── security/           # JWT, auth middleware, password hashing
 │   ├── config/             # Environment configuration loading
 │   ├── database/           # DB connection singleton + migrations
-│   │   └── migration/      # SQL migration files
+│   │   └── migration/migration_scripts/  # SQL migration files
 │   └── helper/             # Utilities (email, validation, etc.)
 ├── specs/                  # Technical specifications (*.md)
 ├── agents/                 # Agent definitions for Claude Code
@@ -80,43 +84,55 @@ _, err := database.DB().ExecContext(ctx,
 - Migration files: `snake_case` with sequence number (`000001_account.up.sql`)
 - Go files: `snake_case` (`accounts.go`, `security_test.go`)
 
+### Package Layering (current standard)
+
+Refactored packages split responsibilities across files (NOT inline in one file):
+- `handlers.go`    — Gin HTTP handlers (binding, validation, response)
+- `service.go`     — business logic
+- `repository.go`  — direct SQL data access
+- `types.go`       — package types
+- `testdata.go`    — test fixtures
+
+Fully split: `inventories`, `packs`, `trails`. Partially migrated: `accounts` (handlers extracted to `handlers.go`, but service + SQL still combined in `accounts.go`). **Use the full split for new packages.**
+
 ### HTTP Handlers Structure
 
-All Gin handlers follow this pattern:
+All Gin handlers follow this pattern (business logic lives in `service.go`, not the handler):
 
 ```go
 func PostMyResource(c *gin.Context) {
     var input ResourceInput
 
-    // 1. Bind JSON
+    // 1. Bind JSON — never leak raw err.Error() to clients
     if err := c.ShouldBindJSON(&input); err != nil {
-        c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+        helper.LogAndSanitize(err, "post my resource: bind json failed")
+        c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
         return
     }
 
-    // 2. Validate (if needed)
-    if !isValid(input) {
-        c.JSON(http.StatusBadRequest, gin.H{"error": "validation error"})
-        return
-    }
-
-    // 3. Execute business logic
+    // 2. Execute business logic (lives in service.go)
     result, err := createResource(c.Request.Context(), input)
     if err != nil {
-        c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+        helper.LogAndSanitize(err, "post my resource: create failed")
+        c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
         return
     }
 
-    // 4. Respond
-    c.JSON(http.StatusOK, gin.H{"data": result})
+    // 3. Respond
+    c.JSON(http.StatusOK, result)
 }
 ```
+
+**Response conventions**:
+- Prefer `helper.ErrMsg*` constants over leaking raw `err.Error()` in error responses
+- Use `apitypes.OkResponse` / `apitypes.ErrorResponse` for typed responses & Swagger annotations
 
 ### Security & Authentication
 
 **Routes**:
 - `/api` - Public endpoints (no auth)
 - `/api/v1` - Protected endpoints (JWT required via `JwtAuthProcessor()`)
+- `/api/v2` - Protected endpoints, newer API revision (JWT required)
 - `/api/admin` - Admin-only endpoints (JWT + admin role via `JwtAuthAdminProcessor()`)
 
 **Middleware**:
@@ -130,24 +146,33 @@ func PostMyResource(c *gin.Context) {
 ### Testing
 
 **Organization**:
-- Test files: `*_test.go` in same package as tested code
-- Use `httptest` for HTTP handlers
-- Use `testify/assert` for assertions
+- Test files: `*_test.go` in the same package as the tested code
+- `TestMain` seeds a test database; tests share a package-level `users` fixture
+- Primary style: stdlib `testing` with **table-driven** tests and `t.Errorf`/`t.Fatalf` (domain packages: `packs`, `inventories`, `accounts`, `trails`)
+- `testify/assert` is used in a few packages (e.g. `security`, `helper`) — match the style of the package you're editing
+- HTTP handlers: `gin.SetMode(gin.TestMode)` + `gin.Default()` + `httptest`; authenticate with `security.GenerateToken(users[0].ID)`
 
-**Example**:
+**Example** (stdlib, handler test):
 ```go
-func TestGetMyInventory_Success(t *testing.T) {
-    router := setupTestRouter(t)
-    user := createTestUser(t)
-    token := generateTestToken(user.ID)
+func TestImportPack_Success(t *testing.T) {
+    token, err := security.GenerateToken(users[0].ID)
+    if err != nil {
+        t.Fatalf("failed to generate token: %v", err)
+    }
 
-    req := httptest.NewRequest("GET", "/api/v1/my/inventory", nil)
+    gin.SetMode(gin.TestMode)
+    router := gin.Default()
+    router.POST("/importpack", ImportPack)
+
+    req, _ := http.NewRequest(http.MethodPost, "/importpack", body)
     req.Header.Set("Authorization", "Bearer "+token)
     w := httptest.NewRecorder()
 
     router.ServeHTTP(w, req)
 
-    assert.Equal(t, 200, w.Code)
+    if w.Code != http.StatusOK {
+        t.Errorf("expected 200, got %d", w.Code)
+    }
 }
 ```
 
@@ -239,27 +264,34 @@ The project includes specialized agents for common tasks. Invoke them explicitly
 # Build the test CLI
 make build-apitest
 
-# Run all test scenarios (35 tests across 4 scenarios)
+# Run all scenarios (8 YAML scenarios in tests/api-scenarios/, ~150 checks)
 make api-test
 
-# Run specific scenario
-./bin/apitest run 001    # Authentication & registration
+# Run specific scenario(s) by number prefix
+./bin/apitest run 001    # User registration & authentication
 ./bin/apitest run 002    # Pack CRUD operations
 ./bin/apitest run 003    # Inventory management
-./bin/apitest run 004    # CSV import (LighterPack)
+./bin/apitest run 004    # Import from LighterPack (CSV)
+./bin/apitest run 005    # Security: input validation & sanitization
+./bin/apitest run 006    # Ownership validation (403 vs 404)
+./bin/apitest run 007    # Account profile: social URLs & profile image
+./bin/apitest run 008    # Trails database & admin management
 
 # Run with verbose output for debugging
 ./bin/apitest run -v 001
 ```
 
+Scenarios are YAML files in `tests/api-scenarios/` (one `NNN-*.yaml` per scenario). Add a scenario by dropping a numbered YAML there.
+
 **What it tests**:
 
-- User registration and email confirmation
-- Login and token refresh flows
-- Pack creation, update, deletion
-- Inventory CRUD operations
-- File upload (CSV import)
-- Authorization and access control
+- User registration, email confirmation, login & token refresh
+- Pack and inventory CRUD
+- LighterPack CSV import
+- Input validation/sanitization and ownership (403 vs 404) checks
+- Account profile (social URLs, profile image) and trails management
+
+> **Coverage gap**: no scenario yet for the LighterPack **URL** import (`/v1/importfromlighterpackurl`) or the anonymous parse/bulk endpoints (`/parselighterpackurl`, `/v1/importpack`) — worth adding.
 
 **Note**: Server must be running on `localhost:8080` with `STAGE=LOCAL` in `.env`
 
@@ -267,7 +299,7 @@ make api-test
 
 **Critical Errors**:
 - ❌ **NO GORM**: Project uses `database/sql` directly, never use any ORM
-- ❌ **NO auto-migrations**: Always write migration files in `pkg/database/migration/`
+- ❌ **NO auto-migrations**: Always write migration files in `pkg/database/migration/migration_scripts/`
 - ❌ **NO `go.mod` changes**: Unless explicitly requested (dependencies are stable)
 - ❌ **NO breaking changes**: Always maintain backward compatibility
 
@@ -292,5 +324,5 @@ make api-test
 
 ---
 
-**Last Updated**: 2026-03-09
+**Last Updated**: 2026-05-31
 **Project Version**: See [go.mod](go.mod) for Go version and dependencies

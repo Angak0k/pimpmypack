@@ -2,14 +2,14 @@
 
 This document outlines the main design and architecture principles to contribute in the PimpMyPack project.
 
-> **For AI Agents**: See [claude.md](claude.md) for quick reference (automatically loaded by Claude Code). This file provides comprehensive details.
+> **For AI Agents**: See [CLAUDE.md](CLAUDE.md) for quick reference (automatically loaded by Claude Code). This file provides comprehensive details.
 >
 > **Related Documentation**:
 >
-> - [claude.md](claude.md) - Quick reference for Claude Code (stack, conventions, critical info)
-> - [Code Patterns & Examples](agents/PATTERNS.md) - Detailed code patterns and templates
-> - [Collaboration Guide](agents/COLLABORATION.md) - Spec-driven development and learnings
-> - [Code Templates](agents/templates/) - Ready-to-use code templates
+> - [CLAUDE.md](CLAUDE.md) - Quick reference for Claude Code (stack, conventions, critical info)
+> - [Code Patterns & Examples](docs/PATTERNS.md) - Detailed code patterns and templates
+> - [Collaboration Guide](docs/COLLABORATION.md) - Spec-driven development and learnings
+> - [Code Templates](docs/agent-templates/) - Ready-to-use code templates
 
 ## 🎯 Purpose of the project
 
@@ -29,13 +29,13 @@ If you are an agent willing to contribute to this project, follow this workflow:
 6. **Implement**: Code following guidelines, write tests, document
 7. **Update status**: Systematically update task checkboxes in specs with implementation dates, files modified, and key decisions
 
-See [COLLABORATION.md](agents/COLLABORATION.md) for detailed best practices.
+See [COLLABORATION.md](docs/COLLABORATION.md) for detailed best practices.
 
 ## 🏗️ Architecture Overview
 
 ### Project Structure
 
-- **Functional package organization**: By business domain (`accounts`, `inventories`, `packs`, `security`, `config`, `database`, `helper`)
+- **Functional package organization**: By business domain (`accounts`, `inventories`, `packs`, `profiles`, `trails`, `images`) plus shared/utility packages (`apitypes`, `security`, `config`, `database`, `helper`)
 - **Separation of concerns**: Clear package responsibilities
 - **Repository Pattern**: Gin handlers separated from business logic
 
@@ -54,7 +54,7 @@ See [COLLABORATION.md](agents/COLLABORATION.md) for detailed best practices.
 - **Structure**: Bind → Validate → Execute → Respond
 - **Documentation**: Complete Swagger annotations required
 
-See [PATTERNS.md#handlers](agents/PATTERNS.md#handlers) for detailed examples.
+See [PATTERNS.md#handlers](docs/PATTERNS.md#handlers) for detailed examples.
 
 ### Business Functions
 
@@ -62,7 +62,7 @@ See [PATTERNS.md#handlers](agents/PATTERNS.md#handlers) for detailed examples.
 - **Context**: Always accept `context.Context` as first parameter
 - **Errors**: Use `fmt.Errorf` with wrapping (`%w`), define sentinel errors
 
-See [PATTERNS.md#business-functions](agents/PATTERNS.md#business-functions) for patterns.
+See [PATTERNS.md#business-functions](docs/PATTERNS.md#business-functions) for patterns.
 
 ### Database Management
 
@@ -76,7 +76,7 @@ See [PATTERNS.md#business-functions](agents/PATTERNS.md#business-functions) for 
 - **JWT**: Generation, extraction (header/query), validation via middleware
 - **Middlewares**: `JwtAuthProcessor()` (standard), `JwtAuthAdminProcessor()` (admin)
 - **Passwords**: bcrypt for hashing and validation
-- **Routes**: `/api` (public), `/api/v1` (protected), `/api/admin` (admin)
+- **Routes**: `/api` (public), `/api/v1` & `/api/v2` (protected), `/api/admin` (admin)
 
 ## 🧪 Testing
 
@@ -94,7 +94,7 @@ See [PATTERNS.md#business-functions](agents/PATTERNS.md#business-functions) for 
 - **Coverage**: Run with `-coverprofile=coverage.out`
 - **Complexity**: Extract helpers when cognitive complexity > 20
 
-See [PATTERNS.md#testing](agents/PATTERNS.md#testing) for examples.
+See [PATTERNS.md#testing](docs/PATTERNS.md#testing) for examples.
 
 ## ⚙️ Configuration
 
@@ -104,14 +104,13 @@ See [PATTERNS.md#testing](agents/PATTERNS.md#testing) for examples.
   - `LOCAL`/`DEV`: Swagger enabled
   - Production: Swagger disabled, Gin release mode
 
-## 📄 Dataset (Data Models)
+## 📄 Data Models
 
-All types in `pkg/dataset`:
+**Types live in their domain package** (`types.go`), NOT in a centralized `dataset` package (that package has been removed):
 
-- Base types: `Account`, `Inventory`, `Pack`, `PackContent`
-- Collections: `Accounts`, `Inventories`, `Packs`
-- Input/Response types: `RegisterInput`, `OkResponse`, `ErrorResponse`
-- Composite types: `PackContentWithItem` (joins)
+- Domain types in their package: `accounts.Account`, `inventories.Inventory`, `packs.Pack`/`PackContent` (+ collections `Accounts`, `Inventories`, `Packs`), input types like `accounts.RegisterInput`
+- **Shared HTTP responses** in `pkg/apitypes`: `OkResponse`, `ErrorResponse`
+- Composite types: `packs.PackContentWithItem` (joins)
 - **Timestamps**: `created_at`, `updated_at` (truncated to second)
 
 ## 🚀 Build and Deployment
@@ -183,7 +182,7 @@ All types in `pkg/dataset`:
 
 ## 📝 New Feature Checklist
 
-- [ ] Create types in `pkg/dataset`
+- [ ] Create types in the domain package (`pkg/<domain>/types.go`)
 - [ ] Create SQL migration (up and down)
 - [ ] Implement business functions with context
 - [ ] Define sentinel errors if necessary
