@@ -223,6 +223,8 @@ func validateConfig(cfg Config) error {
 		return errors.New("MAIL_PASSWORD is not set")
 	case cfg.MailServer.MailServer == "":
 		return errors.New("MAIL_SERVER is not set")
+	case cfg.Stage == "LOCAL" && cfg.DBConfig.DBHost != "localhost" && cfg.DBConfig.DBHost != "127.0.0.1":
+		return errors.New("STAGE=LOCAL is not allowed with a non-local DB_HOST")
 	}
 	return nil
 }
