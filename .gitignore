@@ -34,3 +34,6 @@ go.work.sum
 .DS_Store
 
 dist/
+
+# Local-only security remediation notes (never commit — discloses unpatched vulns)
+.security/
