@@ -301,6 +301,27 @@ func TestEnvInit(t *testing.T) {
 			wantError: true,
 		},
 		{
+			name: "Whitespace-only API_SECRET should fail",
+			envSlice: []string{
+				"SCHEME=http",
+				"HOSTNAME=localhost",
+				"DB_HOST=localhost",
+				"DB_USER=db_user",
+				"DB_PASSWORD=db_password",
+				"DB_NAME=db_name",
+				"DB_PORT=5432",
+				"STAGE=dev",
+				"API_SECRET=                                ",
+				"TOKEN_HOUR_LIFESPAN=1",
+				"MAIL_IDENTITY=identity@exemple.com",
+				"MAIL_USERNAME=username",
+				"MAIL_PASSWORD=password",
+				"MAIL_SERVER=smtp.exemple.com",
+				"MAIL_PORT=587",
+			},
+			wantError: true,
+		},
+		{
 			name: "Placeholder API_SECRET (defaultApiSecret)",
 			envSlice: []string{
 				"SCHEME=http",

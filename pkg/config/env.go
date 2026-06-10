@@ -5,6 +5,7 @@ import (
 	"net/mail"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -209,6 +210,8 @@ func validateConfig(cfg Config) error {
 		return errors.New("DB_NAME is not set")
 	case cfg.APISecret == "":
 		return errors.New("API_SECRET is not set")
+	case strings.TrimSpace(cfg.APISecret) == "":
+		return errors.New("API_SECRET must not be whitespace-only")
 	case cfg.APISecret == "defaultApiSecret" || cfg.APISecret == "myawsomeapisecret": // known repo-history placeholders
 		return errors.New("API_SECRET must not use a default placeholder value")
 	case len(cfg.APISecret) < 32:
