@@ -139,7 +139,6 @@ func newConfig() Config {
 		RefreshRateLimitWindowMinutes:       1,
 		ResendConfirmRateLimitRequests:      1,
 		ResendConfirmRateLimitWindowMinutes: 1,
-		APISecret:                           "defaultApiSecret",
 		Stage:                               "DEV",
 		HostName:                            "localhost",
 		DBConfig: DBConfig{
@@ -208,6 +207,12 @@ func validateConfig(cfg Config) error {
 		return errors.New("DB_PASSWORD is not set")
 	case cfg.DBConfig.DBName == "":
 		return errors.New("DB_NAME is not set")
+	case cfg.APISecret == "":
+		return errors.New("API_SECRET is not set")
+	case cfg.APISecret == "defaultApiSecret" || cfg.APISecret == "myawsomeapisecret":
+		return errors.New("API_SECRET must not use a default placeholder value")
+	case len(cfg.APISecret) < 32:
+		return errors.New("API_SECRET must be at least 32 bytes")
 	case cfg.MailServer.MailIdentity == "":
 		return errors.New("MAIL_IDENTITY is not set")
 	case !isValidMailAddress(cfg.MailServer.MailIdentity):
