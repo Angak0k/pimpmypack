@@ -13,6 +13,10 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// jwtKeyFunc is the single source of truth for the HS256 signing key.
+// Call sites also pass jwt.WithValidMethods([]string{"HS256"}), which rejects
+// non-HS256 tokens before this function runs. The HMAC type check here is a
+// secondary guard that protects any future call site that omits WithValidMethods.
 func jwtKeyFunc(token *jwt.Token) (any, error) {
 	if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 		return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])

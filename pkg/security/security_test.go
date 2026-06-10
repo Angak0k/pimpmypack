@@ -328,6 +328,19 @@ func TestJwtAuthProcessor(t *testing.T) {
 			},
 			expectedStatus: http.StatusUnauthorized,
 		},
+		{
+			name: "none-alg token (alg confusion attack)",
+			setupRequest: func(r *http.Request) {
+				token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{
+					"authorized": true,
+					"user_id":    123,
+					"exp":        time.Now().Add(1 * time.Hour).Unix(),
+				})
+				tokenString, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+				r.Header.Set("Authorization", "Bearer "+tokenString)
+			},
+			expectedStatus: http.StatusUnauthorized,
+		},
 	}
 
 	for _, tt := range tests {
