@@ -259,6 +259,20 @@ func TestExtractTokenID(t *testing.T) {
 			expectedID:    0,
 			expectedError: true,
 		},
+		{
+			name: "none-alg token (alg confusion attack)",
+			setupToken: func() string {
+				token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{
+					"authorized": true,
+					"user_id":    float64(123),
+					"exp":        time.Now().Add(1 * time.Hour).Unix(),
+				})
+				tokenString, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+				return tokenString
+			},
+			expectedID:    0,
+			expectedError: true,
+		},
 	}
 
 	for _, tt := range tests {
