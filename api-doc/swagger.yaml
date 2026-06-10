@@ -1720,7 +1720,44 @@ paths:
       - Packs
   /v1/mypack/:id/packcontent:
     post:
-      responses: {}
+      consumes:
+      - application/json
+      description: Create a new pack content
+      parameters:
+      - description: Pack Content
+        in: body
+        name: packcontent
+        required: true
+        schema:
+          $ref: '#/definitions/packs.PackContent'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/packs.PackContent'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Create a new pack content
+      tags:
+      - Packs
   /v1/mypack/{id}:
     delete:
       description: Delete a pack by ID

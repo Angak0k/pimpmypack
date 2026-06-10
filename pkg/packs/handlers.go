@@ -621,19 +621,6 @@ func PostPackContent(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, newPackContent)
 }
 
-// Create a new pack content
-// @Summary Create a new pack content
-// @Description Create a new pack content
-// @Security Bearer
-// @Tags Packs
-// @Accept  json
-// @Produce  json
-// @Param packcontent body PackContent true "Pack Content"
-// @Success 201 {object} PackContent
-// @Failure 400 {object} apitypes.ErrorResponse
-// @Failure 401 {object} apitypes.ErrorResponse
-// @Failure 403 {object} apitypes.ErrorResponse
-// @Failure 500 {object} apitypes.ErrorResponse
 // itemOwnershipDenied checks that itemID belongs to userID.
 // It writes a 403 or 500 response and returns true when the handler must abort.
 func itemOwnershipDenied(c *gin.Context, itemID, userID uint, logPrefix string) bool {
@@ -650,6 +637,19 @@ func itemOwnershipDenied(c *gin.Context, itemID, userID uint, logPrefix string) 
 	return false
 }
 
+// Create a new pack content
+// @Summary Create a new pack content
+// @Description Create a new pack content
+// @Security Bearer
+// @Tags Packs
+// @Accept  json
+// @Produce  json
+// @Param packcontent body PackContent true "Pack Content"
+// @Success 201 {object} PackContent
+// @Failure 400 {object} apitypes.ErrorResponse
+// @Failure 401 {object} apitypes.ErrorResponse
+// @Failure 403 {object} apitypes.ErrorResponse
+// @Failure 500 {object} apitypes.ErrorResponse
 // @Router /v1/mypack/:id/packcontent [post]
 func PostMyPackContent(c *gin.Context) {
 	var requestData PackContentRequest
@@ -832,11 +832,6 @@ func PutMyPackContentByID(c *gin.Context) {
 		return
 	}
 
-	// Check item ownership (prevent IDOR: attacker swapping in another user's item)
-	if itemOwnershipDenied(c, input.InventoryID, userID, "put my pack content by ID") {
-		return
-	}
-
 	// Fetch existing pack content to preserve timestamps
 	existingPackContent, err := findPackContentByID(c.Request.Context(), contentID)
 	if err != nil {
@@ -848,6 +843,11 @@ func PutMyPackContentByID(c *gin.Context) {
 	// Ensure the pack content actually belongs to the specified pack
 	if existingPackContent.PackID != packID {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack content not found"})
+		return
+	}
+
+	// Check item ownership (prevent IDOR: attacker swapping in another user's item)
+	if itemOwnershipDenied(c, input.InventoryID, userID, "put my pack content by ID") {
 		return
 	}
 
