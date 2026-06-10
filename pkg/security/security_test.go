@@ -144,7 +144,7 @@ func TestGenerateToken(t *testing.T) {
 			assert.NotEmpty(t, token)
 
 			// Verify token structure
-			parsedToken, err := jwt.Parse(token, func(_ *jwt.Token) (interface{}, error) {
+			parsedToken, err := jwt.Parse(token, func(_ *jwt.Token) (any, error) {
 				return []byte(testAPISecret), nil
 			})
 			require.NoError(t, err)
