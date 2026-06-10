@@ -426,6 +426,27 @@ func TestEnvInit(t *testing.T) {
 			},
 			wantError: false,
 		},
+		{
+			name: "STAGE=LOCAL with 127.0.0.1 DB_HOST should pass",
+			envSlice: []string{
+				"SCHEME=http",
+				"HOSTNAME=localhost",
+				"DB_HOST=127.0.0.1",
+				"DB_USER=db_user",
+				"DB_PASSWORD=db_password",
+				"DB_NAME=db_name",
+				"DB_PORT=5432",
+				"STAGE=LOCAL",
+				"API_SECRET=averylongsecretthatis32byteslong",
+				"TOKEN_HOUR_LIFESPAN=1",
+				"MAIL_IDENTITY=identity@exemple.com",
+				"MAIL_USERNAME=username",
+				"MAIL_PASSWORD=password",
+				"MAIL_SERVER=smtp.exemple.com",
+				"MAIL_PORT=587",
+			},
+			wantError: false,
+		},
 	}
 
 	for _, tc := range testCases {
