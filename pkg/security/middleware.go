@@ -23,7 +23,8 @@ func JwtAuthProcessor() gin.HandlerFunc {
 	}
 }
 
-// JwtAuthAdminProcessor validates JWT and checks admin role (existing function, moved here)
+// JwtAuthAdminProcessor validates JWT and checks admin role (existing function, moved here).
+// Alg-confusion and key-source attacks are handled by TokenValid (via jwtKeyFunc + WithValidMethods).
 func JwtAuthAdminProcessor() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// check if token is valid

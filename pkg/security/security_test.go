@@ -146,7 +146,7 @@ func TestGenerateToken(t *testing.T) {
 			// Verify token structure
 			parsedToken, err := jwt.Parse(token, func(_ *jwt.Token) (any, error) {
 				return []byte(testAPISecret), nil
-			})
+			}, jwt.WithValidMethods([]string{"HS256"}))
 			require.NoError(t, err)
 			assert.True(t, parsedToken.Valid)
 

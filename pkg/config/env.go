@@ -209,7 +209,7 @@ func validateConfig(cfg Config) error {
 		return errors.New("DB_NAME is not set")
 	case cfg.APISecret == "":
 		return errors.New("API_SECRET is not set")
-	case cfg.APISecret == "defaultApiSecret" || cfg.APISecret == "myawsomeapisecret":
+	case cfg.APISecret == "defaultApiSecret" || cfg.APISecret == "myawsomeapisecret": // known repo-history placeholders
 		return errors.New("API_SECRET must not use a default placeholder value")
 	case len(cfg.APISecret) < 32:
 		return errors.New("API_SECRET must be at least 32 bytes")
