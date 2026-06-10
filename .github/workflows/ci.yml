@@ -46,7 +46,7 @@ jobs:
           DB_PASSWORD: pmp1234
           DB_NAME: pmp_db
           DB_PORT: 5432 
-          API_SECRET: myawsomeapisecret
+          API_SECRET: averylongsecretthatis32byteslong
           TOKEN_HOUR_LIFESPAN: 1
           STAGE: DEV
           MAIL_IDENTITY: "test@exemple.com"

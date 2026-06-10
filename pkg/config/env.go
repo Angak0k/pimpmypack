@@ -5,6 +5,7 @@ import (
 	"net/mail"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -139,7 +140,6 @@ func newConfig() Config {
 		RefreshRateLimitWindowMinutes:       1,
 		ResendConfirmRateLimitRequests:      1,
 		ResendConfirmRateLimitWindowMinutes: 1,
-		APISecret:                           "defaultApiSecret",
 		Stage:                               "DEV",
 		HostName:                            "localhost",
 		DBConfig: DBConfig{
@@ -208,6 +208,14 @@ func validateConfig(cfg Config) error {
 		return errors.New("DB_PASSWORD is not set")
 	case cfg.DBConfig.DBName == "":
 		return errors.New("DB_NAME is not set")
+	case cfg.APISecret == "":
+		return errors.New("API_SECRET is not set")
+	case strings.TrimSpace(cfg.APISecret) == "":
+		return errors.New("API_SECRET must not be whitespace-only")
+	case cfg.APISecret == "defaultApiSecret" || cfg.APISecret == "myawsomeapisecret": // known repo-history placeholders
+		return errors.New("API_SECRET must not use a default placeholder value")
+	case len(cfg.APISecret) < 32:
+		return errors.New("API_SECRET must be at least 32 bytes")
 	case cfg.MailServer.MailIdentity == "":
 		return errors.New("MAIL_IDENTITY is not set")
 	case !isValidMailAddress(cfg.MailServer.MailIdentity):
@@ -218,6 +226,8 @@ func validateConfig(cfg Config) error {
 		return errors.New("MAIL_PASSWORD is not set")
 	case cfg.MailServer.MailServer == "":
 		return errors.New("MAIL_SERVER is not set")
+	case cfg.Stage == "LOCAL" && cfg.DBConfig.DBHost != "localhost" && cfg.DBConfig.DBHost != "127.0.0.1":
+		return errors.New("STAGE=LOCAL is not allowed with a non-local DB_HOST")
 	}
 	return nil
 }

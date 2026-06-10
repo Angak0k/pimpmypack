@@ -14,7 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const testAPISecret = "test_secret"
+const testAPISecret = "averylongsecretthatis32byteslong"
 const testTokenLifespan = 24 // 24 hours for tests
 
 func setupTestEnv(t *testing.T) {
@@ -144,9 +144,9 @@ func TestGenerateToken(t *testing.T) {
 			assert.NotEmpty(t, token)
 
 			// Verify token structure
-			parsedToken, err := jwt.Parse(token, func(_ *jwt.Token) (interface{}, error) {
+			parsedToken, err := jwt.Parse(token, func(_ *jwt.Token) (any, error) {
 				return []byte(testAPISecret), nil
-			})
+			}, jwt.WithValidMethods([]string{"HS256"}))
 			require.NoError(t, err)
 			assert.True(t, parsedToken.Valid)
 
@@ -259,6 +259,20 @@ func TestExtractTokenID(t *testing.T) {
 			expectedID:    0,
 			expectedError: true,
 		},
+		{
+			name: "none-alg token (alg confusion attack)",
+			setupToken: func() string {
+				token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{
+					"authorized": true,
+					"user_id":    float64(123),
+					"exp":        time.Now().Add(1 * time.Hour).Unix(),
+				})
+				tokenString, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+				return tokenString
+			},
+			expectedID:    0,
+			expectedError: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -311,6 +325,19 @@ func TestJwtAuthProcessor(t *testing.T) {
 			name: "no token",
 			setupRequest: func(_ *http.Request) {
 				// No setup needed
+			},
+			expectedStatus: http.StatusUnauthorized,
+		},
+		{
+			name: "none-alg token (alg confusion attack)",
+			setupRequest: func(r *http.Request) {
+				token := jwt.NewWithClaims(jwt.SigningMethodNone, jwt.MapClaims{
+					"authorized": true,
+					"user_id":    123,
+					"exp":        time.Now().Add(1 * time.Hour).Unix(),
+				})
+				tokenString, _ := token.SignedString(jwt.UnsafeAllowNoneSignatureType)
+				r.Header.Set("Authorization", "Bearer "+tokenString)
 			},
 			expectedStatus: http.StatusUnauthorized,
 		},
