@@ -76,6 +76,10 @@ func main() {
 
 	router := gin.Default()
 
+	if err := router.SetTrustedProxies(nil); err != nil {
+		panic(fmt.Errorf("failed to configure trusted proxies: %w", err))
+	}
+
 	setupRoutes(router)
 
 	// Start refresh token cleanup job
