@@ -363,6 +363,27 @@ func TestEnvInit(t *testing.T) {
 			},
 			wantError: true,
 		},
+		{
+			name: "API_SECRET at 31 bytes (one below minimum) should fail",
+			envSlice: []string{
+				"SCHEME=http",
+				"HOSTNAME=localhost",
+				"DB_HOST=localhost",
+				"DB_USER=db_user",
+				"DB_PASSWORD=db_password",
+				"DB_NAME=db_name",
+				"DB_PORT=5432",
+				"STAGE=dev",
+				"API_SECRET=averylongsecretthatis31bytes123",
+				"TOKEN_HOUR_LIFESPAN=1",
+				"MAIL_IDENTITY=identity@exemple.com",
+				"MAIL_USERNAME=username",
+				"MAIL_PASSWORD=password",
+				"MAIL_SERVER=smtp.exemple.com",
+				"MAIL_PORT=587",
+			},
+			wantError: true,
+		},
 	}
 
 	for _, tc := range testCases {

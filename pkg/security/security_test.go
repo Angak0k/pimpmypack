@@ -14,7 +14,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-const testAPISecret = "test_secret"
+const testAPISecret = "averylongsecretthatis32byteslong"
 const testTokenLifespan = 24 // 24 hours for tests
 
 func setupTestEnv(t *testing.T) {
