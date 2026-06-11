@@ -81,7 +81,7 @@ jobs:
           cache-dependency-path: go.sum
 
       - name: Build server
-        run: go build -o bin/pimpmypack .
+        run: mkdir -p bin && go build -o bin/pimpmypack .
 
       - name: Build apitest CLI
         run: make build-apitest
