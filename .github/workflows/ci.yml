@@ -55,6 +55,80 @@ jobs:
           MAIL_SERVER: "smtp.exemple.com"
         run: go test -covermode=atomic -coverprofile=coverage.out -race -p=1 ./...
 
+  e2e:
+    name: e2e tests
+    runs-on: ubuntu-latest
+    needs: build
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: pmp_user
+          POSTGRES_PASSWORD: pmp1234
+          POSTGRES_DB: pmp_db
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: 'go.mod'
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Build server
+        run: mkdir -p bin && go build -o bin/pimpmypack .
+
+      - name: Build apitest CLI
+        run: make build-apitest
+
+      - name: Start server
+        env:
+          DB_HOST: localhost
+          DB_USER: pmp_user
+          DB_PASSWORD: pmp1234
+          DB_NAME: pmp_db
+          DB_PORT: 5432
+          API_SECRET: averylongsecretthatis32byteslong
+          ACCESS_TOKEN_MINUTES: 15
+          REFRESH_TOKEN_DAYS: 1
+          STAGE: LOCAL
+          SEED_ON_STARTUP: "false"
+          MAIL_IDENTITY: "noreply@example.com"
+          MAIL_USERNAME: "test_user"
+          MAIL_PASSWORD: "test_password"
+          MAIL_SERVER: "smtp.example.com"
+          MAIL_PORT: "587"
+        run: |
+          ./bin/pimpmypack > /tmp/pimpmypack-server.log 2>&1 &
+          echo "Waiting for server to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8080/health > /dev/null; then
+              echo "Server ready (attempt $i)"
+              break
+            fi
+            if [ "$i" -eq 30 ]; then
+              echo "Server did not become ready in time"
+              cat /tmp/pimpmypack-server.log
+              exit 1
+            fi
+            sleep 1
+          done
+
+      - name: Run E2E tests
+        run: ./bin/apitest run --all
+
+      - name: Upload server logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-logs
+          path: /tmp/pimpmypack-server.log
+
   linter:
     name: lint
     runs-on: ubuntu-latest

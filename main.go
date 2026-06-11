@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	_ "github.com/Angak0k/pimpmypack/api-doc"
@@ -105,6 +106,9 @@ func main() {
 }
 
 func setupRoutes(router *gin.Engine) {
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "ok"})
+	})
 	setupPublicRoutes(router)
 	setupProtectedRoutes(router)
 	setupV2Routes(router)
