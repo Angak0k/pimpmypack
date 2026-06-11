@@ -197,6 +197,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/parselighterpackurl": {
+            "post": {
+                "description": "Fetch and parse a LighterPack sharing URL and return its items without saving",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Packs"
+                ],
+                "summary": "Parse a LighterPack sharing URL",
+                "parameters": [
+                    {
+                        "description": "LighterPack URL",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/packs.ImportFromURLRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/packs.ParseExternalPackResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid URL",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Failed to parse page",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Failed to fetch page",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/register": {
             "post": {
                 "description": "Register a new user with username, password, email, firstname, and lastname",
@@ -624,6 +676,63 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Shared pack not found",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/v1/importpack": {
+            "post": {
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "description": "Create a pack and its contents from a client-provided item list",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Packs"
+                ],
+                "summary": "Import a pack from structured items",
+                "parameters": [
+                    {
+                        "description": "Pack name, description and items",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/packs.ImportPackRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/packs.ImportExternalPackResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/apitypes.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Empty payload",
                         "schema": {
                             "$ref": "#/definitions/apitypes.ErrorResponse"
                         }
@@ -3202,6 +3311,44 @@ const docTemplate = `{
                 }
             }
         },
+        "packs.ExternalPackItem": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "consumable": {
+                    "type": "boolean"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "desc": {
+                    "type": "string"
+                },
+                "item_name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "integer"
+                },
+                "qty": {
+                    "type": "integer"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "weight": {
+                    "type": "integer"
+                },
+                "worn": {
+                    "type": "boolean"
+                }
+            }
+        },
         "packs.ImportExternalPackResponse": {
             "type": "object",
             "properties": {
@@ -3220,6 +3367,23 @@ const docTemplate = `{
             ],
             "properties": {
                 "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "packs.ImportPackRequest": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/packs.ExternalPackItem"
+                    }
+                },
+                "pack_description": {
+                    "type": "string"
+                },
+                "pack_name": {
                     "type": "string"
                 }
             }
@@ -3466,6 +3630,23 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "trail": {
+                    "type": "string"
+                }
+            }
+        },
+        "packs.ParseExternalPackResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/packs.ExternalPackItem"
+                    }
+                },
+                "pack_description": {
+                    "type": "string"
+                },
+                "pack_name": {
                     "type": "string"
                 }
             }
