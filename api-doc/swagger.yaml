@@ -238,6 +238,31 @@ definitions:
     - source_item_id
     - target_item_id
     type: object
+  packs.ExternalPackItem:
+    properties:
+      category:
+        type: string
+      consumable:
+        type: boolean
+      currency:
+        type: string
+      desc:
+        type: string
+      item_name:
+        type: string
+      price:
+        type: integer
+      qty:
+        type: integer
+      unit:
+        type: string
+      url:
+        type: string
+      weight:
+        type: integer
+      worn:
+        type: boolean
+    type: object
   packs.ImportExternalPackResponse:
     properties:
       message:
@@ -251,6 +276,17 @@ definitions:
         type: string
     required:
     - url
+    type: object
+  packs.ImportPackRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/packs.ExternalPackItem'
+        type: array
+      pack_description:
+        type: string
+      pack_name:
+        type: string
     type: object
   packs.Pack:
     properties:
@@ -413,6 +449,17 @@ definitions:
         type: string
     required:
     - pack_name
+    type: object
+  packs.ParseExternalPackResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/packs.ExternalPackItem'
+        type: array
+      pack_description:
+        type: string
+      pack_name:
+        type: string
     type: object
   packs.SharedPackInfo:
     properties:
@@ -665,6 +712,41 @@ paths:
       summary: User login
       tags:
       - Public
+  /parselighterpackurl:
+    post:
+      consumes:
+      - application/json
+      description: Fetch and parse a LighterPack sharing URL and return its items
+        without saving
+      parameters:
+      - description: LighterPack URL
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/packs.ImportFromURLRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/packs.ParseExternalPackResponse'
+        "400":
+          description: Invalid URL
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "422":
+          description: Failed to parse page
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "502":
+          description: Failed to fetch page
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      summary: Parse a LighterPack sharing URL
+      tags:
+      - Packs
   /register:
     post:
       consumes:
@@ -952,6 +1034,42 @@ paths:
       security:
       - Bearer: []
       summary: Import a pack from a PimpMyPack sharing URL
+      tags:
+      - Packs
+  /v1/importpack:
+    post:
+      consumes:
+      - application/json
+      description: Create a pack and its contents from a client-provided item list
+      parameters:
+      - description: Pack name, description and items
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/packs.ImportPackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/packs.ImportExternalPackResponse'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "422":
+          description: Empty payload
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Import a pack from structured items
       tags:
       - Packs
   /v1/myaccount:

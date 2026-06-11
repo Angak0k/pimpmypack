@@ -269,6 +269,100 @@ scenarios:
       - type: status_code
         expected: 404
 
+  # IDOR tests: User B tries to use User A's inventory item (M1 fix)
+  - name: "IDOR: User B tries to POST pack content with User A's inventory item (should fail with 403)"
+    request:
+      method: POST
+      endpoint: "/v1/mypack/{{user_b_pack_id}}/packcontent"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+      body:
+        inventory_id: "{{user_a_inventory_id}}"
+        quantity: 1
+        worn: false
+        consumable: false
+    assertions:
+      - type: status_code
+        expected: 403
+
+  - name: "User B creates their own inventory item (for PUT IDOR test)"
+    request:
+      method: POST
+      endpoint: "/v1/myinventory"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+      body:
+        item_name: "User B's Tent"
+        category: "Shelter"
+        description: "A tent belonging to User B"
+        weight: 2000
+        price: 200
+        currency: "USD"
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+    store:
+      user_b_inventory_id: "{{response.id}}"
+
+  - name: "User B adds their own item to their pack"
+    request:
+      method: POST
+      endpoint: "/v1/mypack/{{user_b_pack_id}}/packcontent"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+      body:
+        inventory_id: "{{user_b_inventory_id}}"
+        quantity: 1
+        worn: false
+        consumable: false
+    assertions:
+      - type: status_code
+        expected: 201
+      - type: json_path
+        path: "$.id"
+        exists: true
+    store:
+      user_b_pack_content_id: "{{response.id}}"
+
+  - name: "IDOR: User B tries to PUT pack content swapping in User A's item (should fail with 403)"
+    request:
+      method: PUT
+      endpoint: "/v1/mypack/{{user_b_pack_id}}/packcontent/{{user_b_pack_content_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+      body:
+        inventory_id: "{{user_a_inventory_id}}"
+        quantity: 2
+        worn: false
+        consumable: false
+    assertions:
+      - type: status_code
+        expected: 403
+
+  # Cleanup - User B deletes their own resources
+  - name: "Cleanup: User B deletes their pack content"
+    request:
+      method: DELETE
+      endpoint: "/v1/mypack/{{user_b_pack_id}}/packcontent/{{user_b_pack_content_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
+  - name: "Cleanup: User B deletes their inventory item"
+    request:
+      method: DELETE
+      endpoint: "/v1/myinventory/{{user_b_inventory_id}}"
+      headers:
+        Authorization: "Bearer {{user_b_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
   # Cleanup - User B deletes their own resources
   - name: "Cleanup: User B deletes their pack"
     request:

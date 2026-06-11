@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/Angak0k/pimpmypack/pkg/helper"
+	"github.com/Angak0k/pimpmypack/pkg/inventories"
 	"github.com/Angak0k/pimpmypack/pkg/security"
 	"github.com/Angak0k/pimpmypack/pkg/trails"
 	"github.com/gin-gonic/gin"
@@ -620,6 +621,22 @@ func PostPackContent(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, newPackContent)
 }
 
+// itemOwnershipDenied checks that itemID belongs to userID.
+// It writes a 403 or 500 response and returns true when the handler must abort.
+func itemOwnershipDenied(c *gin.Context, itemID, userID uint, logPrefix string) bool {
+	owned, err := inventories.CheckInventoryOwnership(c.Request.Context(), itemID, userID)
+	if err != nil {
+		helper.LogAndSanitize(err, logPrefix+": check item ownership failed")
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return true
+	}
+	if !owned {
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
+		return true
+	}
+	return false
+}
+
 // Create a new pack content
 // @Summary Create a new pack content
 // @Description Create a new pack content
@@ -672,6 +689,11 @@ func PostMyPackContent(c *gin.Context) {
 	// Check pack ownership
 	if pack.UserID != userID {
 		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+		return
+	}
+
+	// Check item ownership (prevent IDOR: attacker attaching another user's item)
+	if itemOwnershipDenied(c, requestData.InventoryID, userID, "post my pack content") {
 		return
 	}
 
@@ -821,6 +843,11 @@ func PutMyPackContentByID(c *gin.Context) {
 	// Ensure the pack content actually belongs to the specified pack
 	if existingPackContent.PackID != packID {
 		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack content not found"})
+		return
+	}
+
+	// Check item ownership (prevent IDOR: attacker swapping in another user's item)
+	if itemOwnershipDenied(c, input.InventoryID, userID, "put my pack content by ID") {
 		return
 	}
 
