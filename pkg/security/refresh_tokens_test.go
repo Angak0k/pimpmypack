@@ -116,8 +116,28 @@ func TestGetRefreshToken_Success(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, created.ID, retrieved.ID)
-	assert.Equal(t, created.Token, retrieved.Token)
 	assert.Equal(t, created.AccountID, retrieved.AccountID)
+	// At rest only the hash is stored: the retrieved row must not contain
+	// the plaintext handed to the client
+	assert.NotEqual(t, created.Token, retrieved.Token)
+	assert.Equal(t, hashRefreshToken(created.Token), retrieved.Token)
+}
+
+func TestRefreshTokenStoredHashed(t *testing.T) {
+	ctx := context.Background()
+	accountID := createTestAccount(t)
+
+	created, err := CreateRefreshToken(ctx, accountID, false)
+	require.NoError(t, err)
+
+	var stored string
+	err = database.DB().QueryRowContext(ctx,
+		`SELECT token FROM refresh_token WHERE id = $1`, created.ID,
+	).Scan(&stored)
+	require.NoError(t, err)
+
+	assert.NotEqual(t, created.Token, stored)
+	assert.Equal(t, hashRefreshToken(created.Token), stored)
 }
 
 func TestGetRefreshToken_NotFound(t *testing.T) {
@@ -148,29 +168,72 @@ func TestUpdateLastUsed(t *testing.T) {
 	assert.NotNil(t, updated.LastUsedAt)
 }
 
-func TestDeleteRefreshToken_Success(t *testing.T) {
+func TestRevokeRefreshToken_Success(t *testing.T) {
 	ctx := context.Background()
 	accountID := createTestAccount(t)
 
 	token, err := CreateRefreshToken(ctx, accountID, false)
 	require.NoError(t, err)
 
-	err = DeleteRefreshToken(ctx, token.Token)
+	revokedAccountID, found, err := RevokeRefreshToken(ctx, token.Token)
 	require.NoError(t, err)
+	assert.True(t, found)
+	assert.Equal(t, accountID, revokedAccountID)
 
-	// Verify it's deleted
 	retrieved, err := GetRefreshToken(ctx, token.Token)
-	require.Error(t, err)
-	assert.Nil(t, retrieved)
+	require.NoError(t, err)
+	assert.True(t, retrieved.Revoked)
 }
 
-func TestDeleteRefreshToken_NotFound(t *testing.T) {
+func TestRevokeRefreshToken_NotFound(t *testing.T) {
 	ctx := context.Background()
 
-	err := DeleteRefreshToken(ctx, "nonexistent-token")
+	_, found, err := RevokeRefreshToken(ctx, "nonexistent-token")
 
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "not found")
+	require.NoError(t, err)
+	assert.False(t, found)
+}
+
+func TestRevokeRefreshToken_AlreadyRevoked(t *testing.T) {
+	ctx := context.Background()
+	accountID := createTestAccount(t)
+
+	token, err := CreateRefreshToken(ctx, accountID, false)
+	require.NoError(t, err)
+
+	_, found, err := RevokeRefreshToken(ctx, token.Token)
+	require.NoError(t, err)
+	assert.True(t, found)
+
+	// Revoking an already-revoked token is a no-op
+	_, found, err = RevokeRefreshToken(ctx, token.Token)
+	require.NoError(t, err)
+	assert.False(t, found)
+}
+
+func TestRevokeAllUserTokens(t *testing.T) {
+	ctx := context.Background()
+	accountID := createTestAccount(t)
+
+	token1, err := CreateRefreshToken(ctx, accountID, false)
+	require.NoError(t, err)
+	token2, err := CreateRefreshToken(ctx, accountID, true)
+	require.NoError(t, err)
+
+	revoked, err := RevokeAllUserTokens(ctx, accountID)
+	require.NoError(t, err)
+	assert.Equal(t, int64(2), revoked)
+
+	for _, tok := range []string{token1.Token, token2.Token} {
+		retrieved, err := GetRefreshToken(ctx, tok)
+		require.NoError(t, err)
+		assert.True(t, retrieved.Revoked)
+	}
+
+	// Second pass revokes nothing
+	revoked, err = RevokeAllUserTokens(ctx, accountID)
+	require.NoError(t, err)
+	assert.Equal(t, int64(0), revoked)
 }
 
 func TestCleanupExpiredTokens(t *testing.T) {
@@ -179,15 +242,22 @@ func TestCleanupExpiredTokens(t *testing.T) {
 
 	// Create an expired token by manually inserting with a unique token string
 	expiredTokenStr := fmt.Sprintf("expired-token-%d", time.Now().UnixNano())
-	_, err := database.DB().Exec(
+	_, err := database.DB().ExecContext(ctx,
 		`INSERT INTO refresh_token (token, account_id, expires_at, created_at)
          VALUES ($1, $2, $3, $4)`,
-		expiredTokenStr,
+		hashRefreshToken(expiredTokenStr),
 		accountID,
 		time.Now().Add(-time.Hour), // expired 1 hour ago
 		time.Now().Add(-25*time.Hour),
 	)
 	require.NoError(t, err)
+
+	// Create a revoked (but unexpired) token: cleanup must reclaim it too
+	revokedToken, err := CreateRefreshToken(ctx, accountID, false)
+	require.NoError(t, err)
+	_, found, err := RevokeRefreshToken(ctx, revokedToken.Token)
+	require.NoError(t, err)
+	require.True(t, found)
 
 	// Create a valid token
 	validToken, err := CreateRefreshToken(ctx, accountID, false)
@@ -197,10 +267,12 @@ func TestCleanupExpiredTokens(t *testing.T) {
 	deleted, err := CleanupExpiredTokens(ctx)
 
 	require.NoError(t, err)
-	assert.GreaterOrEqual(t, deleted, int64(1))
+	assert.GreaterOrEqual(t, deleted, int64(2))
 
-	// Verify expired token is gone
+	// Verify expired and revoked tokens are gone
 	_, err = GetRefreshToken(ctx, expiredTokenStr)
+	require.Error(t, err)
+	_, err = GetRefreshToken(ctx, revokedToken.Token)
 	require.Error(t, err)
 
 	// Verify valid token still exists

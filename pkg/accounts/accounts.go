@@ -333,6 +333,13 @@ func updatePassword(ctx context.Context, userID uint, updatedPassword string) er
 		return fmt.Errorf("failed to execute update query: %w", err)
 	}
 
+	// A password change must kill every live session, whichever path
+	// triggered it (self-service or forgot-password). Non-fatal: the
+	// password is already updated.
+	if _, err := security.RevokeAllUserTokens(ctx, userID); err != nil {
+		helper.LogAndSanitize(err, "update password: revoke refresh tokens failed")
+	}
+
 	return nil
 }
 
@@ -467,6 +474,16 @@ func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 		return errors.New("payload is empty")
 	}
 
+	// Capture current authority fields: a status or role change must also
+	// revoke the account's live sessions (below)
+	var oldStatus, oldRole string
+	err := database.DB().QueryRowContext(ctx,
+		`SELECT status, role FROM account WHERE id = $1;`, id,
+	).Scan(&oldStatus, &oldRole)
+	if err != nil {
+		return err
+	}
+
 	a.ID = id
 	a.UpdatedAt = time.Now().Truncate(time.Second)
 	statement, err := database.DB().PrepareContext(ctx,
@@ -486,6 +503,16 @@ func updateAccountByID(ctx context.Context, id uint, a *Account) error {
 	if err != nil {
 		return err
 	}
+
+	// An account whose status or role changed must not keep minting access
+	// tokens from old sessions (e.g. a banned or demoted user). Non-fatal:
+	// the account is already updated.
+	if a.Status != oldStatus || a.Role != oldRole {
+		if _, err := security.RevokeAllUserTokens(ctx, id); err != nil {
+			helper.LogAndSanitize(err, "update account: revoke refresh tokens failed")
+		}
+	}
+
 	return nil
 }
 

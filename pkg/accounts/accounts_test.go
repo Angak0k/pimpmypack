@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -333,6 +334,61 @@ func TestPutAccountByID(t *testing.T) {
 			t.Errorf("Expected Status %v but got %v", testUpdatedAccount.Status, updatedAccount.Status)
 		}
 	})
+}
+
+// putAccountForTest sends a PUT /accounts/:id with the given account payload
+func putAccountForTest(t *testing.T, router *gin.Engine, account Account) int {
+	t.Helper()
+	jsonData, err := json.Marshal(account)
+	if err != nil {
+		t.Fatalf("Failed to marshal account data: %v", err)
+	}
+	path := fmt.Sprintf("/accounts/%d", account.ID)
+	req, _ := http.NewRequest(http.MethodPut, path, bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	return w.Code
+}
+
+func TestPutAccountByID_StatusChangeRevokesSessions(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.PUT("/accounts/:id", PutAccountByID)
+
+	activeAccount := Account{
+		ID:        users[2].ID,
+		Username:  users[2].Username,
+		Email:     "joseph.doe@example.com",
+		Firstname: "Joseph",
+		Lastname:  "Doe",
+		Role:      "standard",
+		Status:    "active",
+	}
+
+	refreshToken, err := security.CreateRefreshToken(context.Background(), activeAccount.ID, false)
+	if err != nil {
+		t.Fatalf("failed to create refresh token: %v", err)
+	}
+
+	suspended := activeAccount
+	suspended.Status = "inactive"
+	if code := putAccountForTest(t, router, suspended); code != http.StatusOK {
+		t.Fatalf("Expected status code %d but got %d", http.StatusOK, code)
+	}
+
+	retrieved, err := security.GetRefreshToken(context.Background(), refreshToken.Token)
+	if err != nil {
+		t.Fatalf("failed to get refresh token: %v", err)
+	}
+	if !retrieved.Revoked {
+		t.Errorf("Expected refresh token to be revoked after status change")
+	}
+
+	// Restore the original status so later tests see an active account
+	if code := putAccountForTest(t, router, activeAccount); code != http.StatusOK {
+		t.Fatalf("failed to restore account status: %d", code)
+	}
 }
 
 func TestDeleteAccountByID(t *testing.T) {
@@ -1038,6 +1094,12 @@ func TestPutMyPassword(t *testing.T) {
 
 	// Test: Correct current password
 	t.Run("Correct current password", func(t *testing.T) {
+		// A live session that must not survive the password change
+		refreshToken, err := security.CreateRefreshToken(context.Background(), testUser.ID, false)
+		if err != nil {
+			t.Fatalf("failed to create refresh token: %v", err)
+		}
+
 		input := PasswordUpdateInput{
 			CurrentPassword: testUser.Password,
 			NewPassword:     "newpassword",
@@ -1052,6 +1114,14 @@ func TestPutMyPassword(t *testing.T) {
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
+		}
+
+		retrieved, err := security.GetRefreshToken(context.Background(), refreshToken.Token)
+		if err != nil {
+			t.Fatalf("failed to get refresh token: %v", err)
+		}
+		if !retrieved.Revoked {
+			t.Errorf("Expected refresh token to be revoked after password change")
 		}
 	})
 }

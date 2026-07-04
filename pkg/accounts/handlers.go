@@ -331,7 +331,7 @@ func PutMyPassword(c *gin.Context) {
 		return
 	}
 
-	// Update the password
+	// Update the password (also revokes every live session)
 	if err := updatePassword(c.Request.Context(), userID, input.NewPassword); err != nil {
 		helper.LogAndSanitize(err, "put my password: update password failed")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})

@@ -166,13 +166,13 @@ func TestExtractToken(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name: "token in query parameter",
+			name: "token in query parameter is ignored (URL leak vector)",
 			setupRequest: func(r *http.Request) {
 				q := r.URL.Query()
 				q.Add("token", "test_token")
 				r.URL.RawQuery = q.Encode()
 			},
-			expectedToken: "test_token",
+			expectedToken: "",
 			expectedError: false,
 		},
 		{

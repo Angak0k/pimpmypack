@@ -2,6 +2,7 @@ package security
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"time"
 
@@ -17,7 +18,8 @@ const (
 	EventLoginFailed       AuditEventType = "login_failed"
 	EventRefreshSuccess    AuditEventType = "refresh_success"
 	EventRefreshFailed     AuditEventType = "refresh_failed"
-	EventLogout            AuditEventType = "logout"
+	EventLogout            AuditEventType = "logout_success"
+	EventLogoutAll         AuditEventType = "logout_all_success"
 	EventRateLimitExceeded AuditEventType = "rate_limit_exceeded"
 )
 
@@ -98,6 +100,17 @@ func AuditLogout(c *gin.Context, userID uint) {
 		IP:        c.ClientIP(),
 		UserAgent: c.Request.UserAgent(),
 		Message:   "User logged out",
+	})
+}
+
+// AuditLogoutAll logs a logout-from-all-devices event
+func AuditLogoutAll(c *gin.Context, userID uint, revokedSessions int64) {
+	logAuditEvent(AuditEvent{
+		EventType: EventLogoutAll,
+		UserID:    &userID,
+		IP:        c.ClientIP(),
+		UserAgent: c.Request.UserAgent(),
+		Message:   fmt.Sprintf("User logged out from all devices (%d sessions revoked)", revokedSessions),
 	})
 }
 

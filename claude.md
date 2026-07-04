@@ -140,8 +140,8 @@ func PostMyResource(c *gin.Context) {
 - `security.JwtAuthAdminProcessor()` - JWT validation + admin role check
 
 **Token extraction**:
-- Header: `Authorization: Bearer <token>`
-- Query param: `?token=<token>` (legacy, avoid in new code)
+- Header: `Authorization: Bearer <token>` — the **only** supported transport
+- Query param `?token=` is **not** accepted (removed: URLs leak into logs/history/Referer)
 
 ### Testing
 

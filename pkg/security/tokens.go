@@ -43,12 +43,10 @@ func TokenValid(c *gin.Context) error {
 	return err
 }
 
-// ExtractToken extracts token from header or query (existing function, moved here)
+// ExtractToken extracts the JWT from the Authorization header. Tokens are
+// deliberately not accepted via query string: URLs leak into access logs,
+// proxies, browser history and Referer headers.
 func ExtractToken(c *gin.Context) string {
-	token := c.Query("token")
-	if token != "" {
-		return token
-	}
 	bearerToken := c.Request.Header.Get("Authorization")
 	if len(strings.Split(bearerToken, " ")) == 2 {
 		return strings.Split(bearerToken, " ")[1]

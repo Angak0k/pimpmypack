@@ -153,6 +153,16 @@ scenarios:
     store:
       password: "NewTestPass456!"
 
+  - name: "SECURITY: Refresh token from before the password change is revoked"
+    request:
+      method: POST
+      endpoint: "/auth/refresh"
+      body:
+        refresh_token: "{{refresh_token}}"
+    assertions:
+      - type: status_code
+        expected: 401
+
   - name: "Login with new password to verify change"
     request:
       method: POST
@@ -166,8 +176,12 @@ scenarios:
       - type: json_path
         path: "$.access_token"
         exists: true
+      - type: json_path
+        path: "$.refresh_token"
+        exists: true
     store:
       new_access_token: "{{response.access_token}}"
+      refresh_token: "{{response.refresh_token}}"
 
   - name: "Refresh access token using refresh token"
     request:
@@ -200,6 +214,47 @@ scenarios:
         path: "$.username"
         equals: "{{username}}"
 
+  - name: "SECURITY: Token in query string is not accepted"
+    request:
+      method: GET
+      endpoint: "/v1/myaccount?token={{refreshed_access_token}}"
+    assertions:
+      - type: status_code
+        expected: 401
+
+  - name: "Logout revokes the presented refresh token"
+    request:
+      method: POST
+      endpoint: "/auth/logout"
+      body:
+        refresh_token: "{{refresh_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.message"
+        contains: "Logged out"
+
+  - name: "Refresh with a logged-out token is rejected"
+    request:
+      method: POST
+      endpoint: "/auth/refresh"
+      body:
+        refresh_token: "{{refresh_token}}"
+    assertions:
+      - type: status_code
+        expected: 401
+
+  - name: "Logout with an unknown token still returns 200 (no enumeration)"
+    request:
+      method: POST
+      endpoint: "/auth/logout"
+      body:
+        refresh_token: "unknown-token-{{timestamp}}"
+    assertions:
+      - type: status_code
+        expected: 200
+
   - name: "Test login with remember_me flag"
     request:
       method: POST
@@ -217,3 +272,32 @@ scenarios:
       - type: json_path
         path: "$.refresh_token"
         exists: true
+    store:
+      rm_access_token: "{{response.access_token}}"
+      rm_refresh_token: "{{response.refresh_token}}"
+
+  - name: "Logout from all devices revokes every session"
+    request:
+      method: POST
+      endpoint: "/v1/auth/logout-all"
+      headers:
+        Authorization: "Bearer {{rm_access_token}}"
+    assertions:
+      - type: status_code
+        expected: 200
+      - type: json_path
+        path: "$.message"
+        contains: "all devices"
+      - type: json_path
+        path: "$.revoked_sessions"
+        exists: true
+
+  - name: "Refresh after logout-all is rejected"
+    request:
+      method: POST
+      endpoint: "/auth/refresh"
+      body:
+        refresh_token: "{{rm_refresh_token}}"
+    assertions:
+      - type: status_code
+        expected: 401

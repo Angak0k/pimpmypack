@@ -138,6 +138,7 @@ func setupPublicRoutes(router *gin.Engine) {
 			config.RefreshRateLimitWindowMinutes,
 		),
 		security.RefreshTokenHandler)
+	public.POST("/auth/logout", security.LogoutHandler)
 	public.GET("/confirmemail", accounts.ConfirmEmail)
 	public.POST("/forgotpassword", accounts.ForgotPassword)
 	public.POST("/resend-confirmemail",
@@ -162,6 +163,7 @@ func setupPublicRoutes(router *gin.Engine) {
 func setupProtectedRoutes(router *gin.Engine) {
 	protected := router.Group("/api/v1")
 	protected.Use(security.JwtAuthProcessor())
+	protected.POST("/auth/logout-all", security.LogoutAllHandler)
 	protected.GET("/myaccount", accounts.GetMyAccount)
 	protected.PUT("/myaccount", accounts.PutMyAccount)
 	protected.PUT("/mypassword", accounts.PutMyPassword)

@@ -543,6 +543,13 @@ definitions:
       trail:
         type: string
     type: object
+  security.LogoutAllResponse:
+    properties:
+      message:
+        type: string
+      revoked_sessions:
+        type: integer
+    type: object
   security.RefreshResponse:
     properties:
       access_token:
@@ -589,6 +596,37 @@ info:
   title: PimpMyPack API
   version: "1.0"
 paths:
+  /auth/logout:
+    post:
+      consumes:
+      - application/json
+      description: 'Revoke the presented refresh token, ending that session. Always
+        200: token existence cannot be probed.'
+      parameters:
+      - description: Refresh Token
+        in: body
+        name: refresh_token
+        required: true
+        schema:
+          $ref: '#/definitions/security.RefreshTokenInput'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/apitypes.OkResponse'
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      summary: Logout (revoke a refresh token)
+      tags:
+      - Authentication
   /auth/refresh:
     post:
       consumes:
@@ -929,6 +967,29 @@ paths:
       summary: Get profile image
       tags:
       - Account Images
+  /v1/auth/logout-all:
+    post:
+      description: Revoke all refresh tokens of the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/security.LogoutAllResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/apitypes.ErrorResponse'
+      security:
+      - Bearer: []
+      summary: Logout from all devices
+      tags:
+      - Authentication
   /v1/importfromlighterpack:
     post:
       consumes:

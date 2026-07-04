@@ -2,15 +2,18 @@ package security
 
 import "time"
 
-// RefreshToken represents a refresh token in the database
+// RefreshToken represents a refresh token row in the database. It is a
+// storage model, never serialized to clients — no json tags on purpose:
+// Token holds the plaintext right after creation but the SHA-256 hash when
+// read back from the database.
 type RefreshToken struct {
-	ID         uint       `json:"id"`
-	Token      string     `json:"token"`
-	AccountID  uint       `json:"account_id"`
-	ExpiresAt  time.Time  `json:"expires_at"`
-	CreatedAt  time.Time  `json:"created_at"`
-	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
-	Revoked    bool       `json:"revoked"`
+	ID         uint
+	Token      string
+	AccountID  uint
+	ExpiresAt  time.Time
+	CreatedAt  time.Time
+	LastUsedAt *time.Time
+	Revoked    bool
 }
 
 // RefreshTokenInput represents the input for refresh token endpoint
@@ -31,4 +34,10 @@ type TokenPairResponse struct {
 type RefreshResponse struct {
 	AccessToken string `json:"access_token"`
 	ExpiresIn   int64  `json:"expires_in"`
+}
+
+// LogoutAllResponse is the response of POST /v1/auth/logout-all
+type LogoutAllResponse struct {
+	Message         string `json:"message"`
+	RevokedSessions int64  `json:"revoked_sessions"`
 }
