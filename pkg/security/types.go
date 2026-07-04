@@ -27,8 +27,24 @@ type TokenPairResponse struct {
 	RefreshExpiresIn int64  `json:"refresh_expires_in"`
 }
 
-// RefreshResponse represents the response from refresh endpoint
+// RefreshResponse represents the response from refresh endpoint.
+// RefreshToken carries a freshly rotated token clients should store; the
+// presented token currently stays valid (strict rotation lands once clients
+// have adopted the new field).
 type RefreshResponse struct {
-	AccessToken string `json:"access_token"`
-	ExpiresIn   int64  `json:"expires_in"`
+	AccessToken      string `json:"access_token"`
+	ExpiresIn        int64  `json:"expires_in"`
+	RefreshToken     string `json:"refresh_token,omitempty"`
+	RefreshExpiresIn int64  `json:"refresh_expires_in,omitempty"`
+}
+
+// LogoutResponse is the response of POST /auth/logout
+type LogoutResponse struct {
+	Message string `json:"message"`
+}
+
+// LogoutAllResponse is the response of POST /v1/auth/logout-all
+type LogoutAllResponse struct {
+	Message         string `json:"message"`
+	RevokedSessions int64  `json:"revoked_sessions"`
 }

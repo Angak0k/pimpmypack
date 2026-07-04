@@ -20,7 +20,21 @@ func setupTestRouter() *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	r.POST("/auth/refresh", RefreshTokenHandler)
+	r.POST("/auth/logout", LogoutHandler)
+	r.POST("/v1/auth/logout-all", JwtAuthProcessor(), LogoutAllHandler)
 	return r
+}
+
+func postJSON(router *gin.Engine, path string, payload any, accessToken string) *httptest.ResponseRecorder {
+	body, _ := json.Marshal(payload)
+	req := httptest.NewRequest(http.MethodPost, path, bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	if accessToken != "" {
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+	}
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+	return w
 }
 
 func TestRefreshTokenHandler_Success(t *testing.T) {
@@ -49,6 +63,25 @@ func TestRefreshTokenHandler_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, response.AccessToken)
 	assert.Positive(t, response.ExpiresIn)
+
+	// Rotation prep: a fresh refresh token is returned so clients can adopt
+	// rotation; strict revocation of the old one comes in a later phase
+	assert.NotEmpty(t, response.RefreshToken)
+	assert.NotEqual(t, refreshToken.Token, response.RefreshToken)
+	assert.Positive(t, response.RefreshExpiresIn)
+
+	// The new token preserves the original session horizon
+	rotated, err := GetRefreshToken(context.Background(), response.RefreshToken)
+	require.NoError(t, err)
+	assert.WithinDuration(t, refreshToken.ExpiresAt, rotated.ExpiresAt, time.Second)
+
+	// Phase 1: the old token stays valid until the front adopts rotation
+	w = postJSON(router, "/auth/refresh", RefreshTokenInput{Token: refreshToken.Token}, "")
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	// The new token is itself usable
+	w = postJSON(router, "/auth/refresh", RefreshTokenInput{Token: response.RefreshToken}, "")
+	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 func TestRefreshTokenHandler_InvalidToken(t *testing.T) {
@@ -76,7 +109,7 @@ func TestRefreshTokenHandler_ExpiredToken(t *testing.T) {
 	_, err := database.DB().Exec(
 		`INSERT INTO refresh_token (token, account_id, expires_at, created_at)
          VALUES ($1, $2, $3, $4)`,
-		expiredToken,
+		hashRefreshToken(expiredToken),
 		accountID,
 		time.Now().Add(-time.Hour),
 		time.Now().Add(-25*time.Hour),
@@ -106,4 +139,77 @@ func TestRefreshTokenHandler_MissingInput(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestLogoutHandler_Success(t *testing.T) {
+	ctx := context.Background()
+	accountID := createTestAccount(t)
+	router := setupTestRouter()
+
+	refreshToken, err := CreateRefreshToken(ctx, accountID, false)
+	require.NoError(t, err)
+
+	w := postJSON(router, "/auth/logout", RefreshTokenInput{Token: refreshToken.Token}, "")
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "Logged out successfully")
+
+	// The revoked token must no longer refresh
+	w = postJSON(router, "/auth/refresh", RefreshTokenInput{Token: refreshToken.Token}, "")
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+	assert.Contains(t, w.Body.String(), "revoked")
+}
+
+func TestLogoutHandler_InvalidTokenStillSucceeds(t *testing.T) {
+	router := setupTestRouter()
+
+	// 200 even for unknown tokens: no token enumeration
+	w := postJSON(router, "/auth/logout", RefreshTokenInput{Token: "unknown-token"}, "")
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "Logged out successfully")
+}
+
+func TestLogoutHandler_MissingInput(t *testing.T) {
+	router := setupTestRouter()
+
+	req := httptest.NewRequest(http.MethodPost, "/auth/logout", bytes.NewBufferString("{}"))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusBadRequest, w.Code)
+}
+
+func TestLogoutAllHandler_Success(t *testing.T) {
+	ctx := context.Background()
+	accountID := createTestAccount(t)
+	router := setupTestRouter()
+
+	token1, err := CreateRefreshToken(ctx, accountID, false)
+	require.NoError(t, err)
+	token2, err := CreateRefreshToken(ctx, accountID, true)
+	require.NoError(t, err)
+
+	accessToken, err := GenerateToken(accountID)
+	require.NoError(t, err)
+
+	w := postJSON(router, "/v1/auth/logout-all", struct{}{}, accessToken)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	var response LogoutAllResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &response))
+	assert.Equal(t, "Logged out from all devices", response.Message)
+	assert.Equal(t, int64(2), response.RevokedSessions)
+
+	// Both sessions are dead
+	for _, tok := range []string{token1.Token, token2.Token} {
+		w = postJSON(router, "/auth/refresh", RefreshTokenInput{Token: tok}, "")
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+	}
+}
+
+func TestLogoutAllHandler_RequiresAuth(t *testing.T) {
+	router := setupTestRouter()
+
+	w := postJSON(router, "/v1/auth/logout-all", struct{}{}, "")
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }

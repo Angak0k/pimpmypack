@@ -2,6 +2,7 @@ package accounts
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -1038,6 +1039,12 @@ func TestPutMyPassword(t *testing.T) {
 
 	// Test: Correct current password
 	t.Run("Correct current password", func(t *testing.T) {
+		// A live session that must not survive the password change
+		refreshToken, err := security.CreateRefreshToken(context.Background(), testUser.ID, false)
+		if err != nil {
+			t.Fatalf("failed to create refresh token: %v", err)
+		}
+
 		input := PasswordUpdateInput{
 			CurrentPassword: testUser.Password,
 			NewPassword:     "newpassword",
@@ -1052,6 +1059,14 @@ func TestPutMyPassword(t *testing.T) {
 
 		if w.Code != http.StatusOK {
 			t.Errorf("Expected status code %d but got %d", http.StatusOK, w.Code)
+		}
+
+		retrieved, err := security.GetRefreshToken(context.Background(), refreshToken.Token)
+		if err != nil {
+			t.Fatalf("failed to get refresh token: %v", err)
+		}
+		if !retrieved.Revoked {
+			t.Errorf("Expected refresh token to be revoked after password change")
 		}
 	})
 }

@@ -338,6 +338,13 @@ func PutMyPassword(c *gin.Context) {
 		return
 	}
 
+	// Kill every live session: a password change must invalidate refresh
+	// tokens a potential attacker may hold. Non-fatal — the password is
+	// already updated.
+	if _, err := security.RevokeAllUserTokens(c.Request.Context(), userID); err != nil {
+		helper.LogAndSanitize(err, "put my password: revoke refresh tokens failed")
+	}
+
 	c.JSON(http.StatusOK, gin.H{"message": "Password updated"})
 }
 
