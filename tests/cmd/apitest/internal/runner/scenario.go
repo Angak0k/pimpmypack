@@ -46,9 +46,10 @@ type FileUpload struct {
 
 // Assertion defines a validation rule for the response
 type Assertion struct {
-	Type     string `yaml:"type"` // status_code, json_path
+	Type     string `yaml:"type"` // status_code, json_path, content_type, header
 	Expected any    `yaml:"expected,omitempty"`
 	Path     string `yaml:"path,omitempty"`
+	Name     string `yaml:"name,omitempty"` // Header name for header assertions
 	Exists   bool   `yaml:"exists,omitempty"`
 	Equals   string `yaml:"equals,omitempty"`
 	Contains string `yaml:"contains,omitempty"`

@@ -1293,6 +1293,16 @@ func packAction(c *gin.Context, actionName string,
 	c.IndentedJSON(http.StatusOK, gin.H{"message": successMsg})
 }
 
+// respondInsertExternalPackError maps insertExternalPack errors to an HTTP response
+func respondInsertExternalPackError(c *gin.Context, err error, logMsg string) {
+	if errors.Is(err, ErrTooManyItems) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": ErrTooManyItems.Error()})
+		return
+	}
+	helper.LogAndSanitize(err, logMsg)
+	c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+}
+
 // Import from lighterpack
 // @Summary Import from lighterpack csv pack file
 // @Description Import from lighterpack csv pack file
@@ -1366,14 +1376,17 @@ func ImportFromLighterPack(c *gin.Context) {
 		}
 
 		externalPack = append(externalPack, packItem)
+		if len(externalPack) > MaxImportItems {
+			c.JSON(http.StatusBadRequest, gin.H{"error": ErrTooManyItems.Error()})
+			return
+		}
 	}
 
 	// Perform database insertion
 	packID, err := insertExternalPack(
 		c.Request.Context(), &externalPack, userID, "LighterPack Import", "LighterPack Import")
 	if err != nil {
-		helper.LogAndSanitize(err, "import from lighterpack: insert lighterpack failed")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		respondInsertExternalPackError(c, err, "import from lighterpack: insert lighterpack failed")
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{
@@ -1425,6 +1438,10 @@ func ImportFromLighterPackURL(c *gin.Context) {
 
 	packName, packDescription, items, err := parseLighterPackHTML(body)
 	if err != nil {
+		if errors.Is(err, ErrTooManyItems) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": ErrTooManyItems.Error()})
+			return
+		}
 		helper.LogAndSanitize(err, "import from lighterpack url: parse HTML failed")
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "failed to parse LighterPack page: " + err.Error()})
 		return
@@ -1432,8 +1449,7 @@ func ImportFromLighterPackURL(c *gin.Context) {
 
 	packID, err := insertExternalPack(c.Request.Context(), &items, userID, packName, packDescription)
 	if err != nil {
-		helper.LogAndSanitize(err, "import from lighterpack url: insert lighterpack failed")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		respondInsertExternalPackError(c, err, "import from lighterpack url: insert lighterpack failed")
 		return
 	}
 
@@ -1479,8 +1495,7 @@ func ImportPack(c *gin.Context) {
 
 	packID, err := insertExternalPack(c.Request.Context(), &input.Items, userID, input.PackName, input.PackDescription)
 	if err != nil {
-		helper.LogAndSanitize(err, "import pack: insert external pack failed")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		respondInsertExternalPackError(c, err, "import pack: insert external pack failed")
 		return
 	}
 
@@ -1525,6 +1540,10 @@ func ParseLighterPackURL(c *gin.Context) {
 
 	packName, packDescription, items, err := parseLighterPackHTML(body)
 	if err != nil {
+		if errors.Is(err, ErrTooManyItems) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": ErrTooManyItems.Error()})
+			return
+		}
 		helper.LogAndSanitize(err, "parse lighterpack url: parse HTML failed")
 		c.JSON(http.StatusUnprocessableEntity, gin.H{"error": "failed to parse LighterPack page: " + err.Error()})
 		return
@@ -1595,8 +1614,7 @@ func ImportFromPimpMyPackURL(c *gin.Context) {
 		sharedPack.Pack.PackName, sharedPack.Pack.PackDescription,
 	)
 	if err != nil {
-		helper.LogAndSanitize(err, "import from pimpmypack url: insert external pack failed")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		respondInsertExternalPackError(c, err, "import from pimpmypack url: insert external pack failed")
 		return
 	}
 

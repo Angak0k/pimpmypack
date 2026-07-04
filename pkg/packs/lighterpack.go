@@ -109,6 +109,10 @@ func parseLighterPackHTML(data []byte) (string, string, ExternalPack, error) {
 		// Get items within this category
 		itemNodes := findNodesByClass(catNode, "li", "lpItem")
 		for _, itemNode := range itemNodes {
+			if len(items) >= MaxImportItems {
+				return "", "", nil, fmt.Errorf("%w: page contains more than %d items",
+					ErrTooManyItems, MaxImportItems)
+			}
 			item := parseLighterPackItem(itemNode, categoryName)
 			items = append(items, item)
 		}

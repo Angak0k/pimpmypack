@@ -26,6 +26,13 @@ import (
 const (
 	envDev   = "DEV"
 	envLocal = "LOCAL"
+
+	// maxImportBodyBytes bounds request bodies on pack import/parse endpoints (1 MiB)
+	maxImportBodyBytes = 1 << 20
+	// defaultMaxBodyBytes bounds every request body unless a stricter per-route limit
+	// applies (6 MiB: the largest legitimate payload is a 5 MB image upload plus
+	// multipart overhead)
+	defaultMaxBodyBytes = 6 << 20
 )
 
 func initApp() error {
@@ -80,6 +87,9 @@ func main() {
 	if err := router.SetTrustedProxies(nil); err != nil {
 		panic(fmt.Errorf("failed to configure trusted proxies: %w", err))
 	}
+
+	router.Use(security.Headers())
+	router.Use(security.MaxBodyBytes(defaultMaxBodyBytes))
 
 	setupRoutes(router)
 
@@ -140,7 +150,9 @@ func setupPublicRoutes(router *gin.Engine) {
 		accounts.ResendConfirmEmail)
 	public.GET("/sharedlist/:sharing_code", packs.SharedList)
 	public.GET("/user/:username", profiles.GetPublicProfile)
-	public.POST("/parselighterpackurl", packs.ParseLighterPackURL)
+	public.POST("/parselighterpackurl",
+		security.MaxBodyBytes(maxImportBodyBytes),
+		packs.ParseLighterPackURL)
 	public.GET("/v1/packs/:id/image", images.GetPackImage)
 	public.GET("/v1/packs/:id/items/:itemId/image", images.GetPackItemImage)
 	public.GET("/v1/accounts/:id/image", images.GetProfileImage)
@@ -174,10 +186,18 @@ func setupProtectedRoutes(router *gin.Engine) {
 	protected.PUT("/myinventory/:id", inventories.PutMyInventoryByID)
 	protected.DELETE("/myinventory/:id", inventories.DeleteMyInventoryByID)
 	protected.GET("/pack-options", packs.GetPackOptions)
-	protected.POST("/importfromlighterpack", packs.ImportFromLighterPack)
-	protected.POST("/importfromlighterpackurl", packs.ImportFromLighterPackURL)
-	protected.POST("/importfrompimpmypackurl", packs.ImportFromPimpMyPackURL)
-	protected.POST("/importpack", packs.ImportPack)
+	protected.POST("/importfromlighterpack",
+		security.MaxBodyBytes(maxImportBodyBytes),
+		packs.ImportFromLighterPack)
+	protected.POST("/importfromlighterpackurl",
+		security.MaxBodyBytes(maxImportBodyBytes),
+		packs.ImportFromLighterPackURL)
+	protected.POST("/importfrompimpmypackurl",
+		security.MaxBodyBytes(maxImportBodyBytes),
+		packs.ImportFromPimpMyPackURL)
+	protected.POST("/importpack",
+		security.MaxBodyBytes(maxImportBodyBytes),
+		packs.ImportPack)
 	protected.POST("/mypack/:id/image", images.UploadPackImage)
 	protected.DELETE("/mypack/:id/image", images.DeletePackImage)
 	protected.POST("/myaccount/image", images.UploadMyProfileImage)

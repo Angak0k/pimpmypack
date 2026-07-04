@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"time"
 
@@ -114,12 +115,12 @@ func (r *Runner) executeStep(step Step) (int, error) {
 	// 2. Make HTTP request (with file upload if specified)
 	var statusCode int
 	var body []byte
-	var contentType string
+	var respHeaders http.Header
 	var err error
 
 	if req.File != nil {
 		// File upload request
-		statusCode, body, contentType, err = r.client.MakeRequestWithFile(
+		statusCode, body, respHeaders, err = r.client.MakeRequestWithFile(
 			ctx,
 			req.Method,
 			req.Endpoint,
@@ -129,7 +130,7 @@ func (r *Runner) executeStep(step Step) (int, error) {
 		)
 	} else {
 		// Regular JSON request
-		statusCode, body, contentType, err = r.client.MakeRequest(ctx, req.Method, req.Endpoint, req.Headers, req.Body)
+		statusCode, body, respHeaders, err = r.client.MakeRequest(ctx, req.Method, req.Endpoint, req.Headers, req.Body)
 	}
 
 	if err != nil {
@@ -140,7 +141,7 @@ func (r *Runner) executeStep(step Step) (int, error) {
 	for _, assertion := range step.Assertions {
 		// Substitute variables in assertion values
 		substitutedAssertion := r.substituteAssertion(assertion)
-		if err := ValidateAssertion(substitutedAssertion, statusCode, body, contentType); err != nil {
+		if err := ValidateAssertion(substitutedAssertion, statusCode, body, respHeaders); err != nil {
 			return statusCode, err
 		}
 	}
@@ -171,6 +172,7 @@ func (r *Runner) substituteAssertion(assertion Assertion) Assertion {
 		Type:     assertion.Type,
 		Expected: assertion.Expected,
 		Path:     assertion.Path,
+		Name:     assertion.Name,
 		Exists:   assertion.Exists,
 		Equals:   r.state.Substitute(assertion.Equals),
 		Contains: r.state.Substitute(assertion.Contains),

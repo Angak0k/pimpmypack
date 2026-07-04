@@ -4,22 +4,47 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 )
 
 // ValidateAssertion checks if a response matches the assertion criteria
-func ValidateAssertion(assertion Assertion, statusCode int, body []byte, contentType string) error {
+func ValidateAssertion(assertion Assertion, statusCode int, body []byte, headers http.Header) error {
 	switch assertion.Type {
 	case "status_code":
 		return validateStatusCode(assertion, statusCode)
 	case "json_path":
 		return validateJSONPath(assertion, body)
 	case "content_type":
-		return validateContentType(assertion, contentType)
+		return validateContentType(assertion, headers.Get("Content-Type"))
+	case "header":
+		return validateHeader(assertion, headers)
 	default:
 		return fmt.Errorf("unknown assertion type: %s", assertion.Type)
 	}
+}
+
+// validateHeader checks an arbitrary response header value
+func validateHeader(assertion Assertion, headers http.Header) error {
+	if assertion.Name == "" {
+		return errors.New("header assertion requires a 'name' field")
+	}
+	actual := headers.Get(assertion.Name)
+	switch {
+	case assertion.Equals != "":
+		if actual != assertion.Equals {
+			return fmt.Errorf("header %s: expected '%s', got '%s'", assertion.Name, assertion.Equals, actual)
+		}
+	case assertion.Contains != "":
+		if !strings.Contains(actual, assertion.Contains) {
+			return fmt.Errorf("header %s: expected to contain '%s', got '%s'", assertion.Name, assertion.Contains, actual)
+		}
+	default:
+		// an empty expectation would silently match a missing header
+		return fmt.Errorf("header assertion on %s requires 'equals' or 'contains'", assertion.Name)
+	}
+	return nil
 }
 
 // validateContentType checks the Content-Type response header

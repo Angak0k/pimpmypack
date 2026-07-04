@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"image"
 	"image/jpeg"
+	_ "image/png" // Register PNG decoder
 	"io"
 	"math"
 
@@ -39,6 +40,11 @@ const (
 	MimeTypePNG = "image/png"
 	// MimeTypeWebP is the MIME type for WebP images
 	MimeTypeWebP = "image/webp"
+	// MaxImagePixels caps declared width*height before full decode, since
+	// image.Decode allocates the whole pixel buffer up front (decompression-bomb guard).
+	// 24 MP bounds peak decode memory to ~96 MB RGBA while covering any real photo that
+	// fits under MaxUploadSize; outputs are downscaled to at most MaxDimension anyway.
+	MaxImagePixels = 24_000_000
 )
 
 // ValidateImageFormat checks if the image format is supported by examining magic bytes
@@ -70,6 +76,15 @@ func ValidateImageFormat(data []byte) (string, error) {
 
 // DecodeImage decodes an image from bytes
 func DecodeImage(data []byte) (image.Image, error) {
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(data))
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrCorrupted, err)
+	}
+	if int64(cfg.Width)*int64(cfg.Height) > MaxImagePixels {
+		return nil, fmt.Errorf("%w: declared dimensions %dx%d exceed %d pixels",
+			ErrTooLarge, cfg.Width, cfg.Height, MaxImagePixels)
+	}
+
 	reader := bytes.NewReader(data)
 	img, _, err := image.Decode(reader)
 	if err != nil {
