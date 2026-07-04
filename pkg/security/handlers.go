@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Angak0k/pimpmypack/pkg/apitypes"
 	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/helper"
 	"github.com/gin-gonic/gin"
@@ -64,24 +65,12 @@ func RefreshTokenHandler(c *gin.Context) {
 	// 5. Update last_used_at (ignore errors - non-blocking)
 	_ = UpdateLastUsed(c.Request.Context(), refreshToken.ID)
 
-	// 6. Issue a rotated refresh token preserving the session horizon.
-	// Non-fatal: refresh still succeeds with the presented token if this
-	// fails, since strict rotation is not enforced yet.
-	response := RefreshResponse{
+	// 6. Audit successful refresh and respond
+	AuditRefreshSuccess(c, refreshToken.AccountID)
+	c.JSON(http.StatusOK, RefreshResponse{
 		AccessToken: accessToken,
 		ExpiresIn:   int64(config.AccessTokenMinutes * 60),
-	}
-	rotated, err := createRefreshTokenExpiringAt(c.Request.Context(), refreshToken.AccountID, refreshToken.ExpiresAt)
-	if err != nil {
-		helper.LogAndSanitize(err, "refresh token: rotate refresh token failed")
-	} else {
-		response.RefreshToken = rotated.Token
-		response.RefreshExpiresIn = int64(time.Until(rotated.ExpiresAt).Seconds())
-	}
-
-	// 7. Audit successful refresh and respond
-	AuditRefreshSuccess(c, refreshToken.AccountID)
-	c.JSON(http.StatusOK, response)
+	})
 }
 
 // LogoutHandler handles POST /auth/logout
@@ -91,7 +80,7 @@ func RefreshTokenHandler(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param refresh_token body RefreshTokenInput true "Refresh Token"
-// @Success 200 {object} LogoutResponse
+// @Success 200 {object} apitypes.OkResponse
 // @Failure 400 {object} apitypes.ErrorResponse "Invalid input"
 // @Failure 500 {object} apitypes.ErrorResponse "Internal server error"
 // @Router /auth/logout [post]
@@ -115,7 +104,7 @@ func LogoutHandler(c *gin.Context) {
 	}
 
 	// 200 even when no live token matched: no token enumeration
-	c.JSON(http.StatusOK, LogoutResponse{Message: "Logged out successfully"})
+	c.JSON(http.StatusOK, apitypes.OkResponse{Response: "Logged out successfully"})
 }
 
 // LogoutAllHandler handles POST /v1/auth/logout-all

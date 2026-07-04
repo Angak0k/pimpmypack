@@ -242,15 +242,22 @@ func TestCleanupExpiredTokens(t *testing.T) {
 
 	// Create an expired token by manually inserting with a unique token string
 	expiredTokenStr := fmt.Sprintf("expired-token-%d", time.Now().UnixNano())
-	_, err := database.DB().Exec(
+	_, err := database.DB().ExecContext(ctx,
 		`INSERT INTO refresh_token (token, account_id, expires_at, created_at)
          VALUES ($1, $2, $3, $4)`,
-		expiredTokenStr,
+		hashRefreshToken(expiredTokenStr),
 		accountID,
 		time.Now().Add(-time.Hour), // expired 1 hour ago
 		time.Now().Add(-25*time.Hour),
 	)
 	require.NoError(t, err)
+
+	// Create a revoked (but unexpired) token: cleanup must reclaim it too
+	revokedToken, err := CreateRefreshToken(ctx, accountID, false)
+	require.NoError(t, err)
+	_, found, err := RevokeRefreshToken(ctx, revokedToken.Token)
+	require.NoError(t, err)
+	require.True(t, found)
 
 	// Create a valid token
 	validToken, err := CreateRefreshToken(ctx, accountID, false)
@@ -260,10 +267,12 @@ func TestCleanupExpiredTokens(t *testing.T) {
 	deleted, err := CleanupExpiredTokens(ctx)
 
 	require.NoError(t, err)
-	assert.GreaterOrEqual(t, deleted, int64(1))
+	assert.GreaterOrEqual(t, deleted, int64(2))
 
-	// Verify expired token is gone
+	// Verify expired and revoked tokens are gone
 	_, err = GetRefreshToken(ctx, expiredTokenStr)
+	require.Error(t, err)
+	_, err = GetRefreshToken(ctx, revokedToken.Token)
 	require.Error(t, err)
 
 	// Verify valid token still exists

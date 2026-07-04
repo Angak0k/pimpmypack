@@ -46,16 +46,8 @@ func TestRefreshTokenHandler_Success(t *testing.T) {
 	refreshToken, err := CreateRefreshToken(ctx, accountID, false)
 	require.NoError(t, err)
 
-	// Make request
-	input := RefreshTokenInput{Token: refreshToken.Token}
-	body, _ := json.Marshal(input)
-	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
+	w := postJSON(router, "/auth/refresh", RefreshTokenInput{Token: refreshToken.Token}, "")
 
-	router.ServeHTTP(w, req)
-
-	// Assertions
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response RefreshResponse
@@ -63,37 +55,12 @@ func TestRefreshTokenHandler_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, response.AccessToken)
 	assert.Positive(t, response.ExpiresIn)
-
-	// Rotation prep: a fresh refresh token is returned so clients can adopt
-	// rotation; strict revocation of the old one comes in a later phase
-	assert.NotEmpty(t, response.RefreshToken)
-	assert.NotEqual(t, refreshToken.Token, response.RefreshToken)
-	assert.Positive(t, response.RefreshExpiresIn)
-
-	// The new token preserves the original session horizon
-	rotated, err := GetRefreshToken(context.Background(), response.RefreshToken)
-	require.NoError(t, err)
-	assert.WithinDuration(t, refreshToken.ExpiresAt, rotated.ExpiresAt, time.Second)
-
-	// Phase 1: the old token stays valid until the front adopts rotation
-	w = postJSON(router, "/auth/refresh", RefreshTokenInput{Token: refreshToken.Token}, "")
-	assert.Equal(t, http.StatusOK, w.Code)
-
-	// The new token is itself usable
-	w = postJSON(router, "/auth/refresh", RefreshTokenInput{Token: response.RefreshToken}, "")
-	assert.Equal(t, http.StatusOK, w.Code)
 }
 
 func TestRefreshTokenHandler_InvalidToken(t *testing.T) {
 	router := setupTestRouter()
 
-	input := RefreshTokenInput{Token: "invalid-token"}
-	body, _ := json.Marshal(input)
-	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, req)
+	w := postJSON(router, "/auth/refresh", RefreshTokenInput{Token: "invalid-token"}, "")
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.Contains(t, w.Body.String(), "Invalid refresh token")
@@ -106,7 +73,7 @@ func TestRefreshTokenHandler_ExpiredToken(t *testing.T) {
 	// Create an expired token manually with unique token string
 	now := time.Now()
 	expiredToken := "expired-token-" + now.Format("20060102150405") + "-" + strconv.FormatInt(now.UnixNano(), 10)
-	_, err := database.DB().Exec(
+	_, err := database.DB().ExecContext(context.Background(),
 		`INSERT INTO refresh_token (token, account_id, expires_at, created_at)
          VALUES ($1, $2, $3, $4)`,
 		hashRefreshToken(expiredToken),
@@ -116,14 +83,7 @@ func TestRefreshTokenHandler_ExpiredToken(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	// Make request
-	input := RefreshTokenInput{Token: expiredToken}
-	body, _ := json.Marshal(input)
-	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBuffer(body))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, req)
+	w := postJSON(router, "/auth/refresh", RefreshTokenInput{Token: expiredToken}, "")
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.Contains(t, w.Body.String(), "expired")
@@ -132,11 +92,7 @@ func TestRefreshTokenHandler_ExpiredToken(t *testing.T) {
 func TestRefreshTokenHandler_MissingInput(t *testing.T) {
 	router := setupTestRouter()
 
-	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", bytes.NewBufferString("{}"))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
-	router.ServeHTTP(w, req)
+	w := postJSON(router, "/auth/refresh", struct{}{}, "")
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -171,10 +127,7 @@ func TestLogoutHandler_InvalidTokenStillSucceeds(t *testing.T) {
 func TestLogoutHandler_MissingInput(t *testing.T) {
 	router := setupTestRouter()
 
-	req := httptest.NewRequest(http.MethodPost, "/auth/logout", bytes.NewBufferString("{}"))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, req)
+	w := postJSON(router, "/auth/logout", struct{}{}, "")
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }

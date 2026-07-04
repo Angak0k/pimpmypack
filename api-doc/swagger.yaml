@@ -550,21 +550,12 @@ definitions:
       revoked_sessions:
         type: integer
     type: object
-  security.LogoutResponse:
-    properties:
-      message:
-        type: string
-    type: object
   security.RefreshResponse:
     properties:
       access_token:
         type: string
       expires_in:
         type: integer
-      refresh_expires_in:
-        type: integer
-      refresh_token:
-        type: string
     type: object
   security.RefreshTokenInput:
     properties:
@@ -624,7 +615,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/security.LogoutResponse'
+            $ref: '#/definitions/apitypes.OkResponse'
         "400":
           description: Invalid input
           schema:

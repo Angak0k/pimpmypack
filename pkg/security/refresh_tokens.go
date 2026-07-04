@@ -31,12 +31,6 @@ func CreateRefreshToken(ctx context.Context, accountID uint, rememberMe bool) (*
 		expiresAt = time.Now().Add(time.Hour * 24 * time.Duration(config.RefreshTokenDays))
 	}
 
-	return createRefreshTokenExpiringAt(ctx, accountID, expiresAt)
-}
-
-// createRefreshTokenExpiringAt generates a token with an explicit expiry
-// (rotation uses it to preserve the original session horizon)
-func createRefreshTokenExpiringAt(ctx context.Context, accountID uint, expiresAt time.Time) (*RefreshToken, error) {
 	tokenBytes := make([]byte, 32)
 	if _, err := rand.Read(tokenBytes); err != nil {
 		return nil, fmt.Errorf("failed to generate random token: %w", err)
@@ -153,10 +147,11 @@ func RevokeAllUserTokens(ctx context.Context, accountID uint) (int64, error) {
 	return rowsAffected, nil
 }
 
-// CleanupExpiredTokens deletes expired refresh tokens
+// CleanupExpiredTokens deletes refresh tokens that can never be valid again:
+// expired ones and revoked ones (logout, logout-all, password change)
 func CleanupExpiredTokens(ctx context.Context) (int64, error) {
 	result, err := database.DB().ExecContext(ctx,
-		`DELETE FROM refresh_token WHERE expires_at < $1`,
+		`DELETE FROM refresh_token WHERE expires_at < $1 OR revoked = TRUE`,
 		time.Now(),
 	)
 	if err != nil {

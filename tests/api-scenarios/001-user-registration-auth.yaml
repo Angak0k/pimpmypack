@@ -198,12 +198,8 @@ scenarios:
       - type: json_path
         path: "$.expires_in"
         exists: true
-      - type: json_path
-        path: "$.refresh_token"
-        exists: true
     store:
       refreshed_access_token: "{{response.access_token}}"
-      rotated_refresh_token: "{{response.refresh_token}}"
 
   - name: "Verify refreshed access token works"
     request:
@@ -255,16 +251,6 @@ scenarios:
       endpoint: "/auth/logout"
       body:
         refresh_token: "unknown-token-{{timestamp}}"
-    assertions:
-      - type: status_code
-        expected: 200
-
-  - name: "Rotated refresh token from the earlier refresh still works"
-    request:
-      method: POST
-      endpoint: "/auth/refresh"
-      body:
-        refresh_token: "{{rotated_refresh_token}}"
     assertions:
       - type: status_code
         expected: 200

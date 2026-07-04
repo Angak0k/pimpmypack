@@ -43,7 +43,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/security.LogoutResponse"
+                            "$ref": "#/definitions/apitypes.OkResponse"
                         }
                     },
                     "400": {
@@ -3870,14 +3870,6 @@ const docTemplate = `{
                 }
             }
         },
-        "security.LogoutResponse": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string"
-                }
-            }
-        },
         "security.RefreshResponse": {
             "type": "object",
             "properties": {
@@ -3886,12 +3878,6 @@ const docTemplate = `{
                 },
                 "expires_in": {
                     "type": "integer"
-                },
-                "refresh_expires_in": {
-                    "type": "integer"
-                },
-                "refresh_token": {
-                    "type": "string"
                 }
             }
         },
