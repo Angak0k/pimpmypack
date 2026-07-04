@@ -3878,6 +3878,12 @@ const docTemplate = `{
                 },
                 "expires_in": {
                     "type": "integer"
+                },
+                "refresh_expires_in": {
+                    "type": "integer"
+                },
+                "refresh_token": {
+                    "type": "string"
                 }
             }
         },

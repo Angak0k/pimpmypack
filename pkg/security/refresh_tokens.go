@@ -15,11 +15,61 @@ import (
 	"github.com/Angak0k/pimpmypack/pkg/database"
 )
 
+// ErrTokenAlreadyRotated is returned when a rotation loses the race against
+// a concurrent rotation of the same token
+var ErrTokenAlreadyRotated = errors.New("refresh token already rotated")
+
 // hashRefreshToken returns the hex-encoded SHA-256 of a refresh token —
 // the only form ever persisted, so a database leak cannot be replayed
 func hashRefreshToken(token string) string {
 	sum := sha256.Sum256([]byte(token))
 	return hex.EncodeToString(sum[:])
+}
+
+// newTokenString generates a cryptographically random refresh token
+func newTokenString() (string, error) {
+	tokenBytes := make([]byte, 32)
+	if _, err := rand.Read(tokenBytes); err != nil {
+		return "", fmt.Errorf("failed to generate random token: %w", err)
+	}
+	return base64.URLEncoding.EncodeToString(tokenBytes), nil
+}
+
+// queryRower is the QueryRowContext surface shared by *sql.DB and *sql.Tx,
+// so insertRefreshToken works both standalone and inside a transaction.
+type queryRower interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}
+
+// insertRefreshToken inserts a token row (storing only its hash) and returns
+// the populated model with the plaintext token set for the caller to hand out
+func insertRefreshToken(
+	ctx context.Context, q queryRower, plaintext string, accountID uint, expiresAt time.Time,
+) (*RefreshToken, error) {
+	var token RefreshToken
+	err := q.QueryRowContext(ctx,
+		`INSERT INTO refresh_token (token, account_id, expires_at, created_at)
+         VALUES ($1, $2, $3, $4)
+         RETURNING id, token, account_id, expires_at, created_at, last_used_at, revoked, rotated_at`,
+		hashRefreshToken(plaintext), accountID, expiresAt, time.Now(),
+	).Scan(
+		&token.ID,
+		&token.Token,
+		&token.AccountID,
+		&token.ExpiresAt,
+		&token.CreatedAt,
+		&token.LastUsedAt,
+		&token.Revoked,
+		&token.RotatedAt,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert refresh token: %w", err)
+	}
+
+	// The database holds only the hash; the plaintext exists server-side only
+	// here, to be handed to the client
+	token.Token = plaintext
+	return &token, nil
 }
 
 // CreateRefreshToken creates a new refresh token for a user
@@ -31,37 +81,12 @@ func CreateRefreshToken(ctx context.Context, accountID uint, rememberMe bool) (*
 		expiresAt = time.Now().Add(time.Hour * 24 * time.Duration(config.RefreshTokenDays))
 	}
 
-	tokenBytes := make([]byte, 32)
-	if _, err := rand.Read(tokenBytes); err != nil {
-		return nil, fmt.Errorf("failed to generate random token: %w", err)
-	}
-	tokenString := base64.URLEncoding.EncodeToString(tokenBytes)
-
-	var token RefreshToken
-	err := database.DB().QueryRowContext(ctx,
-		`INSERT INTO refresh_token (token, account_id, expires_at, created_at)
-         VALUES ($1, $2, $3, $4)
-         RETURNING id, token, account_id, expires_at, created_at, last_used_at, revoked`,
-		hashRefreshToken(tokenString), accountID, expiresAt, time.Now(),
-	).Scan(
-		&token.ID,
-		&token.Token,
-		&token.AccountID,
-		&token.ExpiresAt,
-		&token.CreatedAt,
-		&token.LastUsedAt,
-		&token.Revoked,
-	)
-
+	tokenString, err := newTokenString()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create refresh token: %w", err)
+		return nil, err
 	}
 
-	// The database holds only the hash; the caller needs the plaintext to
-	// hand to the client — this is the only place it exists server-side
-	token.Token = tokenString
-
-	return &token, nil
+	return insertRefreshToken(ctx, database.DB(), tokenString, accountID, expiresAt)
 }
 
 // GetRefreshToken retrieves a refresh token by token string
@@ -69,7 +94,7 @@ func GetRefreshToken(ctx context.Context, tokenString string) (*RefreshToken, er
 	var token RefreshToken
 
 	err := database.DB().QueryRowContext(ctx,
-		`SELECT id, token, account_id, expires_at, created_at, last_used_at, revoked
+		`SELECT id, token, account_id, expires_at, created_at, last_used_at, revoked, rotated_at
          FROM refresh_token
          WHERE token = $1`,
 		hashRefreshToken(tokenString),
@@ -81,6 +106,7 @@ func GetRefreshToken(ctx context.Context, tokenString string) (*RefreshToken, er
 		&token.CreatedAt,
 		&token.LastUsedAt,
 		&token.Revoked,
+		&token.RotatedAt,
 	)
 
 	if err == sql.ErrNoRows {
@@ -93,16 +119,65 @@ func GetRefreshToken(ctx context.Context, tokenString string) (*RefreshToken, er
 	return &token, nil
 }
 
-// UpdateLastUsed updates the last_used_at timestamp
-func UpdateLastUsed(ctx context.Context, tokenID uint) error {
-	_, err := database.DB().ExecContext(ctx,
-		`UPDATE refresh_token SET last_used_at = $1 WHERE id = $2`,
-		time.Now(), tokenID,
+// HasLiveRefreshToken reports whether the account still has at least one
+// non-revoked, unexpired refresh token — used to deny the rotation grace
+// once a logout/password-change/admin action has cleared the sessions.
+func HasLiveRefreshToken(ctx context.Context, accountID uint) (bool, error) {
+	var exists bool
+	err := database.DB().QueryRowContext(ctx,
+		`SELECT EXISTS(
+            SELECT 1 FROM refresh_token
+            WHERE account_id = $1 AND revoked = FALSE AND expires_at > $2)`,
+		accountID, time.Now(),
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check for live refresh token: %w", err)
+	}
+	return exists, nil
+}
+
+// RotateRefreshToken atomically revokes the presented token and issues its
+// successor, preserving the session horizon. Returns ErrTokenAlreadyRotated
+// when a concurrent rotation of the same token won the race.
+func RotateRefreshToken(ctx context.Context, old *RefreshToken) (*RefreshToken, error) {
+	tokenString, err := newTokenString()
+	if err != nil {
+		return nil, err
+	}
+
+	tx, err := database.DB().BeginTx(ctx, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to begin rotation transaction: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }() // no-op once committed
+
+	now := time.Now()
+	result, err := tx.ExecContext(ctx,
+		`UPDATE refresh_token SET revoked = TRUE, rotated_at = $1, last_used_at = $1
+         WHERE id = $2 AND revoked = FALSE AND expires_at > $1`,
+		now, old.ID,
 	)
 	if err != nil {
-		return fmt.Errorf("failed to update last used: %w", err)
+		return nil, fmt.Errorf("failed to revoke rotated token: %w", err)
 	}
-	return nil
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, fmt.Errorf("failed to check rows affected: %w", err)
+	}
+	if rowsAffected == 0 {
+		return nil, ErrTokenAlreadyRotated
+	}
+
+	successor, err := insertRefreshToken(ctx, tx, tokenString, old.AccountID, old.ExpiresAt)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("failed to commit rotation: %w", err)
+	}
+
+	return successor, nil
 }
 
 // RevokeRefreshToken marks a refresh token as revoked. It returns the owning

@@ -150,24 +150,6 @@ func TestGetRefreshToken_NotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "not found")
 }
 
-func TestUpdateLastUsed(t *testing.T) {
-	ctx := context.Background()
-	accountID := createTestAccount(t)
-
-	token, err := CreateRefreshToken(ctx, accountID, false)
-	require.NoError(t, err)
-	assert.Nil(t, token.LastUsedAt)
-
-	time.Sleep(time.Second) // Ensure time difference
-
-	err = UpdateLastUsed(ctx, token.ID)
-	require.NoError(t, err)
-
-	updated, err := GetRefreshToken(ctx, token.Token)
-	require.NoError(t, err)
-	assert.NotNil(t, updated.LastUsedAt)
-}
-
 func TestRevokeRefreshToken_Success(t *testing.T) {
 	ctx := context.Background()
 	accountID := createTestAccount(t)
@@ -234,6 +216,49 @@ func TestRevokeAllUserTokens(t *testing.T) {
 	revoked, err = RevokeAllUserTokens(ctx, accountID)
 	require.NoError(t, err)
 	assert.Equal(t, int64(0), revoked)
+}
+
+func TestRotateRefreshToken_Success(t *testing.T) {
+	ctx := context.Background()
+	accountID := createTestAccount(t)
+
+	old, err := CreateRefreshToken(ctx, accountID, true)
+	require.NoError(t, err)
+
+	successor, err := RotateRefreshToken(ctx, old)
+	require.NoError(t, err)
+	assert.NotEmpty(t, successor.Token)
+	assert.NotEqual(t, old.Token, successor.Token)
+	assert.Equal(t, accountID, successor.AccountID)
+	// Rotation preserves the session horizon
+	assert.WithinDuration(t, old.ExpiresAt, successor.ExpiresAt, time.Second)
+
+	// The presented token is revoked and marked as rotated
+	oldRow, err := GetRefreshToken(ctx, old.Token)
+	require.NoError(t, err)
+	assert.True(t, oldRow.Revoked)
+	require.NotNil(t, oldRow.RotatedAt)
+
+	// The successor is live
+	newRow, err := GetRefreshToken(ctx, successor.Token)
+	require.NoError(t, err)
+	assert.False(t, newRow.Revoked)
+	assert.Nil(t, newRow.RotatedAt)
+}
+
+func TestRotateRefreshToken_AlreadyRotated(t *testing.T) {
+	ctx := context.Background()
+	accountID := createTestAccount(t)
+
+	old, err := CreateRefreshToken(ctx, accountID, false)
+	require.NoError(t, err)
+
+	_, err = RotateRefreshToken(ctx, old)
+	require.NoError(t, err)
+
+	// A concurrent rotation of the same token loses the race
+	_, err = RotateRefreshToken(ctx, old)
+	require.ErrorIs(t, err, ErrTokenAlreadyRotated)
 }
 
 func TestCleanupExpiredTokens(t *testing.T) {

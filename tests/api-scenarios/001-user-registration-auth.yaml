@@ -183,7 +183,7 @@ scenarios:
       new_access_token: "{{response.access_token}}"
       refresh_token: "{{response.refresh_token}}"
 
-  - name: "Refresh access token using refresh token"
+  - name: "Refresh access token (strict rotation returns a successor refresh token)"
     request:
       method: POST
       endpoint: "/auth/refresh"
@@ -198,8 +198,13 @@ scenarios:
       - type: json_path
         path: "$.expires_in"
         exists: true
+      - type: json_path
+        path: "$.refresh_token"
+        exists: true
     store:
       refreshed_access_token: "{{response.access_token}}"
+      # The presented token is revoked by rotation; use the successor from now on
+      refresh_token: "{{response.refresh_token}}"
 
   - name: "Verify refreshed access token works"
     request:
