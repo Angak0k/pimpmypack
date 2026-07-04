@@ -154,7 +154,7 @@ func RotateRefreshToken(ctx context.Context, old *RefreshToken) (*RefreshToken, 
 	now := time.Now()
 	result, err := tx.ExecContext(ctx,
 		`UPDATE refresh_token SET revoked = TRUE, rotated_at = $1, last_used_at = $1
-         WHERE id = $2 AND revoked = FALSE`,
+         WHERE id = $2 AND revoked = FALSE AND expires_at > $1`,
 		now, old.ID,
 	)
 	if err != nil {

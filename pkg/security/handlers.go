@@ -55,19 +55,19 @@ func RefreshTokenHandler(c *gin.Context) {
 		return
 	}
 
-	// 5. Strict rotation: revoke the presented token and issue its successor.
-	// Losing a concurrent-rotation race is the same benign situation as the
-	// grace path: answer with an access token only; the client adopts the
-	// successor from the winning request.
+	// 5. Generate the access token BEFORE rotating: if signing fails we must
+	// not have already burned (revoked) the presented refresh token.
+	accessToken, err := GenerateToken(refreshToken.AccountID)
+	if err != nil {
+		AuditRefreshFailed(c, "failed to generate access token")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+
+	// 6. Strict rotation: revoke the presented token and issue its successor.
 	successor, err := RotateRefreshToken(c.Request.Context(), refreshToken)
 	switch {
 	case err == nil:
-		accessToken, genErr := GenerateToken(refreshToken.AccountID)
-		if genErr != nil {
-			AuditRefreshFailed(c, "failed to generate access token")
-			c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
-			return
-		}
 		AuditRefreshSuccess(c, refreshToken.AccountID)
 		c.JSON(http.StatusOK, RefreshResponse{
 			AccessToken:      accessToken,
@@ -76,11 +76,34 @@ func RefreshTokenHandler(c *gin.Context) {
 			RefreshExpiresIn: max(0, int64(time.Until(successor.ExpiresAt).Seconds())),
 		})
 	case errors.Is(err, ErrTokenAlreadyRotated):
-		respondWithAccessToken(c, refreshToken.AccountID)
+		// The row changed between the read and the rotation UPDATE (a
+		// concurrent rotation, a logout/password/admin revocation, or a
+		// just-crossed expiry). Re-read and apply the current policy rather
+		// than blindly granting access.
+		reevaluateRefreshAfterRace(c, input.Token)
 	default:
 		AuditRefreshFailed(c, "failed to rotate refresh token")
 		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
 	}
+}
+
+// reevaluateRefreshAfterRace re-reads a token that could not be rotated
+// (the row was revoked/rotated/expired concurrently) and re-applies the full
+// validation, so a benign rotation race still yields access while a
+// concurrent revocation or expiry correctly returns 401.
+func reevaluateRefreshAfterRace(c *gin.Context, tokenString string) {
+	latest, err := GetRefreshToken(c.Request.Context(), tokenString)
+	if err != nil {
+		AuditRefreshFailed(c, "invalid refresh token")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid refresh token"})
+		return
+	}
+	if time.Now().After(latest.ExpiresAt) {
+		AuditRefreshFailed(c, "refresh token has expired")
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token has expired"})
+		return
+	}
+	handleRevokedRefreshToken(c, latest)
 }
 
 // handleRevokedRefreshToken answers a refresh attempt with a revoked token.
