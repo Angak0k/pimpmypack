@@ -1,6 +1,7 @@
 package security
 
 import (
+	"errors"
 	"net/http"
 	"time"
 
@@ -42,31 +43,92 @@ func RefreshTokenHandler(c *gin.Context) {
 	}
 
 	// 3. Validate refresh token
-	if refreshToken.Revoked {
-		AuditRefreshFailed(c, "refresh token has been revoked")
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token has been revoked"})
-		return
-	}
-
 	if time.Now().After(refreshToken.ExpiresAt) {
 		AuditRefreshFailed(c, "refresh token has expired")
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Refresh token has expired"})
 		return
 	}
 
-	// 4. Generate new access token
-	accessToken, err := GenerateToken(refreshToken.AccountID)
-	if err != nil {
-		AuditRefreshFailed(c, "failed to generate access token")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to generate access token"})
+	// 4. A revoked token may still be within the rotation grace window
+	if refreshToken.Revoked {
+		handleRevokedRefreshToken(c, refreshToken)
 		return
 	}
 
-	// 5. Update last_used_at (ignore errors - non-blocking)
-	_ = UpdateLastUsed(c.Request.Context(), refreshToken.ID)
+	// 5. Strict rotation: revoke the presented token and issue its successor.
+	// Losing a concurrent-rotation race is the same benign situation as the
+	// grace path: answer with an access token only; the client adopts the
+	// successor from the winning request.
+	successor, err := RotateRefreshToken(c.Request.Context(), refreshToken)
+	switch {
+	case err == nil:
+		accessToken, genErr := GenerateToken(refreshToken.AccountID)
+		if genErr != nil {
+			AuditRefreshFailed(c, "failed to generate access token")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+		AuditRefreshSuccess(c, refreshToken.AccountID)
+		c.JSON(http.StatusOK, RefreshResponse{
+			AccessToken:      accessToken,
+			ExpiresIn:        int64(config.AccessTokenMinutes * 60),
+			RefreshToken:     successor.Token,
+			RefreshExpiresIn: max(0, int64(time.Until(successor.ExpiresAt).Seconds())),
+		})
+	case errors.Is(err, ErrTokenAlreadyRotated):
+		respondWithAccessToken(c, refreshToken.AccountID)
+	default:
+		AuditRefreshFailed(c, "failed to rotate refresh token")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+	}
+}
 
-	// 6. Audit successful refresh and respond
-	AuditRefreshSuccess(c, refreshToken.AccountID)
+// handleRevokedRefreshToken answers a refresh attempt with a revoked token.
+// Rotation deliberately does NOT auto-revoke sibling sessions on replay: a
+// superseded token replayed by a benign client (multi-tab race, a lost
+// response on a flaky network, a backgrounded tab) is common, and an
+// account-wide logout would be a worse outcome than a re-login.
+//   - rotated within the grace window AND the account still has a live
+//     session: benign race → issue an access token (no re-rotation)
+//   - otherwise: plain 401. A replay past the grace window is logged as a
+//     reuse signal for out-of-band alerting, but triggers no revocation.
+func handleRevokedRefreshToken(c *gin.Context, refreshToken *RefreshToken) {
+	graceWindow := time.Duration(config.RefreshRotationGraceSeconds) * time.Second
+	if refreshToken.RotatedAt != nil && time.Since(*refreshToken.RotatedAt) <= graceWindow {
+		// Guard the grace path against a concurrent logout / password change /
+		// admin action: if no live session remains, the account was revoked
+		// and the grace must not resurrect access.
+		live, err := HasLiveRefreshToken(c.Request.Context(), refreshToken.AccountID)
+		if err != nil {
+			helper.LogAndSanitize(err, "refresh grace: live-token check failed")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+			return
+		}
+		if live {
+			respondWithAccessToken(c, refreshToken.AccountID)
+			return
+		}
+	}
+
+	if refreshToken.RotatedAt != nil {
+		// Superseded token replayed beyond grace: log for alerting, no action
+		AuditRefreshReuseDetected(c, refreshToken.AccountID)
+	} else {
+		AuditRefreshFailed(c, "refresh token has been revoked")
+	}
+	c.JSON(http.StatusUnauthorized, gin.H{"error": helper.ErrMsgUnauthorized})
+}
+
+// respondWithAccessToken issues a new access token for an already-valid
+// session (rotation-race loser or benign grace replay) without rotating
+func respondWithAccessToken(c *gin.Context, accountID uint) {
+	accessToken, err := GenerateToken(accountID)
+	if err != nil {
+		AuditRefreshFailed(c, "failed to generate access token")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": helper.ErrMsgInternalServer})
+		return
+	}
+	AuditRefreshSuccess(c, accountID)
 	c.JSON(http.StatusOK, RefreshResponse{
 		AccessToken: accessToken,
 		ExpiresIn:   int64(config.AccessTokenMinutes * 60),

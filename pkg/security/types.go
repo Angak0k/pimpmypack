@@ -14,6 +14,9 @@ type RefreshToken struct {
 	CreatedAt  time.Time
 	LastUsedAt *time.Time
 	Revoked    bool
+	// RotatedAt is set when the token was revoked because a successor was
+	// issued (rotation), nil when revoked by logout/password/admin action
+	RotatedAt *time.Time
 }
 
 // RefreshTokenInput represents the input for refresh token endpoint
@@ -30,10 +33,15 @@ type TokenPairResponse struct {
 	RefreshExpiresIn int64  `json:"refresh_expires_in"`
 }
 
-// RefreshResponse represents the response from refresh endpoint
+// RefreshResponse represents the response from refresh endpoint.
+// RefreshToken carries the rotated successor the client must store — the
+// presented token is revoked. The fields are absent only on the short
+// reuse-grace path (benign multi-tab race), where no rotation happens.
 type RefreshResponse struct {
-	AccessToken string `json:"access_token"`
-	ExpiresIn   int64  `json:"expires_in"`
+	AccessToken      string `json:"access_token"`
+	ExpiresIn        int64  `json:"expires_in"`
+	RefreshToken     string `json:"refresh_token,omitempty"`
+	RefreshExpiresIn int64  `json:"refresh_expires_in,omitempty"`
 }
 
 // LogoutAllResponse is the response of POST /v1/auth/logout-all

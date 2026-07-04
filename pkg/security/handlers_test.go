@@ -10,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Angak0k/pimpmypack/pkg/config"
 	"github.com/Angak0k/pimpmypack/pkg/database"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -59,6 +60,102 @@ func TestRefreshTokenHandler_Success(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, response.AccessToken)
 	assert.Positive(t, response.ExpiresIn)
+
+	// Strict rotation: a successor refresh token is returned
+	assert.NotEmpty(t, response.RefreshToken)
+	assert.NotEqual(t, refreshToken.Token, response.RefreshToken)
+	assert.Positive(t, response.RefreshExpiresIn)
+
+	// The presented token is now revoked-by-rotation
+	oldRow, err := GetRefreshToken(ctx, refreshToken.Token)
+	require.NoError(t, err)
+	assert.True(t, oldRow.Revoked)
+	require.NotNil(t, oldRow.RotatedAt)
+
+	// The successor is usable
+	w = postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: response.RefreshToken}, "")
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestRefreshTokenHandler_GraceOnRecentRotation(t *testing.T) {
+	ctx := context.Background()
+	accountID := createTestAccount(t)
+	router := setupTestRouter()
+
+	oldToken, err := CreateRefreshToken(ctx, accountID, false)
+	require.NoError(t, err)
+
+	// Rotate: oldToken is superseded
+	w := postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: oldToken.Token}, "")
+	require.Equal(t, http.StatusOK, w.Code)
+	var rotated RefreshResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &rotated))
+
+	// Immediate replay of the superseded token (multi-tab race): a fresh
+	// access token is issued WITHOUT another rotation and without nuking
+	w = postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: oldToken.Token}, "")
+	assert.Equal(t, http.StatusOK, w.Code)
+	var grace RefreshResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &grace))
+	assert.NotEmpty(t, grace.AccessToken)
+	assert.Empty(t, grace.RefreshToken)
+
+	// The successor is still live
+	w = postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: rotated.RefreshToken}, "")
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestRefreshTokenHandler_SupersededReplayBeyondGraceIs401(t *testing.T) {
+	ctx := context.Background()
+	accountID := createTestAccount(t)
+	router := setupTestRouter()
+
+	oldToken, err := CreateRefreshToken(ctx, accountID, false)
+	require.NoError(t, err)
+
+	// The token gets rotated by the legitimate client
+	w := postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: oldToken.Token}, "")
+	require.Equal(t, http.StatusOK, w.Code)
+	var rotated RefreshResponse
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &rotated))
+
+	graceWindow := time.Duration(config.RefreshRotationGraceSeconds) * time.Second
+
+	// Backdate the rotation beyond the grace window
+	_, err = database.DB().ExecContext(ctx,
+		`UPDATE refresh_token SET rotated_at = $1 WHERE token = $2`,
+		time.Now().Add(-2*graceWindow), hashRefreshToken(oldToken.Token),
+	)
+	require.NoError(t, err)
+
+	// Replaying the superseded token is rejected...
+	w = postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: oldToken.Token}, "")
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
+
+	// ...but the legitimate successor session is NOT revoked (no auto-nuke:
+	// a lost response / backgrounded tab must not log the user out everywhere)
+	w = postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: rotated.RefreshToken}, "")
+	assert.Equal(t, http.StatusOK, w.Code)
+}
+
+func TestRefreshTokenHandler_GraceDeniedAfterLogoutAll(t *testing.T) {
+	ctx := context.Background()
+	accountID := createTestAccount(t)
+	router := setupTestRouter()
+
+	oldToken, err := CreateRefreshToken(ctx, accountID, false)
+	require.NoError(t, err)
+
+	// Rotate, then revoke every session (logout-all / password change)
+	w := postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: oldToken.Token}, "")
+	require.Equal(t, http.StatusOK, w.Code)
+	_, err = RevokeAllUserTokens(ctx, accountID)
+	require.NoError(t, err)
+
+	// The just-rotated token is within its grace window, but no live session
+	// remains → the grace must not resurrect access
+	w = postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: oldToken.Token}, "")
+	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }
 
 func TestRefreshTokenHandler_InvalidToken(t *testing.T) {
@@ -116,7 +213,6 @@ func TestLogoutHandler_Success(t *testing.T) {
 	// The revoked token must no longer refresh
 	w = postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: refreshToken.Token}, "")
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
-	assert.Contains(t, w.Body.String(), "revoked")
 }
 
 func TestLogoutHandler_InvalidTokenStillSucceeds(t *testing.T) {

@@ -20,6 +20,7 @@ const (
 	EventRefreshFailed     AuditEventType = "refresh_failed"
 	EventLogout            AuditEventType = "logout_success"
 	EventLogoutAll         AuditEventType = "logout_all_success"
+	EventRefreshReuse      AuditEventType = "refresh_token_reuse_detected"
 	EventRateLimitExceeded AuditEventType = "rate_limit_exceeded"
 )
 
@@ -111,6 +112,19 @@ func AuditLogoutAll(c *gin.Context, userID uint, revokedSessions int64) {
 		IP:        c.ClientIP(),
 		UserAgent: c.Request.UserAgent(),
 		Message:   fmt.Sprintf("User logged out from all devices (%d sessions revoked)", revokedSessions),
+	})
+}
+
+// AuditRefreshReuseDetected logs the replay of a superseded refresh token
+// beyond the rotation grace window — a possible token-theft signal surfaced
+// for out-of-band alerting (no automatic revocation is performed)
+func AuditRefreshReuseDetected(c *gin.Context, userID uint) {
+	logAuditEvent(AuditEvent{
+		EventType: EventRefreshReuse,
+		UserID:    &userID,
+		IP:        c.ClientIP(),
+		UserAgent: c.Request.UserAgent(),
+		Message:   "Superseded refresh token replayed beyond grace window",
 	})
 }
 

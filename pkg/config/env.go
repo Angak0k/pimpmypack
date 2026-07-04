@@ -42,6 +42,7 @@ var (
 	RefreshTokenDays                    int
 	RefreshTokenRememberMeDays          int
 	RefreshTokenCleanupIntervalHours    int
+	RefreshRotationGraceSeconds         int
 	RefreshRateLimitRequests            int
 	RefreshRateLimitWindowMinutes       int
 	ResendConfirmRateLimitRequests      int
@@ -62,6 +63,7 @@ type Config struct {
 	RefreshTokenDays                    int
 	RefreshTokenRememberMeDays          int
 	RefreshTokenCleanupIntervalHours    int
+	RefreshRotationGraceSeconds         int
 	RefreshRateLimitRequests            int
 	RefreshRateLimitWindowMinutes       int
 	ResendConfirmRateLimitRequests      int
@@ -91,6 +93,7 @@ func EnvInit(envFilePath string) error {
 	RefreshTokenDays = newConfig.RefreshTokenDays
 	RefreshTokenRememberMeDays = newConfig.RefreshTokenRememberMeDays
 	RefreshTokenCleanupIntervalHours = newConfig.RefreshTokenCleanupIntervalHours
+	RefreshRotationGraceSeconds = newConfig.RefreshRotationGraceSeconds
 	RefreshRateLimitRequests = newConfig.RefreshRateLimitRequests
 	RefreshRateLimitWindowMinutes = newConfig.RefreshRateLimitWindowMinutes
 	ResendConfirmRateLimitRequests = newConfig.ResendConfirmRateLimitRequests
@@ -136,6 +139,7 @@ func newConfig() Config {
 		RefreshTokenDays:                    1,
 		RefreshTokenRememberMeDays:          30,
 		RefreshTokenCleanupIntervalHours:    24,
+		RefreshRotationGraceSeconds:         30,
 		RefreshRateLimitRequests:            10,
 		RefreshRateLimitWindowMinutes:       1,
 		ResendConfirmRateLimitRequests:      1,
@@ -171,6 +175,8 @@ func setEnvVars(cfg *Config) {
 		ifEnvEmpty(os.Getenv("REFRESH_TOKEN_REMEMBER_ME_DAYS"), strconv.Itoa(cfg.RefreshTokenRememberMeDays)))
 	cfg.RefreshTokenCleanupIntervalHours, _ = strconv.Atoi(
 		ifEnvEmpty(os.Getenv("REFRESH_TOKEN_CLEANUP_INTERVAL_HOURS"), strconv.Itoa(cfg.RefreshTokenCleanupIntervalHours)))
+	cfg.RefreshRotationGraceSeconds, _ = strconv.Atoi(
+		ifEnvEmpty(os.Getenv("REFRESH_ROTATION_GRACE_SECONDS"), strconv.Itoa(cfg.RefreshRotationGraceSeconds)))
 	cfg.RefreshRateLimitRequests, _ = strconv.Atoi(
 		ifEnvEmpty(os.Getenv("REFRESH_RATE_LIMIT_REQUESTS"), strconv.Itoa(cfg.RefreshRateLimitRequests)))
 	cfg.RefreshRateLimitWindowMinutes, _ = strconv.Atoi(
