@@ -18,7 +18,13 @@ var (
 
 	// ErrPackNotOwned is returned when a user tries to operate on a pack they don't own
 	ErrPackNotOwned = errors.New("pack does not belong to user")
+
+	// ErrTooManyItems is returned when an import exceeds MaxImportItems
+	ErrTooManyItems = errors.New("too many items in import")
 )
+
+// MaxImportItems caps the number of items accepted by a single pack import
+const MaxImportItems = 500
 
 // Allowed metadata values for pack categorization
 

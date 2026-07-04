@@ -2,8 +2,10 @@ package images
 
 import (
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"image/jpeg"
@@ -50,6 +52,78 @@ func createTestPNG(width, height int) []byte {
 		panic(fmt.Sprintf("failed to encode test PNG: %v", err))
 	}
 	return buf.Bytes()
+}
+
+// createBombPNG hand-crafts a tiny PNG whose IHDR header declares the given
+// (potentially huge) dimensions without carrying any pixel data
+func createBombPNG(width, height uint32) []byte {
+	var buf bytes.Buffer
+
+	// PNG signature
+	buf.Write([]byte{0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A})
+
+	// IHDR chunk: width, height, bit depth 8, color type 6 (RGBA), no interlace
+	ihdr := make([]byte, 13)
+	binary.BigEndian.PutUint32(ihdr[0:4], width)
+	binary.BigEndian.PutUint32(ihdr[4:8], height)
+	ihdr[8] = 8
+	ihdr[9] = 6
+
+	var length [4]byte
+	binary.BigEndian.PutUint32(length[:], uint32(len(ihdr)))
+	buf.Write(length[:])
+	buf.WriteString("IHDR")
+	buf.Write(ihdr)
+
+	crc := crc32.NewIEEE()
+	crc.Write([]byte("IHDR"))
+	crc.Write(ihdr)
+	var crcBytes [4]byte
+	binary.BigEndian.PutUint32(crcBytes[:], crc.Sum32())
+	buf.Write(crcBytes[:])
+
+	return buf.Bytes()
+}
+
+func TestDecodeImage_DecompressionBomb(t *testing.T) {
+	tests := []struct {
+		name    string
+		data    []byte
+		wantErr error
+	}{
+		{
+			name:    "Huge declared dimensions rejected before decode",
+			data:    createBombPNG(20000, 20000),
+			wantErr: ErrTooLarge,
+		},
+		{
+			name:    "Just above pixel cap rejected",
+			data:    createBombPNG(6000, 4001),
+			wantErr: ErrTooLarge,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := DecodeImage(tt.data)
+			if err == nil {
+				t.Fatalf("Expected error but got none")
+			}
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("Expected error %v, got %v", tt.wantErr, err)
+			}
+		})
+	}
+}
+
+func TestProcessImage_DecompressionBomb(t *testing.T) {
+	_, err := ProcessImage(createBombPNG(20000, 20000))
+	if err == nil {
+		t.Fatalf("Expected error but got none")
+	}
+	if !errors.Is(err, ErrTooLarge) {
+		t.Errorf("Expected ErrTooLarge, got %v", err)
+	}
 }
 
 func TestValidateImageFormat(t *testing.T) {

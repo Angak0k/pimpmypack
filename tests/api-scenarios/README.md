@@ -107,6 +107,15 @@ Extracts and validates JSON fields using JSONPath syntax:
     contains: "success"
 ```
 
+### header
+Validates a response header value (`equals` for exact match, `contains` for substring; one of the two is required):
+
+```yaml
+  - type: header
+    name: "X-Content-Type-Options"
+    equals: "nosniff"
+```
+
 ## Example Scenarios
 
 ### Simple Login Test

@@ -120,6 +120,22 @@ scenarios:
       - type: status_code
         expected: 200
 
+  - name: "Security: CSV import with too many items is rejected"
+    request:
+      method: POST
+      endpoint: "/v1/importfromlighterpack"
+      headers:
+        Authorization: "Bearer {{access_token}}"
+      file:
+        field: "file"
+        path: "tests/api-scenarios/fixtures/oversized-pack.csv"
+    assertions:
+      - type: status_code
+        expected: 400
+      - type: json_path
+        path: "$.error"
+        contains: "too many items"
+
   - name: "Upload imperial CSV file to import pack"
     request:
       method: POST

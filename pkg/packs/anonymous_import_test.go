@@ -85,6 +85,46 @@ func TestImportPack_Success(t *testing.T) {
 	verifyImportResponse(t, w.Body.Bytes())
 }
 
+func TestImportPack_TooManyItems(t *testing.T) {
+	token, err := security.GenerateToken(users[0].ID)
+	if err != nil {
+		t.Fatalf("failed to generate token: %v", err)
+	}
+
+	gin.SetMode(gin.TestMode)
+	router := gin.Default()
+	router.POST("/importpack", ImportPack)
+
+	items := make(ExternalPack, MaxImportItems+1)
+	for i := range items {
+		items[i] = ExternalPackItem{
+			ItemName: "Item",
+			Category: "Misc",
+			Qty:      1,
+			Weight:   100,
+			Unit:     "g",
+			Currency: "EUR",
+		}
+	}
+	payload := ImportPackRequest{
+		PackName:        "Oversized Pack",
+		PackDescription: "too many items",
+		Items:           items,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, _ := http.NewRequest(http.MethodPost, "/importpack", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+token)
+
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("expected 400, got %d (body: %s)", w.Code, w.Body.String())
+	}
+}
+
 func TestImportPack_EmptyItems(t *testing.T) {
 	token, err := security.GenerateToken(users[0].ID)
 	if err != nil {

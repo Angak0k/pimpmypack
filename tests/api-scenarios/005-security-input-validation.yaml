@@ -41,6 +41,12 @@ scenarios:
       - type: json_path
         path: "$.access_token"
         exists: true
+      - type: header
+        name: "X-Content-Type-Options"
+        equals: "nosniff"
+      - type: header
+        name: "X-Frame-Options"
+        equals: "DENY"
     store:
       access_token: "{{response.access_token}}"
       user_id: "{{response.id}}"

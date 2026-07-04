@@ -832,6 +832,9 @@ func insertExternalPack(
 	if lp == nil || len(*lp) == 0 {
 		return 0, errors.New("payload is empty")
 	}
+	if len(*lp) > MaxImportItems {
+		return 0, fmt.Errorf("%w: %d items exceeds limit of %d", ErrTooManyItems, len(*lp), MaxImportItems)
+	}
 
 	// Create new pack
 	var newPack Pack
