@@ -25,8 +25,12 @@ func setupTestRouter() *gin.Engine {
 	return r
 }
 
-func postJSON(router *gin.Engine, path string, payload any, accessToken string) *httptest.ResponseRecorder {
-	body, _ := json.Marshal(payload)
+func postJSON(
+	t *testing.T, router *gin.Engine, path string, payload any, accessToken string,
+) *httptest.ResponseRecorder {
+	t.Helper()
+	body, err := json.Marshal(payload)
+	require.NoError(t, err)
 	req := httptest.NewRequest(http.MethodPost, path, bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	if accessToken != "" {
@@ -46,7 +50,7 @@ func TestRefreshTokenHandler_Success(t *testing.T) {
 	refreshToken, err := CreateRefreshToken(ctx, accountID, false)
 	require.NoError(t, err)
 
-	w := postJSON(router, "/auth/refresh", RefreshTokenInput{Token: refreshToken.Token}, "")
+	w := postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: refreshToken.Token}, "")
 
 	assert.Equal(t, http.StatusOK, w.Code)
 
@@ -60,7 +64,7 @@ func TestRefreshTokenHandler_Success(t *testing.T) {
 func TestRefreshTokenHandler_InvalidToken(t *testing.T) {
 	router := setupTestRouter()
 
-	w := postJSON(router, "/auth/refresh", RefreshTokenInput{Token: "invalid-token"}, "")
+	w := postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: "invalid-token"}, "")
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.Contains(t, w.Body.String(), "Invalid refresh token")
@@ -83,7 +87,7 @@ func TestRefreshTokenHandler_ExpiredToken(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	w := postJSON(router, "/auth/refresh", RefreshTokenInput{Token: expiredToken}, "")
+	w := postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: expiredToken}, "")
 
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.Contains(t, w.Body.String(), "expired")
@@ -92,7 +96,7 @@ func TestRefreshTokenHandler_ExpiredToken(t *testing.T) {
 func TestRefreshTokenHandler_MissingInput(t *testing.T) {
 	router := setupTestRouter()
 
-	w := postJSON(router, "/auth/refresh", struct{}{}, "")
+	w := postJSON(t, router, "/auth/refresh", struct{}{}, "")
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -105,12 +109,12 @@ func TestLogoutHandler_Success(t *testing.T) {
 	refreshToken, err := CreateRefreshToken(ctx, accountID, false)
 	require.NoError(t, err)
 
-	w := postJSON(router, "/auth/logout", RefreshTokenInput{Token: refreshToken.Token}, "")
+	w := postJSON(t, router, "/auth/logout", RefreshTokenInput{Token: refreshToken.Token}, "")
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "Logged out successfully")
 
 	// The revoked token must no longer refresh
-	w = postJSON(router, "/auth/refresh", RefreshTokenInput{Token: refreshToken.Token}, "")
+	w = postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: refreshToken.Token}, "")
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 	assert.Contains(t, w.Body.String(), "revoked")
 }
@@ -119,7 +123,7 @@ func TestLogoutHandler_InvalidTokenStillSucceeds(t *testing.T) {
 	router := setupTestRouter()
 
 	// 200 even for unknown tokens: no token enumeration
-	w := postJSON(router, "/auth/logout", RefreshTokenInput{Token: "unknown-token"}, "")
+	w := postJSON(t, router, "/auth/logout", RefreshTokenInput{Token: "unknown-token"}, "")
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "Logged out successfully")
 }
@@ -127,7 +131,7 @@ func TestLogoutHandler_InvalidTokenStillSucceeds(t *testing.T) {
 func TestLogoutHandler_MissingInput(t *testing.T) {
 	router := setupTestRouter()
 
-	w := postJSON(router, "/auth/logout", struct{}{}, "")
+	w := postJSON(t, router, "/auth/logout", struct{}{}, "")
 
 	assert.Equal(t, http.StatusBadRequest, w.Code)
 }
@@ -145,7 +149,7 @@ func TestLogoutAllHandler_Success(t *testing.T) {
 	accessToken, err := GenerateToken(accountID)
 	require.NoError(t, err)
 
-	w := postJSON(router, "/v1/auth/logout-all", struct{}{}, accessToken)
+	w := postJSON(t, router, "/v1/auth/logout-all", struct{}{}, accessToken)
 	assert.Equal(t, http.StatusOK, w.Code)
 
 	var response LogoutAllResponse
@@ -155,7 +159,7 @@ func TestLogoutAllHandler_Success(t *testing.T) {
 
 	// Both sessions are dead
 	for _, tok := range []string{token1.Token, token2.Token} {
-		w = postJSON(router, "/auth/refresh", RefreshTokenInput{Token: tok}, "")
+		w = postJSON(t, router, "/auth/refresh", RefreshTokenInput{Token: tok}, "")
 		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	}
 }
@@ -163,6 +167,6 @@ func TestLogoutAllHandler_Success(t *testing.T) {
 func TestLogoutAllHandler_RequiresAuth(t *testing.T) {
 	router := setupTestRouter()
 
-	w := postJSON(router, "/v1/auth/logout-all", struct{}{}, "")
+	w := postJSON(t, router, "/v1/auth/logout-all", struct{}{}, "")
 	assert.Equal(t, http.StatusUnauthorized, w.Code)
 }

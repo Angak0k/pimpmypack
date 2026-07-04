@@ -112,9 +112,9 @@ func RevokeRefreshToken(ctx context.Context, tokenString string) (uint, bool, er
 	var accountID uint
 	err := database.DB().QueryRowContext(ctx,
 		`UPDATE refresh_token SET revoked = TRUE
-         WHERE token = $1 AND revoked = FALSE
+         WHERE token = $1 AND revoked = FALSE AND expires_at > $2
          RETURNING account_id`,
-		hashRefreshToken(tokenString),
+		hashRefreshToken(tokenString), time.Now(),
 	).Scan(&accountID)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -132,8 +132,8 @@ func RevokeRefreshToken(ctx context.Context, tokenString string) (uint, bool, er
 func RevokeAllUserTokens(ctx context.Context, accountID uint) (int64, error) {
 	result, err := database.DB().ExecContext(ctx,
 		`UPDATE refresh_token SET revoked = TRUE
-         WHERE account_id = $1 AND revoked = FALSE`,
-		accountID,
+         WHERE account_id = $1 AND revoked = FALSE AND expires_at > $2`,
+		accountID, time.Now(),
 	)
 	if err != nil {
 		return 0, fmt.Errorf("failed to revoke user refresh tokens: %w", err)
