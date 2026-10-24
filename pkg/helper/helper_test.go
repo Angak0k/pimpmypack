@@ -124,8 +124,6 @@ func TestBuildMIMEMessage(t *testing.T) {
 		{"Message-ID header", "Message-ID: <"},
 		{"MIME-Version", "MIME-Version: 1.0"},
 		{"multipart boundary", "Content-Type: multipart/alternative; boundary="},
-		{"List-Unsubscribe header", "List-Unsubscribe: <mailto:noreply@pimpmypack.com?subject=unsubscribe>"},
-		{"List-Unsubscribe-Post header", "List-Unsubscribe-Post: List-Unsubscribe=One-Click"},
 		{"text/plain part", "Content-Type: text/plain; charset=utf-8"},
 		{"text/html part", "Content-Type: text/html; charset=utf-8"},
 		{"text body", "Plain text body"},
@@ -139,6 +137,11 @@ func TestBuildMIMEMessage(t *testing.T) {
 				t.Errorf("expected message to contain %q", c.substr)
 			}
 		})
+	}
+
+	// Transactional mail must not look like bulk mail.
+	if strings.Contains(raw, "List-Unsubscribe") {
+		t.Error("transactional message must not carry List-Unsubscribe headers")
 	}
 }
 
