@@ -123,8 +123,6 @@ func BuildMIMEMessage(
 		"Subject: %s\r\n"+
 		"Date: %s\r\n"+
 		"Message-ID: <%s>\r\n"+
-		"List-Unsubscribe: <mailto:%s?subject=unsubscribe>\r\n"+
-		"List-Unsubscribe-Post: List-Unsubscribe=One-Click\r\n"+
 		"MIME-Version: 1.0\r\n"+
 		"Content-Type: multipart/alternative; boundary=%s\r\n"+
 		"\r\n",
@@ -133,7 +131,6 @@ func BuildMIMEMessage(
 		sanitizeHeaderValue(subject),
 		time.Now().Format(time.RFC1123Z),
 		messageID,
-		sanitizeHeaderValue(fromAddr),
 		writer.Boundary(),
 	)
 
