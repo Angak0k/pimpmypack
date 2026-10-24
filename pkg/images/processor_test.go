@@ -18,14 +18,15 @@ func createTestJPEG(width, height int) []byte {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
 
 	// Fill with a gradient pattern
+	// Write straight into Pix: per-pixel img.Set is very slow under -race.
 	for y := 0; y < height; y++ {
+		row := img.Pix[y*img.Stride : y*img.Stride+width*4]
+		g := uint8((y * 255) / height)
 		for x := 0; x < width; x++ {
-			img.Set(x, y, color.RGBA{
-				R: uint8((x * 255) / width),
-				G: uint8((y * 255) / height),
-				B: 128,
-				A: 255,
-			})
+			row[x*4] = uint8((x * 255) / width)
+			row[x*4+1] = g
+			row[x*4+2] = 128
+			row[x*4+3] = 255
 		}
 	}
 
@@ -249,15 +250,15 @@ func TestResizeImage(t *testing.T) {
 		},
 		{
 			name:         "Resize landscape image",
-			inputWidth:   3000,
-			inputHeight:  2000,
+			inputWidth:   MaxDimension + 80,
+			inputHeight:  MaxDimension / 2,
 			expectResize: true,
 			maxDim:       MaxDimension,
 		},
 		{
 			name:         "Resize portrait image",
-			inputWidth:   2000,
-			inputHeight:  3000,
+			inputWidth:   MaxDimension / 2,
+			inputHeight:  MaxDimension + 80,
 			expectResize: true,
 			maxDim:       MaxDimension,
 		},
@@ -389,7 +390,8 @@ func TestProcessImage_ValidPNG(t *testing.T) {
 
 func TestProcessImage_LargeImage(t *testing.T) {
 	// Create image that exceeds MaxDimension
-	data := createTestJPEG(3000, 2000)
+	const inputWidth, inputHeight = MaxDimension + 80, MaxDimension / 2
+	data := createTestJPEG(inputWidth, inputHeight)
 
 	result, err := ProcessImage(data)
 	if err != nil {
@@ -409,7 +411,7 @@ func TestProcessImage_LargeImage(t *testing.T) {
 	}
 
 	// Verify aspect ratio maintained
-	inputAspect := 3000.0 / 2000.0
+	inputAspect := float64(inputWidth) / float64(inputHeight)
 	outputAspect := float64(result.Metadata.Width) / float64(result.Metadata.Height)
 	aspectDiff := inputAspect - outputAspect
 	if aspectDiff < -0.01 || aspectDiff > 0.01 {
@@ -557,9 +559,9 @@ func TestResizeBannerImage(t *testing.T) {
 		width  int
 		height int
 	}{
-		{"4x3 source", 2048, 1536},
+		{"4x3 source", 1960, 1470},
 		{"16x9 source", 1920, 1080},
-		{"wide panoramic", 3840, 600},
+		{"wide panoramic", 2400, 375},
 		{"small image", 800, 400},
 		{"exact target size", MaxBannerWidth, MaxBannerHeight},
 	}
@@ -582,7 +584,7 @@ func TestProcessBannerImage(t *testing.T) {
 		width  int
 		height int
 	}{
-		{"4x3 source", 2048, 1536},
+		{"4x3 source", 1960, 1470},
 		{"16x9 source", 1920, 1080},
 		{"small image", 800, 400},
 	}

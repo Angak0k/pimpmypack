@@ -1,8 +1,19 @@
 package security
 
 import (
+	"testing"
+
 	"golang.org/x/crypto/bcrypt"
 )
+
+// hashCost is the bcrypt work factor. Test binaries use the minimum cost,
+// since bcrypt at the default cost dominates test runtime under -race.
+func hashCost() int {
+	if testing.Testing() {
+		return bcrypt.MinCost
+	}
+	return bcrypt.DefaultCost
+}
 
 // Security Definitions:
 // securityDefinitions:
@@ -13,7 +24,7 @@ import (
 
 // HashPassword hashes a password using bcrypt
 func HashPassword(password string) (string, error) {
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), hashCost())
 	if err != nil {
 		return "", err
 	}
