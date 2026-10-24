@@ -73,3 +73,9 @@ type MergeInventoryRequest struct {
 	Currency     string `json:"currency"`
 	ImageSource  string `json:"image_source" binding:"required,oneof=source target none"`
 }
+
+// Client-facing error messages.
+const (
+	errMsgInventoryNotFound = "Inventory not found"
+	errMsgItemNotOwned      = "This item does not belong to you"
+)

@@ -13,6 +13,8 @@ const (
 	ErrMsgNotFound       = "Resource not found"
 	ErrMsgBadRequest     = "Invalid request"
 	ErrMsgForbidden      = "Access forbidden"
+	ErrMsgInvalidID      = "Invalid ID format"
+	ErrMsgInvalidBody    = "Invalid Body format"
 )
 
 // LogAndSanitize logs the actual error internally and returns a safe message for the client

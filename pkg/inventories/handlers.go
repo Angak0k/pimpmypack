@@ -90,7 +90,7 @@ func GetMyInventory(c *gin.Context) {
 func GetInventoryByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -98,7 +98,7 @@ func GetInventoryByID(c *gin.Context) {
 
 	if err != nil {
 		if errors.Is(err, ErrNoItemFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgInventoryNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "get inventory by ID: find inventory failed")
@@ -107,7 +107,7 @@ func GetInventoryByID(c *gin.Context) {
 	}
 
 	if inventory == nil {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+		c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgInventoryNotFound})
 		return
 	}
 
@@ -137,7 +137,7 @@ func GetMyInventoryByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -145,7 +145,7 @@ func GetMyInventoryByID(c *gin.Context) {
 	inventory, err := findInventoryByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrNoItemFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgInventoryNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "get my inventory by ID: find inventory failed")
@@ -155,7 +155,7 @@ func GetMyInventoryByID(c *gin.Context) {
 
 	// Check ownership
 	if inventory.UserID != userID {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgItemNotOwned})
 		return
 	}
 
@@ -286,7 +286,7 @@ func PutInventoryByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -300,7 +300,7 @@ func PutInventoryByID(c *gin.Context) {
 	existingInventory, err := findInventoryByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrNoItemFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgInventoryNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "put inventory by ID: get existing inventory failed")
@@ -365,7 +365,7 @@ func PutMyInventoryByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -380,7 +380,7 @@ func PutMyInventoryByID(c *gin.Context) {
 	existingInventory, err := findInventoryByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrNoItemFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgInventoryNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "put my inventory by ID: find inventory failed")
@@ -390,7 +390,7 @@ func PutMyInventoryByID(c *gin.Context) {
 
 	// Check ownership
 	if existingInventory.UserID != userID {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgItemNotOwned})
 		return
 	}
 
@@ -477,7 +477,7 @@ func PostMyInventoryMerge(c *gin.Context) {
 		return
 	}
 	if sourceItem.UserID != userID {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgItemNotOwned})
 		return
 	}
 
@@ -493,7 +493,7 @@ func PostMyInventoryMerge(c *gin.Context) {
 		return
 	}
 	if targetItem.UserID != userID {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgItemNotOwned})
 		return
 	}
 
@@ -522,7 +522,7 @@ func PostMyInventoryMerge(c *gin.Context) {
 func DeleteInventoryByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -559,7 +559,7 @@ func DeleteMyInventoryByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -567,7 +567,7 @@ func DeleteMyInventoryByID(c *gin.Context) {
 	inventory, err := findInventoryByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrNoItemFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Inventory not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgInventoryNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "delete my inventory by ID: find inventory failed")
@@ -577,7 +577,7 @@ func DeleteMyInventoryByID(c *gin.Context) {
 
 	// Check ownership
 	if inventory.UserID != userID {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgItemNotOwned})
 		return
 	}
 

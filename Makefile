@@ -41,7 +41,7 @@ api-doc:
 build:
 	go build
 
-GOLANGCI_LINT_VERSION=v2.10.1
+GOLANGCI_LINT_VERSION=v2.15.0
 
 # Pinned to the go.mod toolchain: golangci-lint is built with the Go in use, and this
 # version cannot typecheck with newer Go releases (export data format changes).

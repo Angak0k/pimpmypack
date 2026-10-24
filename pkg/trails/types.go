@@ -67,3 +67,5 @@ type TrailSummary struct {
 type GroupedResponse struct {
 	Continents map[string]map[string][]TrailSummary `json:"continents"`
 }
+
+const errMsgTrailNotFound = "Trail not found"

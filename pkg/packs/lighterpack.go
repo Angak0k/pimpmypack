@@ -130,7 +130,7 @@ func parseLighterPackItem(node *xhtml.Node, category string) ExternalPackItem {
 	item := ExternalPackItem{
 		Category: category,
 		Qty:      1,
-		Currency: "EUR", // default
+		Currency: currencyEUR, // default
 	}
 
 	extractItemName(node, &item)
@@ -222,10 +222,10 @@ func parsePrice(s string) (int, string) {
 	// Detect currency from prefix
 	switch {
 	case strings.HasPrefix(s, "$"):
-		currency = "USD"
+		currency = currencyUSD
 		cleaned = s[1:]
 	case strings.HasPrefix(s, "€"):
-		currency = "EUR"
+		currency = currencyEUR
 		cleaned = s[len("€"):]
 	case strings.HasPrefix(s, "£"):
 		currency = "GBP"

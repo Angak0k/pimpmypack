@@ -70,13 +70,17 @@ linters:
     exhaustive:
       check:
         - switch
-        - map
+        - mapliteral
     funlen:
       lines: 100
       statements: 50
       ignore-comments: true
     gocognit:
       min-complexity: 20
+    goconst:
+      # JSON response keys and enum-like values repeated across handlers are idiomatic here
+      ignore-string-values:
+        - '^(error|message|file_size|mime_type|pack_id|item_id|width|height)$'
     gocritic:
       settings:
         captLocal:
@@ -121,6 +125,9 @@ linters:
           - noctx
           - wrapcheck
         path: _test\.go
+      - linters:
+          - goconst
+        path: testdata\.go
     paths:
       - third_party$
       - builtin$

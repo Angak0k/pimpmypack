@@ -98,3 +98,12 @@ type ResendConfirmEmailInput struct {
 type Token struct {
 	Token string `json:"token"`
 }
+
+// Client-facing error messages and account enum values.
+const (
+	errMsgInvalidEmail    = "invalid email"
+	errMsgAccountNotFound = "Account not found"
+
+	accountStatusActive = "active"
+	roleStandard        = "standard"
+)

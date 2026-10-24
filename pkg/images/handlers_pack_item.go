@@ -42,7 +42,7 @@ func GetPackItemImage(c *gin.Context) {
 	pack, err := packs.FindPackByID(ctx, packID)
 	if err != nil {
 		if errors.Is(err, packs.ErrPackNotFound) {
-			c.String(http.StatusNotFound, "Pack not found")
+			c.String(http.StatusNotFound, errMsgPackNotFound)
 			return
 		}
 		c.String(http.StatusInternalServerError, "Failed to retrieve pack")
@@ -51,7 +51,7 @@ func GetPackItemImage(c *gin.Context) {
 
 	// Only allow access to public (shared) packs
 	if pack.SharingCode == nil || *pack.SharingCode == "" {
-		c.String(http.StatusNotFound, "Pack not found")
+		c.String(http.StatusNotFound, errMsgPackNotFound)
 		return
 	}
 

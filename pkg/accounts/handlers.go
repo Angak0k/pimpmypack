@@ -35,7 +35,7 @@ func Register(c *gin.Context) {
 	}
 
 	if !helper.IsValidEmail(input.Email) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errMsgInvalidEmail})
 		return
 	}
 
@@ -50,7 +50,7 @@ func Register(c *gin.Context) {
 		Password:  input.Password,
 		Firstname: input.Firstname,
 		Lastname:  input.Lastname,
-		Role:      "standard",
+		Role:      roleStandard,
 		Status:    "pending",
 		CreatedAt: time.Now().Truncate(time.Second),
 		UpdatedAt: time.Now().Truncate(time.Second),
@@ -181,7 +181,7 @@ func ResendConfirmEmail(c *gin.Context) {
 	}
 
 	if !helper.IsValidEmail(input.Email) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errMsgInvalidEmail})
 		return
 	}
 
@@ -266,7 +266,7 @@ func GetMyAccount(c *gin.Context) {
 	account, err := findAccountByID(c.Request.Context(), userID)
 	if err != nil {
 		if errors.Is(err, ErrNoAccountFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": errMsgAccountNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "get my account: find account failed")
@@ -375,7 +375,7 @@ func PutMyAccount(c *gin.Context) {
 	account, err := updateMyAccount(c.Request.Context(), userID, &input)
 	if err != nil {
 		if errors.Is(err, ErrNoAccountFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": errMsgAccountNotFound})
 			return
 		}
 		// Return validation errors as 400
@@ -426,7 +426,7 @@ func GetAccounts(c *gin.Context) {
 func GetAccountByID(c *gin.Context) {
 	id64, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -437,7 +437,7 @@ func GetAccountByID(c *gin.Context) {
 	if err != nil {
 		if errors.Is(err, ErrNoAccountFound) {
 			// Handle the "not found" case specifically
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Account not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgAccountNotFound})
 		} else {
 			// Handle other errors
 			helper.LogAndSanitize(err, "get account by ID: find account failed")
@@ -474,7 +474,7 @@ func PostAccount(c *gin.Context) {
 	}
 
 	if !helper.IsValidEmail(newAccount.Email) {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "invalid email"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": errMsgInvalidEmail})
 		return
 	}
 
@@ -512,7 +512,7 @@ func PutAccountByID(c *gin.Context) {
 
 	id64, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 

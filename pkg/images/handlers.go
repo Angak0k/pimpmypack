@@ -81,7 +81,7 @@ func UploadPackImage(c *gin.Context) {
 	_, err = packs.FindPackByID(c.Request.Context(), packID)
 	if err != nil {
 		if errors.Is(err, packs.ErrPackNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "upload pack image: find pack failed")
@@ -97,7 +97,7 @@ func UploadPackImage(c *gin.Context) {
 		return
 	}
 	if !isOwner {
-		c.JSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+		c.JSON(http.StatusForbidden, gin.H{"error": errMsgPackNotOwned})
 		return
 	}
 
@@ -106,20 +106,20 @@ func UploadPackImage(c *gin.Context) {
 	if err != nil {
 		// Handle specific error types
 		if errors.Is(err, ErrInvalidFormat) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid image format. Only JPEG, PNG, and WebP are supported"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": errMsgInvalidImageFormat})
 			return
 		}
 		if errors.Is(err, ErrTooLarge) {
-			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "File size exceeds maximum allowed"})
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": errMsgFileTooLarge})
 			return
 		}
 		if errors.Is(err, ErrCorrupted) {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Corrupted or invalid image file"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": errMsgCorruptedImage})
 			return
 		}
 		// Generic file upload errors
 		if err.Error() == ErrMsgNoImageProvided {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "No image file provided"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": errMsgNoImageFile})
 			return
 		}
 		helper.LogAndSanitize(err, "upload pack image: process image failed")
@@ -130,7 +130,7 @@ func UploadPackImage(c *gin.Context) {
 	// Save to storage
 	err = storage.Save(ctx, packID, processed.Data, processed.Metadata)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save image"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errMsgSaveImage})
 		return
 	}
 
@@ -172,7 +172,7 @@ func GetPackImage(c *gin.Context) {
 	pack, err := packs.FindPackByID(c.Request.Context(), packID)
 	if err != nil {
 		if errors.Is(err, packs.ErrPackNotFound) {
-			c.String(http.StatusNotFound, "Pack not found")
+			c.String(http.StatusNotFound, errMsgPackNotFound)
 			return
 		}
 		c.String(http.StatusInternalServerError, "Failed to retrieve pack")
@@ -261,7 +261,7 @@ func DeletePackImage(c *gin.Context) {
 	_, err = packs.FindPackByID(c.Request.Context(), packID)
 	if err != nil {
 		if errors.Is(err, packs.ErrPackNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.JSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "delete pack image: find pack failed")
@@ -277,14 +277,14 @@ func DeletePackImage(c *gin.Context) {
 		return
 	}
 	if !isOwner {
-		c.JSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+		c.JSON(http.StatusForbidden, gin.H{"error": errMsgPackNotOwned})
 		return
 	}
 
 	// Delete image from storage (idempotent)
 	err = storage.Delete(ctx, packID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete image"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errMsgDeleteImage})
 		return
 	}
 

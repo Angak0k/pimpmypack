@@ -290,7 +290,7 @@ func loginCheck(
 	}
 
 	// Check account status before generating tokens
-	if status != "active" {
+	if status != accountStatusActive {
 		return nil, id, true, nil
 	}
 

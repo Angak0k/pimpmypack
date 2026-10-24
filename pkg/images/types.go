@@ -109,3 +109,16 @@ type InventoryImageStorage interface {
 	// Exists checks if an image exists for an inventory item
 	Exists(ctx context.Context, itemID uint) (bool, error)
 }
+
+// Client-facing error messages.
+const (
+	errMsgPackNotFound       = "Pack not found"
+	errMsgPackNotOwned       = "This pack does not belong to you"
+	errMsgItemNotOwned       = "This item does not belong to you"
+	errMsgInvalidImageFormat = "Invalid image format. Only JPEG, PNG, and WebP are supported"
+	errMsgFileTooLarge       = "File size exceeds maximum allowed"
+	errMsgCorruptedImage     = "Corrupted or invalid image file"
+	errMsgNoImageFile        = "No image file provided"
+	errMsgSaveImage          = "Failed to save image"
+	errMsgDeleteImage        = "Failed to delete image"
+)
