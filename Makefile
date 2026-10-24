@@ -43,9 +43,13 @@ build:
 
 GOLANGCI_LINT_VERSION=v2.10.1
 
+# Pinned to the go.mod toolchain: golangci-lint is built with the Go in use, and this
+# version cannot typecheck with newer Go releases (export data format changes).
+LINT_GOTOOLCHAIN=go1.26.0
+
 lint:
-	@echo "Running golangci-lint $(GOLANGCI_LINT_VERSION)..."
-	@go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --timeout=5m
+	@echo "Running golangci-lint $(GOLANGCI_LINT_VERSION) (GOTOOLCHAIN=$(LINT_GOTOOLCHAIN))..."
+	@GOTOOLCHAIN=$(LINT_GOTOOLCHAIN) go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION) run --timeout=5m
 
 build-apitest:
 	@echo "Building API test CLI..."
