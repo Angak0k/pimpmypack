@@ -47,14 +47,14 @@ func GetTrails(c *gin.Context) {
 func GetTrailByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
 	trail, err := findTrailByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrTrailNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Trail not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgTrailNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "get trail by ID: find trail failed")
@@ -127,7 +127,7 @@ func PostTrail(c *gin.Context) {
 func PutTrailByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -141,7 +141,7 @@ func PutTrailByID(c *gin.Context) {
 	existingTrail, err := findTrailByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrTrailNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Trail not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgTrailNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "put trail by ID: find trail failed")
@@ -186,14 +186,14 @@ func PutTrailByID(c *gin.Context) {
 func DeleteTrailByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
 	err = deleteTrailByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrTrailNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Trail not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgTrailNotFound})
 			return
 		}
 		if errors.Is(err, ErrTrailInUse) {

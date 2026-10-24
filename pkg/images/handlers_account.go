@@ -16,22 +16,22 @@ var accountStorage AccountImageStorage = NewDBAccountImageStorage()
 func handleImageProcessingError(c *gin.Context, err error, context string) {
 	if errors.Is(err, ErrInvalidFormat) {
 		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "Invalid image format. Only JPEG, PNG, and WebP are supported",
+			"error": errMsgInvalidImageFormat,
 		})
 		return
 	}
 	if errors.Is(err, ErrTooLarge) {
 		c.JSON(http.StatusRequestEntityTooLarge, gin.H{
-			"error": "File size exceeds maximum allowed",
+			"error": errMsgFileTooLarge,
 		})
 		return
 	}
 	if errors.Is(err, ErrCorrupted) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Corrupted or invalid image file"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errMsgCorruptedImage})
 		return
 	}
 	if err.Error() == ErrMsgNoImageProvided {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "No image file provided"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": errMsgNoImageFile})
 		return
 	}
 	helper.LogAndSanitize(err, context+": process image failed")
@@ -69,7 +69,7 @@ func uploadUserImage(
 	err = store.Save(ctx, userID, processed.Data, processed.Metadata)
 	if err != nil {
 		helper.LogAndSanitize(err, logPrefix+": save image failed")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save image"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errMsgSaveImage})
 		return
 	}
 
@@ -124,7 +124,7 @@ func DeleteMyProfileImage(c *gin.Context) {
 	err = accountStorage.Delete(ctx, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "delete profile image: delete image failed")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete image"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errMsgDeleteImage})
 		return
 	}
 

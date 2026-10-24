@@ -53,7 +53,7 @@ func DeleteMyBannerImage(c *gin.Context) {
 	err = bannerStorage.Delete(ctx, userID)
 	if err != nil {
 		helper.LogAndSanitize(err, "delete banner image: delete image failed")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete image"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errMsgDeleteImage})
 		return
 	}
 

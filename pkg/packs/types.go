@@ -268,3 +268,12 @@ func isAllowedValue(value *string, allowed []string) bool {
 	}
 	return false
 }
+
+// Client-facing error messages and supported currencies.
+const (
+	errMsgPackNotFound = "Pack not found"
+	errMsgPackNotOwned = "This pack does not belong to you"
+
+	currencyEUR = "EUR"
+	currencyUSD = "USD"
+)

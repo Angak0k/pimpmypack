@@ -877,7 +877,7 @@ func insertExternalPack(
 			i.Price = item.Price
 			i.Currency = item.Currency
 			if i.Currency == "" {
-				i.Currency = "USD"
+				i.Currency = currencyUSD
 			}
 			err := inventories.InsertInventory(ctx, &i)
 			if err != nil {

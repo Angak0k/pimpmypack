@@ -55,7 +55,7 @@ func GetPacks(c *gin.Context) {
 func GetPackByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -63,7 +63,7 @@ func GetPackByID(c *gin.Context) {
 
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "get pack by ID: find pack failed")
@@ -72,7 +72,7 @@ func GetPackByID(c *gin.Context) {
 	}
 
 	if pack == nil {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+		c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 		return
 	}
 
@@ -148,12 +148,12 @@ func PutPackByID(c *gin.Context) {
 	var input PackUpdateRequest
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
 	if err := c.BindJSON(&input); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Body format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidBody})
 		return
 	}
 
@@ -172,7 +172,7 @@ func PutPackByID(c *gin.Context) {
 	existingPack, err := findPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "put pack by ID: get existing pack failed")
@@ -223,7 +223,7 @@ func PutPackByID(c *gin.Context) {
 func DeletePackByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -297,7 +297,7 @@ func GetMyPackByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -305,7 +305,7 @@ func GetMyPackByID(c *gin.Context) {
 	pack, err := findPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "get my pack by ID: find pack failed")
@@ -315,7 +315,7 @@ func GetMyPackByID(c *gin.Context) {
 
 	// Check ownership
 	if pack.UserID != userID {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgPackNotOwned})
 		return
 	}
 
@@ -403,7 +403,7 @@ func PutMyPackByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -436,7 +436,7 @@ func PutMyPackByID(c *gin.Context) {
 	existingPack, err := findPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "put my pack by ID: find pack failed")
@@ -446,7 +446,7 @@ func PutMyPackByID(c *gin.Context) {
 
 	// Check ownership
 	if existingPack.UserID != userID {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgPackNotOwned})
 		return
 	}
 
@@ -485,7 +485,7 @@ func PutMyPackByID(c *gin.Context) {
 func DeleteMyPackByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -500,7 +500,7 @@ func DeleteMyPackByID(c *gin.Context) {
 	pack, err := findPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "delete my pack by ID: find pack failed")
@@ -510,7 +510,7 @@ func DeleteMyPackByID(c *gin.Context) {
 
 	// Check ownership
 	if pack.UserID != userID {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgPackNotOwned})
 		return
 	}
 
@@ -560,7 +560,7 @@ func GetPackContents(c *gin.Context) {
 func GetPackContentByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -599,7 +599,7 @@ func PostPackContent(c *gin.Context) {
 	var input PackContentCreateRequest
 
 	if err := c.BindJSON(&input); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Body format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidBody})
 		return
 	}
 
@@ -657,7 +657,7 @@ func PostMyPackContent(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -670,7 +670,7 @@ func PostMyPackContent(c *gin.Context) {
 
 	// Bind the JSON data to our request struct
 	if err := c.BindJSON(&requestData); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Body format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidBody})
 		return
 	}
 
@@ -678,7 +678,7 @@ func PostMyPackContent(c *gin.Context) {
 	pack, err := findPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "post my pack content: find pack failed")
@@ -688,7 +688,7 @@ func PostMyPackContent(c *gin.Context) {
 
 	// Check pack ownership
 	if pack.UserID != userID {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgPackNotOwned})
 		return
 	}
 
@@ -732,12 +732,12 @@ func PutPackContentByID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
 	if err := c.BindJSON(&input); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Body format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidBody})
 		return
 	}
 
@@ -792,13 +792,13 @@ func PutMyPackContentByID(c *gin.Context) {
 
 	packID, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
 	contentID, err := helper.StringToUint(c.Param("item_id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -810,7 +810,7 @@ func PutMyPackContentByID(c *gin.Context) {
 	}
 
 	if err := c.BindJSON(&input); err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid Body format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidBody})
 		return
 	}
 
@@ -818,7 +818,7 @@ func PutMyPackContentByID(c *gin.Context) {
 	pack, err := findPackByID(c.Request.Context(), packID)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "put my pack content by ID: find pack failed")
@@ -828,7 +828,7 @@ func PutMyPackContentByID(c *gin.Context) {
 
 	// Check pack ownership
 	if pack.UserID != userID {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgPackNotOwned})
 		return
 	}
 
@@ -885,7 +885,7 @@ func PutMyPackContentByID(c *gin.Context) {
 func DeletePackContentByID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -937,7 +937,7 @@ func DeleteMyPackContentByID(c *gin.Context) {
 	pack, err := findPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "delete my pack content by ID: find pack failed")
@@ -947,7 +947,7 @@ func DeleteMyPackContentByID(c *gin.Context) {
 
 	// Check pack ownership
 	if pack.UserID != userID {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgPackNotOwned})
 		return
 	}
 
@@ -994,14 +994,14 @@ func DeleteMyPackContentByID(c *gin.Context) {
 func GetPackContentsByPackID(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
 	packContents, err := returnPackContentsByPackID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "get pack contents by pack ID: return pack contents failed")
@@ -1009,7 +1009,7 @@ func GetPackContentsByPackID(c *gin.Context) {
 		return
 	}
 	if packContents == nil {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+		c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 		return
 	}
 
@@ -1035,7 +1035,7 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -1057,7 +1057,7 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 		packContents, err = returnPackContentsByPackID(c.Request.Context(), id)
 		if err != nil {
 			if errors.Is(err, ErrPackNotFound) {
-				c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+				c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 				return
 			}
 			helper.LogAndSanitize(err, "get my pack contents by pack ID: return pack contents failed")
@@ -1067,7 +1067,7 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 
 		c.IndentedJSON(http.StatusOK, packContents)
 	} else {
-		c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+		c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgPackNotOwned})
 		return
 	}
 }
@@ -1089,7 +1089,7 @@ func GetMyPackContentsByPackID(c *gin.Context) {
 func ShareMyPack(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -1104,7 +1104,7 @@ func ShareMyPack(c *gin.Context) {
 	_, err = FindPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "share my pack: find pack failed")
@@ -1116,7 +1116,7 @@ func ShareMyPack(c *gin.Context) {
 	sharingCode, err := sharePackByID(c.Request.Context(), id, userID)
 	if err != nil {
 		if errors.Is(err, ErrPackNotOwned) {
-			c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+			c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgPackNotOwned})
 			return
 		}
 		helper.LogAndSanitize(err, "share my pack: share pack failed")
@@ -1204,7 +1204,7 @@ func UnfavoriteMyPack(c *gin.Context) {
 func DuplicateMyPack(c *gin.Context) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -1218,7 +1218,7 @@ func DuplicateMyPack(c *gin.Context) {
 	_, err = FindPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "duplicate my pack: find pack failed")
@@ -1229,11 +1229,11 @@ func DuplicateMyPack(c *gin.Context) {
 	newPackID, err := duplicatePackByID(c.Request.Context(), id, userID)
 	if err != nil {
 		if errors.Is(err, ErrPackNotOwned) {
-			c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+			c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgPackNotOwned})
 			return
 		}
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "duplicate my pack: duplicate pack failed")
@@ -1257,7 +1257,7 @@ func packAction(c *gin.Context, actionName string,
 	action func(ctx context.Context, packID, userID uint) error, successMsg string) {
 	id, err := helper.StringToUint(c.Param("id"))
 	if err != nil {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format"})
+		c.IndentedJSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgInvalidID})
 		return
 	}
 
@@ -1271,7 +1271,7 @@ func packAction(c *gin.Context, actionName string,
 	_, err = FindPackByID(c.Request.Context(), id)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, actionName+" my pack: find pack failed")
@@ -1282,7 +1282,7 @@ func packAction(c *gin.Context, actionName string,
 	err = action(c.Request.Context(), id, userID)
 	if err != nil {
 		if errors.Is(err, ErrPackNotOwned) {
-			c.IndentedJSON(http.StatusForbidden, gin.H{"error": "This pack does not belong to you"})
+			c.IndentedJSON(http.StatusForbidden, gin.H{"error": errMsgPackNotOwned})
 			return
 		}
 		helper.LogAndSanitize(err, actionName+" my pack: "+actionName+" pack failed")
@@ -1720,7 +1720,7 @@ func SharedList(c *gin.Context) {
 	sharedPack, err := returnSharedPack(c.Request.Context(), sharingCode)
 	if err != nil {
 		if errors.Is(err, ErrPackNotFound) {
-			c.IndentedJSON(http.StatusNotFound, gin.H{"error": "Pack not found"})
+			c.IndentedJSON(http.StatusNotFound, gin.H{"error": errMsgPackNotFound})
 			return
 		}
 		helper.LogAndSanitize(err, "shared list: return shared pack failed")

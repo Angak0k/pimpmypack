@@ -70,7 +70,7 @@ func UploadInventoryItemImage(c *gin.Context) {
 		return
 	}
 	if !isOwner {
-		c.JSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
+		c.JSON(http.StatusForbidden, gin.H{"error": errMsgItemNotOwned})
 		return
 	}
 
@@ -78,13 +78,13 @@ func UploadInventoryItemImage(c *gin.Context) {
 	if err != nil {
 		switch {
 		case errors.Is(err, ErrInvalidFormat):
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid image format. Only JPEG, PNG, and WebP are supported"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": errMsgInvalidImageFormat})
 		case errors.Is(err, ErrTooLarge):
-			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": "File size exceeds maximum allowed"})
+			c.JSON(http.StatusRequestEntityTooLarge, gin.H{"error": errMsgFileTooLarge})
 		case errors.Is(err, ErrCorrupted):
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Corrupted or invalid image file"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": errMsgCorruptedImage})
 		case err.Error() == ErrMsgNoImageProvided:
-			c.JSON(http.StatusBadRequest, gin.H{"error": "No image file provided"})
+			c.JSON(http.StatusBadRequest, gin.H{"error": errMsgNoImageFile})
 		default:
 			helper.LogAndSanitize(err, "upload inventory image: process image failed")
 			c.JSON(http.StatusBadRequest, gin.H{"error": helper.ErrMsgBadRequest})
@@ -95,7 +95,7 @@ func UploadInventoryItemImage(c *gin.Context) {
 	err = inventoryStorage.Save(ctx, itemID, processed.Data, processed.Metadata)
 	if err != nil {
 		helper.LogAndSanitize(err, "upload inventory image: save image failed")
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save image"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errMsgSaveImage})
 		return
 	}
 
@@ -221,13 +221,13 @@ func DeleteInventoryItemImage(c *gin.Context) {
 		return
 	}
 	if !isOwner {
-		c.JSON(http.StatusForbidden, gin.H{"error": "This item does not belong to you"})
+		c.JSON(http.StatusForbidden, gin.H{"error": errMsgItemNotOwned})
 		return
 	}
 
 	err = inventoryStorage.Delete(ctx, itemID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete image"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": errMsgDeleteImage})
 		return
 	}
 
